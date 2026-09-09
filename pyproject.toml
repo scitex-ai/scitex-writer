@@ -58,6 +58,15 @@ dependencies = [
     # was created to end (operator, Telegram 4901, 2026-09-05).
     "scitex-logging>=0.2.0",
     "django>=4.2",
+    # bibtexparser is used by the compile scripts (merge_bibliographies.py,
+    # explore_bibtex.py) but was never declared, so CI resolved "latest".
+    # 2.0.0 (released 2026-09-08) is a non-compatible rewrite that dropped
+    # `bibtexparser.bibdatabase`; that import sits at module level in
+    # merge_bibliographies.py, so under pytest-xdist it raises SystemExit at
+    # collection time and takes the whole run down (KeyError gw0). The code
+    # targets the 1.x API, so cap below 2.0 until it is adapted. Declaring it
+    # also stops relying on a transitive install.
+    "bibtexparser>=1.4,<2.0",
     # scitex-ui ships `standalone_shell.html` + shell CSS that the editor
     # and viewer templates extend. Loading either page without scitex-ui
     # installed raises TemplateDoesNotExist.
