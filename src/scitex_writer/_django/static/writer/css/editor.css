@@ -1914,6 +1914,28 @@ select:focus {
   color: var(--text-muted);
   line-height: 1.4;
 }
+/* Import / Export section — vendor integrations (Overleaf, Prism) are folded
+   under sub-headings so they do not permanently occupy the right pane as
+   top-level vendor entries (compass §11 L418/L419/L420). */
+.details-iec {
+  display: block;
+}
+.details-iec-subhead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.details-iec-subhead i {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.details-iec .details-hint {
+  margin: 3px 0 0 0;
+}
 .details-mono {
   font-family: "Consolas", "Monaco", monospace;
   font-size: 11px;
