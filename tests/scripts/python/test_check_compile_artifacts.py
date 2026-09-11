@@ -482,8 +482,18 @@ def test_raw_macro_dump_in_pdf_text_fails(tmp_path):
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), rows=0,
                 pdf_text=_PDF_TEXT_MACRO_DUMP)
-    # Assert
-    assert (proc.returncode == 1) and ("claim@maybecolor" in proc.stdout)
+    # Assert — one assertion per failure mode (scitex-app STX-TQ007 /
+    # writer-gate-tests-conflate-two-defects-in-one-assert): a compound
+    # `(rc == 1) and (token in stdout)` would pass if EITHER held and mask
+    # the other. Split so each defect is reported on its own.
+    assert proc.returncode == 1, (
+        f"expected the gate to FAIL (rc=1) on a raw macro dump, got rc={proc.returncode}\n"
+        f"stdout:\n{proc.stdout}"
+    )
+    assert "claim@maybecolor" in proc.stdout, (
+        "expected the failure to NAME the offending token (claim@maybecolor); "
+        f"stdout was:\n{proc.stdout}"
+    )
 
 
 def test_email_address_is_not_a_macro_dump(tmp_path):
