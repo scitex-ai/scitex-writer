@@ -1,7 +1,10 @@
 /**
  * Details panel — collapsible right-hand column matching scitex.ai/apps/writer.
- * Sections: Compilation (Preview/Full status) · Overleaf (WIP) · Prism (WIP) ·
- * Project Info · Shortcuts. Collapsed/expanded state stored in localStorage.
+ * Sections: Compilation (Preview/Full status) · Import / Export · Project Info ·
+ * Shortcuts. The right pane carries Writer context only — the Overleaf and
+ * Prism integrations are folded into a single "Import / Export" section (mirroring
+ * the Scholar library Import/Export pattern) rather than permanently occupying
+ * the pane as top-level vendor entries. Collapsed/expanded state stored in localStorage.
  */
 
 import { manuscriptHints, projectInfo } from "./api";
@@ -11,8 +14,7 @@ type SectionId =
   | "hints"
   | "compile-preview"
   | "compile-full"
-  | "overleaf"
-  | "prism"
+  | "import-export"
   | "project"
   | "shortcuts";
 
@@ -137,26 +139,21 @@ export class DetailsPanel {
         `,
       },
       {
-        id: "overleaf",
-        title: "↔ Overleaf",
-        icon: "fa-cloud-arrow-up",
-        wip: true,
+        id: "import-export",
+        title: "Import / Export",
+        icon: "fa-right-left",
         render: () => `
-          <p class="details-hint">
-            Overleaf ZIP import / export is on the roadmap.
-            Meanwhile: compile locally and upload the PDF to Overleaf manually.
-          </p>
-        `,
-      },
-      {
-        id: "prism",
-        title: "↔ Prism (OpenAI)",
-        icon: "fa-wand-magic-sparkles",
-        wip: true,
-        render: () => `
-          <p class="details-hint">
-            Inline AI drafting (GPT-based) will be wired in a later PR.
-          </p>
+          <div class="details-iec">
+            <div class="details-iec-subhead"><i class="fas fa-cloud-arrow-up"></i> Overleaf <span class="details-wip-badge">WIP</span></div>
+            <p class="details-hint">
+              Overleaf ZIP import / export is on the roadmap.
+              Meanwhile: compile locally and upload the PDF to Overleaf manually.
+            </p>
+            <div class="details-iec-subhead"><i class="fas fa-wand-magic-sparkles"></i> Prism (OpenAI) <span class="details-wip-badge">WIP</span></div>
+            <p class="details-hint">
+              Inline AI drafting (GPT-based) will be wired in a later PR.
+            </p>
+          </div>
         `,
       },
       {

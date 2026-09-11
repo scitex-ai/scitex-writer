@@ -857,15 +857,18 @@ The flag will not be saved for the future.
             <span>Status</span><span>${e(this.compileState.full)} ${this.compileState.full}</span>
           </div>
           <p class="details-hint">Compiles the full manuscript (all sections + bibliography).</p>
-        `},{id:"overleaf",title:"↔ Overleaf",icon:"fa-cloud-arrow-up",wip:!0,render:()=>`
-          <p class="details-hint">
-            Overleaf ZIP import / export is on the roadmap.
-            Meanwhile: compile locally and upload the PDF to Overleaf manually.
-          </p>
-        `},{id:"prism",title:"↔ Prism (OpenAI)",icon:"fa-wand-magic-sparkles",wip:!0,render:()=>`
-          <p class="details-hint">
-            Inline AI drafting (GPT-based) will be wired in a later PR.
-          </p>
+        `},{id:"import-export",title:"Import / Export",icon:"fa-right-left",render:()=>`
+          <div class="details-iec">
+            <div class="details-iec-subhead"><i class="fas fa-cloud-arrow-up"></i> Overleaf <span class="details-wip-badge">WIP</span></div>
+            <p class="details-hint">
+              Overleaf ZIP import / export is on the roadmap.
+              Meanwhile: compile locally and upload the PDF to Overleaf manually.
+            </p>
+            <div class="details-iec-subhead"><i class="fas fa-wand-magic-sparkles"></i> Prism (OpenAI) <span class="details-wip-badge">WIP</span></div>
+            <p class="details-hint">
+              Inline AI drafting (GPT-based) will be wired in a later PR.
+            </p>
+          </div>
         `},{id:"project",title:"Project Info",icon:"fa-circle-info",render:()=>this.project?`
             <div class="details-row"><span>Name</span><span>${Rl(this.project.project_name)}</span></div>
             <div class="details-row"><span>Path</span><span class="details-mono">${Rl(this.project.project_dir)}</span></div>
