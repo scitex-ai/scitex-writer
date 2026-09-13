@@ -373,8 +373,15 @@ def test_undefined_reference_log_fails_and_lists_the_key(tmp_path):
         str(tmp_path / "c.log"),
         rows=0,
     )
-    # Assert
-    assert (proc.returncode == 1) and ("tab:2_scorecard" in proc.stdout)
+    # Assert — one assertion per failure mode (STX-TQ007)
+    assert proc.returncode == 1, (
+        f"expected the gate to FAIL (rc=1) on an unresolvable table label, got rc={proc.returncode}\n"
+        f"stdout:\n{proc.stdout}"
+    )
+    assert "tab:2_scorecard" in proc.stdout, (
+        "expected the failure to NAME the offending label (tab:2_scorecard); "
+        f"stdout was:\n{proc.stdout}"
+    )
 
 
 # ============================================================================
@@ -397,8 +404,15 @@ def test_signature_inlined_but_absent_from_pdf_fails(tmp_path):
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), rows=0,
                 pdf_text="Body text only, no colophon here.")
-    # Assert
-    assert (proc.returncode == 1) and ("colophon did not render" in proc.stdout)
+    # Assert — one assertion per failure mode (STX-TQ007)
+    assert proc.returncode == 1, (
+        f"expected the gate to FAIL (rc=1) when the signature is inlined but absent from the PDF, got rc={proc.returncode}\n"
+        f"stdout:\n{proc.stdout}"
+    )
+    assert "colophon did not render" in proc.stdout, (
+        "expected the failure to name the missing colophon; "
+        f"stdout was:\n{proc.stdout}"
+    )
 
 
 def test_signature_inlined_and_rendered_passes(tmp_path):
@@ -437,8 +451,15 @@ def test_claim_placeholder_in_pdf_text_fails(tmp_path):
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), rows=0,
                 pdf_text="value [claim:cohorta_inter_ncaps] more text")
-    # Assert
-    assert (proc.returncode == 1) and ("cohorta_inter_ncaps" in proc.stdout)
+    # Assert — one assertion per failure mode (STX-TQ007)
+    assert proc.returncode == 1, (
+        f"expected the gate to FAIL (rc=1) on a literal [claim:] placeholder in the PDF, got rc={proc.returncode}\n"
+        f"stdout:\n{proc.stdout}"
+    )
+    assert "cohorta_inter_ncaps" in proc.stdout, (
+        "expected the failure to NAME the claim id (cohorta_inter_ncaps); "
+        f"stdout was:\n{proc.stdout}"
+    )
 
 
 def test_signature_unverifiable_without_pdftotext_warns_not_fails(tmp_path):
@@ -450,8 +471,15 @@ def test_signature_unverifiable_without_pdftotext_warns_not_fails(tmp_path):
     # Act
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), use_fake=False)
-    # Assert
-    assert (proc.returncode == 0) and ("cannot verify it rendered" in proc.stdout)
+    # Assert — one assertion per failure mode (STX-TQ007)
+    assert proc.returncode == 0, (
+        f"expected a WARN-skip (rc=0) when poppler is absent, got rc={proc.returncode}\n"
+        f"stdout:\n{proc.stdout}"
+    )
+    assert "cannot verify it rendered" in proc.stdout, (
+        "expected the warning to say the signature cannot be verified; "
+        f"stdout was:\n{proc.stdout}"
+    )
 
 
 # ============================================================================
