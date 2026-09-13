@@ -1994,3 +1994,60 @@ select:focus {
   border-right-width: 0;
   pointer-events: none;
 }
+
+/* ==========================================================================
+   Mobile (<=414px) — stack the split so the editor surface gets real
+   dimensions.
+
+   At phone widths the horizontal .writer-split row (editor-pane | insert-bar |
+   preview-pane) squeezes the editor to ~165px and the CodeMirror widget
+   initialises its line-number gutter at 0x0 — the audit's "blank void".
+   The hub shell already hands the mount a correct 390xN container, so the fix
+   is purely the writer's own layout: go vertical, give the editor pane
+   priority, and keep the preview reachable. No desktop rule is touched (this
+   file has no other @media block).
+   ========================================================================== */
+@media (max-width: 414px) {
+  .writer-split {
+    flex-direction: column;
+  }
+  /* The horizontal drag handle is meaningless once stacked — hide it. */
+  .writer-split-resizer {
+    display: none;
+  }
+  /* Editor surface owns the available height (CodeMirror needs a real box to
+     size its gutter + code area). */
+  .writer-editor-pane {
+    flex: 1 1 auto;
+    min-height: 45%;
+    min-width: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+  /* Preview stays reachable below the editor instead of fighting for width. */
+  .writer-preview-pane {
+    flex: 0 0 auto;
+    height: 32%;
+    min-height: 140px;
+    width: auto;
+    min-width: 0;
+    border-left: 0;
+    border-top: 1px solid var(--border-color);
+  }
+  /* Insert controls (Cite / Fig / Table / Collab / History) become a
+     tappable horizontal strip directly above the editor. */
+  .insert-bar {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    width: 100%;
+    order: -1;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding: 4px;
+  }
+  .insert-bar-btn {
+    flex: 1 1 auto;
+    min-width: 44px; /* tappable target */
+  }
+}
