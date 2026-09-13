@@ -56,7 +56,7 @@ env:
 
 jobs:
   test:
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","Linux","X64","scitex-org-cpu"]') }}
+    runs-on: ["self-hosted", "Linux", "X64", "scitex-org-cpu"]
     strategy:
       fail-fast: false
       matrix:
@@ -86,7 +86,7 @@ jobs:
 
   build:
     needs: test
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","Linux","X64","scitex-org-cpu"]') }}
+    runs-on: ["self-hosted", "Linux", "X64", "scitex-org-cpu"]
     outputs:
       version: ${{ steps.ver.outputs.version }}
     steps:
@@ -116,7 +116,7 @@ jobs:
 
   publish:
     needs: build
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","Linux","X64","scitex-org-cpu"]') }}
+    runs-on: ["self-hosted", "Linux", "X64", "scitex-org-cpu"]
     environment:
       name: pypi
       url: https://pypi.org/p/scitex-writer
@@ -142,7 +142,7 @@ jobs:
 
   release:
     needs: [build, publish]
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","Linux","X64","scitex-org-cpu"]') }}
+    runs-on: ["self-hosted", "Linux", "X64", "scitex-org-cpu"]
     permissions:
       contents: write
     steps:

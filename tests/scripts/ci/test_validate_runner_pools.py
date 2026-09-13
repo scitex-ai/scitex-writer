@@ -135,3 +135,39 @@ def test_main_report_names_violations_when_dirty(tmp_repo, capsys):
     v.main([str(tmp_repo)])
     # Assert: the human report names the violation (triage is one read).
     assert "VIOLATIONS" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# hidden-seam rule — pinned workflows must NOT route through vars.CI_RUNS_ON
+# ---------------------------------------------------------------------------
+
+def test_pinned_workflow_rejects_hidden_vars_seam(tmp_path):
+    # Arrange: the sdist (pinned) workflow routes through vars.CI_RUNS_ON, even
+    # though the fallback itself names the supported pool. A SET repo variable
+    # would silently override the fallback — so the seam is rejected outright.
+    _write_workflow(tmp_path, "sdist-wheel-import-on-ubuntu-py3-12.yml", FALLBACK_ORG_CPU)
+    # Act
+    viols = v.check_repo(tmp_path)
+    # Assert: a hidden-seam violation is reported.
+    assert any(xv.kind == "hidden-seam" for xv in viols)
+
+
+def test_pinned_workflow_accepts_explicit_label_list(tmp_path):
+    # Arrange: the sdist (pinned) workflow names the pool as an explicit literal
+    # (no vars.* seam) — the correct, version-controlled form.
+    _write_workflow(tmp_path, "sdist-wheel-import-on-ubuntu-py3-12.yml", '["self-hosted", "Linux", "X64", "scitex-org-cpu"]')
+    # Act
+    viols = v.check_repo(tmp_path)
+    # Assert: no violation — explicit supported-pool literal is clean.
+    assert viols == []
+
+
+def test_non_pinned_workflow_may_use_variable_seam(tmp_path):
+    # Arrange: an UNPINNED workflow (e.g. the org-reusable caller) that routes
+    # through vars.CI_RUNS_ON is allowed — the seam rule only binds the pinned
+    # sdist/release gates. The fallback names the supported pool.
+    _write_workflow(tmp_path, "ci.yml", FALLBACK_ORG_CPU)
+    # Act
+    viols = v.check_repo(tmp_path)
+    # Assert: no hidden-seam violation for a non-pinned workflow.
+    assert not any(xv.kind == "hidden-seam" for xv in viols)

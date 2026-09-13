@@ -63,13 +63,25 @@ SUPPORTED_POOL = "scitex-org-cpu"
 # target any of these will queue forever. This is the violation set.
 RETIRED_POOLS = frozenset({"scitex-ci", "spartan-cpu", "spartan-pooled-cpu"})
 
+# Workflows that are PINNED to an explicit version-controlled pool and must NOT
+# route through the hidden `vars.CI_RUNS_ON` seam. A set repository variable
+# silently overrides any `|| '<fallback>'`, is not visible in a diff, and is not
+# writable by the agent token — so for these gates the pool must be an explicit
+# literal in the YAML (mirrored in .github/runner-pools.yaml), never a variable
+# reference. The validator rejects any `vars.*` seam here.
+#
+# The pypi release workflow's filename contains non-ASCII characters (it displays
+# with an elided "..."), so it is matched by prefix, not by a literal name.
+def _is_pinned_workflow(wf_name: str) -> bool:
+    return wf_name.startswith("sdist-wheel-import") or wf_name.startswith("pypi")
+
 
 @dataclass(frozen=True)
 class Violation:
     path: str
     job_id: str
     pool: str
-    kind: str  # "frozen" | "fallback"
+    kind: str  # "frozen" | "fallback" | "hidden-seam"
 
 
 def _pool_labels(text: str) -> list[str]:
@@ -120,7 +132,18 @@ def _iter_runs_on(workflows_dir: Path):
 
 
 def check_repo(root: Path) -> list[Violation]:
-    """Return violations: any readable pool label that names a retired pool."""
+    """Return violations for the pinned workflows.
+
+    Two independent rules (both statically decidable, so both fail loudly):
+
+    1. **retired pool** — any readable pool label (frozen literal OR variable
+       fallback) that names a RETIRED_POOL queues forever;
+    2. **hidden seam** — a PINNED workflow must name its pool as an EXPLICIT
+       literal in version control. Routing through `vars.CI_RUNS_ON` is
+       rejected because a set repository variable silently overrides the
+       fallback, is not visible in a diff, and is not writable by the agent
+       token — exactly the failure that stalled sdist on `scitex-ci`.
+    """
     workflows = root / ".github" / "workflows"
     if not workflows.is_dir():
         return []
@@ -128,10 +151,13 @@ def check_repo(root: Path) -> list[Violation]:
     for path, job_id, ro_text in _iter_runs_on(workflows):
         for label in _pool_labels(ro_text):
             if label in RETIRED_POOLS:
-                # A variable seam (vars.CI_RUNS_ON present) means the label is a
-                # fallback; a frozen literal means it's the destination itself.
                 kind = "fallback" if "vars." in ro_text else "frozen"
                 out.append(Violation(path, job_id, label, kind))
+        if _is_pinned_workflow(path) and "vars." in ro_text:
+            # Name the offending label for triage (the readable pool), or mark
+            # it as the raw seam if no concrete label is readable.
+            labels = [l for l in _pool_labels(ro_text) if l not in _GENERIC]
+            out.append(Violation(path, job_id, labels[0] if labels else "(variable)", "hidden-seam"))
     return out
 
 
@@ -139,17 +165,27 @@ def format_report(root: Path, violations: list[Violation]) -> str:
     if not violations:
         return (
             f"runner-pool validator: OK — no workflow in {root / '.github' / 'workflows'} "
-            f"reads a retired pool ({', '.join(sorted(RETIRED_POOLS))})."
+            f"reads a retired pool ({', '.join(sorted(RETIRED_POOLS))}), and the pinned "
+            f"workflows name their pool explicitly (no hidden vars.CI_RUNS_ON seam)."
         )
-    lines = ["runner-pool validator: VIOLATIONS — these jobs name a RETIRED pool and will queue forever:", ""]
+    lines = ["runner-pool validator: VIOLATIONS:", ""]
     for v in violations:
-        lines.append(
-            f"  {v.path} :: {v.job_id}: readable pool '{v.pool}' ({v.kind}) "
-            f"is retired; use '{SUPPORTED_POOL}'."
-        )
+        if v.kind == "hidden-seam":
+            lines.append(
+                f"  {v.path} :: {v.job_id}: routes through a hidden `vars.*` seam. "
+                f"Pinned workflows must use an EXPLICIT label list in YAML "
+                f"([\"self-hosted\", \"Linux\", \"X64\", \"{SUPPORTED_POOL}\"]) — a set "
+                f"repo variable silently overrides the fallback and cannot be "
+                f"written by the agent token."
+            )
+        else:
+            lines.append(
+                f"  {v.path} :: {v.job_id}: readable pool '{v.pool}' ({v.kind}) "
+                f"is retired; use '{SUPPORTED_POOL}'."
+            )
     lines.append("")
-    lines.append("  If the pool is a VARIABLE seam, ALSO re-point the repo Actions variable")
-    lines.append("  CI_RUNS_ON to the supported pool — a stale variable overrides the fallback.")
+    lines.append("  Re-point the pool by editing the workflow's runs-on literal AND")
+    lines.append(f"  .github/runner-pools.yaml (the version-controlled SSOT), not a hidden variable.")
     return "\n".join(lines)
 
 
