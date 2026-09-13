@@ -352,8 +352,10 @@ def test_extract_undefined_empty_when_clean():
     assert (refs == []) and (cites == [])
 
 
-def test_undefined_reference_log_fails_and_lists_the_key(tmp_path):
-    # Arrange: 0 figures (primary check passes) + a log with an undefined \ref.
+def _run_undefined_ref(tmp_path):
+    """Arrange + Act for the undefined-reference scenario: 0 figures (primary
+    check passes) + a log with an undefined \\ref. Returns the _run result so
+    each single-assert test (STX-TQ007) exercises ONE aspect of the same gate."""
     _write(tmp_path, "compiled.tex", _TEX_0)
     _write(tmp_path, "out.pdf", "%PDF-1.5\n")
     _write(
@@ -362,8 +364,7 @@ def test_undefined_reference_log_fails_and_lists_the_key(tmp_path):
         "LaTeX Warning: Reference `tab:2_scorecard' on page 3 undefined on input line 42.\n"
         "LaTeX Warning: There were undefined references.\n",
     )
-    # Act
-    proc = _run(
+    return _run(
         tmp_path,
         "--compiled-tex",
         str(tmp_path / "compiled.tex"),
@@ -373,11 +374,20 @@ def test_undefined_reference_log_fails_and_lists_the_key(tmp_path):
         str(tmp_path / "c.log"),
         rows=0,
     )
-    # Assert — one assertion per failure mode (STX-TQ007)
+
+
+def test_undefined_reference_log_fails(tmp_path):
+    # Assert: the gate FAILS (rc=1) on an unresolvable reference.
+    proc = _run_undefined_ref(tmp_path)
     assert proc.returncode == 1, (
         f"expected the gate to FAIL (rc=1) on an unresolvable table label, got rc={proc.returncode}\n"
         f"stdout:\n{proc.stdout}"
     )
+
+
+def test_undefined_reference_log_names_the_key(tmp_path):
+    # Assert: the failure NAMES the offending label so triage is one read.
+    proc = _run_undefined_ref(tmp_path)
     assert "tab:2_scorecard" in proc.stdout, (
         "expected the failure to NAME the offending label (tab:2_scorecard); "
         f"stdout was:\n{proc.stdout}"
@@ -404,11 +414,24 @@ def test_signature_inlined_but_absent_from_pdf_fails(tmp_path):
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), rows=0,
                 pdf_text="Body text only, no colophon here.")
-    # Assert — one assertion per failure mode (STX-TQ007)
+    # Assert: the gate FAILS (rc=1).
     assert proc.returncode == 1, (
         f"expected the gate to FAIL (rc=1) when the signature is inlined but absent from the PDF, got rc={proc.returncode}\n"
         f"stdout:\n{proc.stdout}"
     )
+
+
+def test_signature_inlined_but_absent_from_pdf_names_the_colophon(tmp_path):
+    """Same scenario as ..._fails, but a single assertion: the failure names
+    the missing colophon so triage is one read (STX-TQ007: one assert/test)."""
+    # Arrange
+    _write(tmp_path, "compiled.tex", _TEX_SIGNED)
+    _write(tmp_path, "out.pdf", "%PDF-1.5\n")
+    # Act
+    proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
+                "--pdf", str(tmp_path / "out.pdf"), rows=0,
+                pdf_text="Body text only, no colophon here.")
+    # Assert: the failure NAMES the missing colophon.
     assert "colophon did not render" in proc.stdout, (
         "expected the failure to name the missing colophon; "
         f"stdout was:\n{proc.stdout}"
@@ -442,8 +465,8 @@ def test_signature_not_enabled_skips_check(tmp_path):
 
 
 def test_claim_placeholder_in_pdf_text_fails(tmp_path):
-    """A literal [claim:<id>] in the rendered PDF -> FAIL, naming the id
-    (undefined \\vclaim backstop at the OUTPUT level)."""
+    """A literal [claim:<id>] in the rendered PDF -> FAIL (undefined \\\\vclaim
+    backstop at the OUTPUT level)."""
     # Arrange
     _write(tmp_path, "compiled.tex", _TEX_0)
     _write(tmp_path, "out.pdf", "%PDF-1.5\n")
@@ -451,31 +474,56 @@ def test_claim_placeholder_in_pdf_text_fails(tmp_path):
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), rows=0,
                 pdf_text="value [claim:cohorta_inter_ncaps] more text")
-    # Assert — one assertion per failure mode (STX-TQ007)
+    # Assert: the gate FAILS (rc=1).
     assert proc.returncode == 1, (
         f"expected the gate to FAIL (rc=1) on a literal [claim:] placeholder in the PDF, got rc={proc.returncode}\n"
         f"stdout:\n{proc.stdout}"
     )
+
+
+def test_claim_placeholder_in_pdf_text_names_the_id(tmp_path):
+    """Same scenario as ..._fails, but a single assertion: the failure NAMES
+    the claim id (STX-TQ007: one assert/test)."""
+    # Arrange
+    _write(tmp_path, "compiled.tex", _TEX_0)
+    _write(tmp_path, "out.pdf", "%PDF-1.5\n")
+    # Act
+    proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
+                "--pdf", str(tmp_path / "out.pdf"), rows=0,
+                pdf_text="value [claim:cohorta_inter_ncaps] more text")
+    # Assert: the failure NAMES the claim id.
     assert "cohorta_inter_ncaps" in proc.stdout, (
         "expected the failure to NAME the claim id (cohorta_inter_ncaps); "
         f"stdout was:\n{proc.stdout}"
     )
 
 
-def test_signature_unverifiable_without_pdftotext_warns_not_fails(tmp_path):
+def test_signature_unverifiable_without_pdftotext_rc0(tmp_path):
     """Sentinel present but poppler absent -> WARN-skip (exit 0), never a
-    silent pass claim and never a false fail."""
+    false fail."""
     # Arrange
     _write(tmp_path, "compiled.tex", _TEX_SIGNED)
     _write(tmp_path, "out.pdf", "%PDF-1.5\n")
     # Act
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), use_fake=False)
-    # Assert — one assertion per failure mode (STX-TQ007)
+    # Assert: rc is 0 (WARN-skip, not a fail).
     assert proc.returncode == 0, (
         f"expected a WARN-skip (rc=0) when poppler is absent, got rc={proc.returncode}\n"
         f"stdout:\n{proc.stdout}"
     )
+
+
+def test_signature_unverifiable_without_pdftotext_warns(tmp_path):
+    """Same scenario, single assertion: the WARN says the signature cannot be
+    verified (STX-TQ007: one assert/test)."""
+    # Arrange
+    _write(tmp_path, "compiled.tex", _TEX_SIGNED)
+    _write(tmp_path, "out.pdf", "%PDF-1.5\n")
+    # Act
+    proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
+                "--pdf", str(tmp_path / "out.pdf"), use_fake=False)
+    # Assert: the warning NAMES that the signature cannot be verified.
     assert "cannot verify it rendered" in proc.stdout, (
         "expected the warning to say the signature cannot be verified; "
         f"stdout was:\n{proc.stdout}"
@@ -497,7 +545,7 @@ _PDF_TEXT_MACRO_DUMP = (
 
 
 def test_raw_macro_dump_in_pdf_text_fails(tmp_path):
-    """LaTeX internals typeset into the PDF -> FAIL, naming the token.
+    """LaTeX internals typeset into the PDF -> FAIL.
 
     The regression this gate was blind to: a claims block inlined into the BODY
     argument of \\IfFileExists tokenized with @ still catcode 12, so it typeset
@@ -510,14 +558,24 @@ def test_raw_macro_dump_in_pdf_text_fails(tmp_path):
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), rows=0,
                 pdf_text=_PDF_TEXT_MACRO_DUMP)
-    # Assert — one assertion per failure mode (scitex-app STX-TQ007 /
-    # writer-gate-tests-conflate-two-defects-in-one-assert): a compound
-    # `(rc == 1) and (token in stdout)` would pass if EITHER held and mask
-    # the other. Split so each defect is reported on its own.
+    # Assert: the gate FAILS (rc=1) on a raw macro dump.
     assert proc.returncode == 1, (
         f"expected the gate to FAIL (rc=1) on a raw macro dump, got rc={proc.returncode}\n"
         f"stdout:\n{proc.stdout}"
     )
+
+
+def test_raw_macro_dump_in_pdf_text_names_the_token(tmp_path):
+    """Same scenario, single assertion: the failure NAMES the offending token
+    (claim@maybecolor) so triage is one read (STX-TQ007: one assert/test)."""
+    # Arrange
+    _write(tmp_path, "compiled.tex", _TEX_0)
+    _write(tmp_path, "out.pdf", "%PDF-1.5\n")
+    # Act
+    proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
+                "--pdf", str(tmp_path / "out.pdf"), rows=0,
+                pdf_text=_PDF_TEXT_MACRO_DUMP)
+    # Assert: the failure NAMES the offending token.
     assert "claim@maybecolor" in proc.stdout, (
         "expected the failure to NAME the offending token (claim@maybecolor); "
         f"stdout was:\n{proc.stdout}"
