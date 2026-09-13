@@ -4,7 +4,9 @@ The guard stops a workflow from reading a RETIRED runner pool (scitex-ci /
 spartan-cpu) into its runs-on — the class of defect that queues every PR forever
 with no red signal. It validates the label against the supported/retired
 convention (a pure function of the repo tree), not against the live runner census.
-One assertion per test (STX-TQ007).
+
+House style (scitex-app STX-TQ): one assertion per test (TQ007) and explicit
+`# Arrange` / `# Act` / `# Assert` markers on their own lines (TQ002).
 """
 from __future__ import annotations
 
@@ -19,69 +21,89 @@ sys.path.insert(0, str(REPO_ROOT / "scripts" / "ci"))
 
 import validate_runner_pools as v  # noqa: E402
 
+FALLBACK_ORG_CPU = '${{ fromJSON(vars.CI_RUNS_ON || \'["self-hosted","Linux","X64","scitex-org-cpu"]\') }}'
+FALLBACK_SCITEX_CI = '${{ fromJSON(vars.CI_RUNS_ON || \'["self-hosted","Linux","X64","scitex-ci"]\') }}'
+
+
+def _write_workflow(repo: Path, name: str, runs_on: str) -> None:
+    wf = repo / ".github" / "workflows"
+    wf.mkdir(parents=True, exist_ok=True)
+    (wf / name).write_text(
+        "jobs:\n"
+        f"  job:\n"
+        f"    runs-on: {runs_on}\n"
+        "    steps:\n"
+        "      - run: echo hi\n",
+        encoding="utf-8",
+    )
+
+
+@pytest.fixture()
+def tmp_repo(tmp_path):
+    _write_workflow(tmp_path, "stub.yml", FALLBACK_ORG_CPU)
+    return tmp_path
+
 
 # ---------------------------------------------------------------------------
 # _pool_labels — the readable pool must be parsed from both spellings
 # ---------------------------------------------------------------------------
 
 def test_pool_labels_from_variable_fallback_seam():
-    ro = '${{ fromJSON(vars.CI_RUNS_ON || \'["self-hosted","Linux","X64","scitex-org-cpu"]\') }}'
-    assert "scitex-org-cpu" in v._pool_labels(ro)
+    # Arrange: a variable-seam runs-on whose fallback names the supported pool.
+    ro = FALLBACK_ORG_CPU
+    # Act
+    labels = v._pool_labels(ro)
+    # Assert: the pool-selecting label is found (capability labels excluded).
+    assert "scitex-org-cpu" in labels
 
 
 def test_pool_labels_from_frozen_literal():
+    # Arrange: a frozen literal runs-on (YAML flow list, double-quoted).
     ro = '["self-hosted", "Linux", "X64", "scitex-ci"]'
-    assert "scitex-ci" in v._pool_labels(ro)
-
-
-def test_pool_labels_excludes_generic_and_variable_refs():
-    ro = '["self-hosted", "Linux", "X64", "scitex-org-cpu"]'
+    # Act
     labels = v._pool_labels(ro)
-    assert labels == ["scitex-org-cpu"]  # self-hosted/Linux/X64 are capability labels
+    # Assert
+    assert "scitex-ci" in labels
+
+
+def test_pool_labels_excludes_generic_capability_labels():
+    # Arrange: a supported-pool array with only capability + one pool label.
+    ro = '["self-hosted", "Linux", "X64", "scitex-org-cpu"]'
+    # Act
+    labels = v._pool_labels(ro)
+    # Assert: self-hosted/Linux/X64 are capability labels, so only the pool remains.
+    assert labels == ["scitex-org-cpu"]
 
 
 # ---------------------------------------------------------------------------
 # check_repo — a retired pool in a workflow is a violation
 # ---------------------------------------------------------------------------
 
-@pytest.fixture()
-def tmp_repo(tmp_path):
-    wf = tmp_path / ".github" / "workflows"
-    wf.mkdir(parents=True)
-    return tmp_path
-
-
 def test_check_repo_flags_retired_pool_in_fallback(tmp_repo):
-    (tmp_repo / ".github/workflows/x.yml").write_text(
-        "jobs:\n"
-        "  a:\n"
-        '    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || \'["self-hosted","Linux","X64","scitex-ci"]\') }}\n'
-        "    steps:\n      - run: echo hi\n",
-        encoding="utf-8",
-    )
+    # Arrange: one workflow whose fallback reads a retired pool.
+    _write_workflow(tmp_repo, "x.yml", FALLBACK_SCITEX_CI)
+    # Act
     viols = v.check_repo(tmp_repo)
+    # Assert
     assert len(viols) == 1
 
 
 def test_check_repo_flags_retired_pool_in_frozen_literal(tmp_repo):
-    (tmp_repo / ".github/workflows/y.yml").write_text(
-        "jobs:\n  b:\n    runs-on: [\"self-hosted\", \"Linux\", \"X64\", \"spartan-cpu\"]\n"
-        "    steps:\n      - run: echo hi\n",
-        encoding="utf-8",
-    )
+    # Arrange: a workflow frozen to a retired pool.
+    _write_workflow(tmp_repo, "y.yml", '["self-hosted", "Linux", "X64", "spartan-cpu"]')
+    # Act
     viols = v.check_repo(tmp_repo)
+    # Assert
     assert any(vv.pool == "spartan-cpu" for vv in viols)
 
 
 def test_check_repo_passes_supported_pool(tmp_repo):
-    (tmp_repo / ".github/workflows/z.yml").write_text(
-        "jobs:\n"
-        "  c:\n"
-        '    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || \'["self-hosted","Linux","X64","scitex-org-cpu"]\') }}\n'
-        "    steps:\n      - run: echo hi\n",
-        encoding="utf-8",
-    )
-    assert v.check_repo(tmp_repo) == []
+    # Arrange: the fixture repo already routes to the supported pool (stub.yml).
+    _write_workflow(tmp_repo, "z.yml", FALLBACK_ORG_CPU)
+    # Act
+    viols = v.check_repo(tmp_repo)
+    # Assert: no workflow reads a retired pool.
+    assert viols == []
 
 
 # ---------------------------------------------------------------------------
@@ -89,15 +111,27 @@ def test_check_repo_passes_supported_pool(tmp_repo):
 # ---------------------------------------------------------------------------
 
 def test_scitex_writer_repo_workflows_are_clean():
-    assert v.check_repo(REPO_ROOT) == []
+    # Arrange: the actual repository root.
+    repo = REPO_ROOT
+    # Act
+    viols = v.check_repo(repo)
+    # Assert: every scitex-writer workflow reads a supported pool.
+    assert viols == []
 
 
-def test_main_exit_code_clean_vs_dirty(tmp_repo, capsys):
-    (tmp_repo / ".github/workflows/dirty.yml").write_text(
-        "jobs:\n  d:\n    runs-on: [\"self-hosted\", \"Linux\", \"X64\", \"scitex-ci\"]\n"
-        "    steps:\n      - run: echo hi\n",
-        encoding="utf-8",
-    )
-    assert v.main([str(tmp_repo)]) == 1
-    out = capsys.readouterr().out
-    assert "VIOLATIONS" in out
+def test_main_exit_code_is_one_when_dirty(tmp_repo, capsys):
+    # Arrange: a workflow frozen to a retired pool.
+    _write_workflow(tmp_repo, "dirty.yml", '["self-hosted", "Linux", "X64", "scitex-ci"]')
+    # Act
+    exit_code = v.main([str(tmp_repo)])
+    # Assert: the guard fails loudly (exit 1) rather than passing a dead pool.
+    assert exit_code == 1
+
+
+def test_main_report_names_violations_when_dirty(tmp_repo, capsys):
+    # Arrange: a workflow frozen to a retired pool.
+    _write_workflow(tmp_repo, "dirty.yml", '["self-hosted", "Linux", "X64", "scitex-ci"]')
+    # Act
+    v.main([str(tmp_repo)])
+    # Assert: the human report names the violation (triage is one read).
+    assert "VIOLATIONS" in capsys.readouterr().out
