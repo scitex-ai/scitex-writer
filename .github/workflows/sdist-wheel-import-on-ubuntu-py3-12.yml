@@ -24,7 +24,26 @@ on:
 jobs:
   sdist-wheel-import:
     name: sdist-wheel-import-on-ubuntu-py3-12
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","Linux","X64","scitex-ci"]') }}
+    # EXPLICIT, VERSION-CONTROLLED pool — no hidden `vars.CI_RUNS_ON` seam.
+    #
+    # This job previously routed through `vars.CI_RUNS_ON` with a fallback. That
+    # is the trap: the repo's CI_RUNS_ON variable held the RETIRED `scitex-ci`
+    # pool (all runners offline), and a SET variable silently overrides every
+    # `|| '<fallback>'` in the YAML — so the job queued forever with NO red
+    # signal while `scitex-org-cpu` runners sat online and idle. The variable is
+    # a hidden repository-settings value: not visible in a diff, not reviewable,
+    # and NOT writable by the agent token (PUT /actions/variables/CI_RUNS_ON ->
+    # 404). Leaving it in the seam means a stale variable can always re-break
+    # routing without anyone seeing it in code.
+    #
+    # So the pool is named here as an explicit literal (the org's supported pool,
+    # scitex-org-cpu — the CI_RUNS_ON_DEFAULT in scitex_dev), mirrored in the
+    # version-controlled .github/runner-pools.yaml SSOT, and pinned by
+    # scripts/ci/validate_runner_pools.py + tests/scripts/ci/. Re-pointing the
+    # pool is now a reviewed one-line change in this file, not a hidden click.
+    # Deliberately NO `vars.*` reference: the validator rejects that seam for
+    # these pinned workflows.
+    runs-on: ["self-hosted", "Linux", "X64", "scitex-org-cpu"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
