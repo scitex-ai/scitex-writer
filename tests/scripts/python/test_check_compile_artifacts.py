@@ -377,8 +377,11 @@ def _run_undefined_ref(tmp_path):
 
 
 def test_undefined_reference_log_fails(tmp_path):
-    # Assert: the gate FAILS (rc=1) on an unresolvable reference.
+    # Arrange: 0 figures (primary check passes) + a log with an undefined \ref.
+    # Act: run the gate on that scenario (_run_undefined_ref encapsulates both).
     proc = _run_undefined_ref(tmp_path)
+    # Assert
+    # the gate FAILS (rc=1) on an unresolvable reference.
     assert proc.returncode == 1, (
         f"expected the gate to FAIL (rc=1) on an unresolvable table label, got rc={proc.returncode}\n"
         f"stdout:\n{proc.stdout}"
@@ -386,8 +389,11 @@ def test_undefined_reference_log_fails(tmp_path):
 
 
 def test_undefined_reference_log_names_the_key(tmp_path):
-    # Assert: the failure NAMES the offending label so triage is one read.
+    # Arrange: 0 figures (primary check passes) + a log with an undefined \ref.
+    # Act: run the gate on that scenario (_run_undefined_ref encapsulates both).
     proc = _run_undefined_ref(tmp_path)
+    # Assert
+    # the failure NAMES the offending label so triage is one read.
     assert "tab:2_scorecard" in proc.stdout, (
         "expected the failure to NAME the offending label (tab:2_scorecard); "
         f"stdout was:\n{proc.stdout}"
@@ -414,7 +420,8 @@ def test_signature_inlined_but_absent_from_pdf_fails(tmp_path):
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), rows=0,
                 pdf_text="Body text only, no colophon here.")
-    # Assert: the gate FAILS (rc=1).
+    # Assert
+    # the gate FAILS (rc=1).
     assert proc.returncode == 1, (
         f"expected the gate to FAIL (rc=1) when the signature is inlined but absent from the PDF, got rc={proc.returncode}\n"
         f"stdout:\n{proc.stdout}"
@@ -431,7 +438,8 @@ def test_signature_inlined_but_absent_from_pdf_names_the_colophon(tmp_path):
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), rows=0,
                 pdf_text="Body text only, no colophon here.")
-    # Assert: the failure NAMES the missing colophon.
+    # Assert
+    # the failure NAMES the missing colophon.
     assert "colophon did not render" in proc.stdout, (
         "expected the failure to name the missing colophon; "
         f"stdout was:\n{proc.stdout}"
@@ -474,7 +482,8 @@ def test_claim_placeholder_in_pdf_text_fails(tmp_path):
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), rows=0,
                 pdf_text="value [claim:cohorta_inter_ncaps] more text")
-    # Assert: the gate FAILS (rc=1).
+    # Assert
+    # the gate FAILS (rc=1).
     assert proc.returncode == 1, (
         f"expected the gate to FAIL (rc=1) on a literal [claim:] placeholder in the PDF, got rc={proc.returncode}\n"
         f"stdout:\n{proc.stdout}"
@@ -491,7 +500,8 @@ def test_claim_placeholder_in_pdf_text_names_the_id(tmp_path):
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), rows=0,
                 pdf_text="value [claim:cohorta_inter_ncaps] more text")
-    # Assert: the failure NAMES the claim id.
+    # Assert
+    # the failure NAMES the claim id.
     assert "cohorta_inter_ncaps" in proc.stdout, (
         "expected the failure to NAME the claim id (cohorta_inter_ncaps); "
         f"stdout was:\n{proc.stdout}"
@@ -507,7 +517,8 @@ def test_signature_unverifiable_without_pdftotext_rc0(tmp_path):
     # Act
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), use_fake=False)
-    # Assert: rc is 0 (WARN-skip, not a fail).
+    # Assert
+    # rc is 0 (WARN-skip, not a fail).
     assert proc.returncode == 0, (
         f"expected a WARN-skip (rc=0) when poppler is absent, got rc={proc.returncode}\n"
         f"stdout:\n{proc.stdout}"
@@ -523,7 +534,8 @@ def test_signature_unverifiable_without_pdftotext_warns(tmp_path):
     # Act
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), use_fake=False)
-    # Assert: the warning NAMES that the signature cannot be verified.
+    # Assert
+    # the warning NAMES that the signature cannot be verified.
     assert "cannot verify it rendered" in proc.stdout, (
         "expected the warning to say the signature cannot be verified; "
         f"stdout was:\n{proc.stdout}"
@@ -558,7 +570,8 @@ def test_raw_macro_dump_in_pdf_text_fails(tmp_path):
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), rows=0,
                 pdf_text=_PDF_TEXT_MACRO_DUMP)
-    # Assert: the gate FAILS (rc=1) on a raw macro dump.
+    # Assert
+    # the gate FAILS (rc=1) on a raw macro dump.
     assert proc.returncode == 1, (
         f"expected the gate to FAIL (rc=1) on a raw macro dump, got rc={proc.returncode}\n"
         f"stdout:\n{proc.stdout}"
@@ -575,7 +588,8 @@ def test_raw_macro_dump_in_pdf_text_names_the_token(tmp_path):
     proc = _run(tmp_path, "--compiled-tex", str(tmp_path / "compiled.tex"),
                 "--pdf", str(tmp_path / "out.pdf"), rows=0,
                 pdf_text=_PDF_TEXT_MACRO_DUMP)
-    # Assert: the failure NAMES the offending token.
+    # Assert
+    # the failure NAMES the offending token.
     assert "claim@maybecolor" in proc.stdout, (
         "expected the failure to NAME the offending token (claim@maybecolor); "
         f"stdout was:\n{proc.stdout}"
