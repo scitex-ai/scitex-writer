@@ -24,7 +24,14 @@ on:
 jobs:
   sdist-wheel-import:
     name: sdist-wheel-import-on-ubuntu-py3-12
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","Linux","X64","scitex-ci"]') }}
+    # Route through vars.CI_RUNS_ON when set. The FALLBACK is the org's supported
+    # pool (scitex-org-cpu, the CI_RUNS_ON_DEFAULT in scitex_dev), NOT the retired
+    # self-hosted `scitex-ci` label: the docs/ci-runner-routing.md incident records
+    # that a fallback pinned to a pool whose runners are all offline queues EVERY
+    # PR forever with no red signal (nothing fails — the job never starts). With
+    # vars unset, this job was stalling on the dead `scitex-ci` pool while
+    # scitex-org-cpu runners sat online and idle.
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '["self-hosted","Linux","X64","scitex-org-cpu"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
