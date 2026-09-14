@@ -29,6 +29,7 @@ from .handlers import (
     handle_remove_claim,
 )
 from .services import get_or_create_project
+from ..workspace_layout import NotAWriterWorkspaceError
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,18 @@ def _get_project(request):
         return get_or_create_project(working_dir)
     except FileNotFoundError:
         logger.warning("[Writer] Project not found: %s", working_dir)
+        return None
+    except NotAWriterWorkspaceError:
+        # A directory that is neither a project root (no .scitex/writer under
+        # it) nor a workspace (no 00_shared/ in it). The load point (#389
+        # follow-up) now raises this named error instead of letting the
+        # downstream compile fail with a bare FileNotFoundError on
+        # root/00_shared/... — map it to the same 400 the missing-dir case
+        # returns so the UI reads a clean "no project" state.
+        logger.warning(
+            "[Writer] working_dir is not a writer project or workspace: %s",
+            working_dir,
+        )
         return None
 
 

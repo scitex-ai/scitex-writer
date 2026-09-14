@@ -28,12 +28,17 @@ from __future__ import annotations
 
 import json
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
 from django.test import RequestFactory
 
+from scitex_writer._compile._event_log import read_events
+from scitex_writer._django import services
 from scitex_writer._django import views
+from scitex_writer._django.services import get_or_create_project
+from scitex_writer.workspace_layout import resolve_workspace
 
 
 @pytest.fixture
@@ -749,3 +754,146 @@ def test_writer_css_does_not_target_scitex_ui_internals(internal: str):
     ]
     # Assert
     assert selectors == [], f"editor.css still targets {internal}: {selectors}"
+
+
+# ---------------------------------------------------------------------------
+# End-to-end: the hub's leaf-v2 mount passes the PROJECT ROOT as ?working_dir.
+# Before the #389 follow-up, a ROOT reached run_compile_script and refused with
+# "compile.sh not found at <root>/compile.sh" (compile.sh actually lives at
+# <root>/.scitex/writer/). These drive the real api/compile view -> load point
+# -> compile thread against a ROOT, using a trivial compile.sh (no LaTeX engine,
+# no mocks), and assert on the workspace event log the hub reads in production.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def root_with_workspace(tmp_path):
+    """A PROJECT ROOT with its writer WORKSPACE nested at .scitex/writer/.
+
+    The workspace carries a trivial compile.sh that succeeds (writes the
+    expected PDF) and a 00_shared/ dir, so the compile thread runs cleanly
+    without a LaTeX install. Nothing 00_shared/-shaped is at the root itself --
+    that is what distinguishes the root from the workspace in the repro.
+    """
+    root = tmp_path / "proj"
+    workspace = root / ".scitex" / "writer"
+    (workspace / "00_shared").mkdir(parents=True)
+    (workspace / "01_manuscript").mkdir(parents=True)
+    (workspace / "compile.sh").write_text(
+        "#!/bin/bash\n"
+        "mkdir -p 01_manuscript\n"
+        "touch 01_manuscript/manuscript.pdf\n"
+        "exit 0\n"
+    )
+    return root
+
+
+def _compile_at_root(root, rf):
+    """POST api/compile with ?working_dir=<ROOT> and wait for the thread.
+
+    Returns the resolved WORKSPACE path (where the event log lives). This is
+    the ACT; the tests below each make exactly one assertion on the outcome.
+    """
+    # The load point caches by the resolved workspace; start clean so the single
+    # project below is unambiguous, and clear again after (module-level cache).
+    services._project_cache.clear()
+    try:
+        _call(
+            rf,
+            "POST",
+            "api/compile",
+            str(root),
+            body=json.dumps({"doc_type": "manuscript", "draft": True}),
+        )
+        workspace = resolve_workspace(root)
+        entry = services._project_cache.get(str(workspace))
+        deadline = time.time() + 20
+        while (
+            entry is not None
+            and entry[0]._compiling
+            and time.time() < deadline
+        ):
+            time.sleep(0.05)
+            entry = services._project_cache.get(str(workspace))
+        time.sleep(0.1)  # let the thread's finally-block flip _compiling
+        return workspace
+    finally:
+        services._project_cache.clear()
+
+
+def test_api_compile_given_root_working_dir_records_success_at_workspace(
+    root_with_workspace,
+):
+    # Arrange
+    rf = RequestFactory()
+    root = root_with_workspace
+    # Act
+    workspace = _compile_at_root(root, rf)
+    # Assert: the engine RAN (a success event at the workspace), not a refusal
+    kinds = [e["kind"] for e in read_events(workspace)]
+    assert "success" in kinds
+
+
+def test_api_compile_given_root_working_dir_does_not_refuse_workspace_missing(
+    root_with_workspace,
+):
+    # Arrange
+    rf = RequestFactory()
+    root = root_with_workspace
+    # Act
+    workspace = _compile_at_root(root, rf)
+    # Assert: no "workspace-missing" refusal (the 2026-09-14 live failure mode)
+    refusals = [e for e in read_events(workspace) if e["reason"] == "workspace-missing"]
+    assert refusals == []
+
+
+def test_api_compile_given_root_working_dir_loads_a_workspace_state(root_with_workspace):
+    # Arrange
+    root = root_with_workspace
+    # Act: loading the root through the load point yields a workspace state
+    services._project_cache.clear()
+    try:
+        state = get_or_create_project(str(root))
+    finally:
+        services._project_cache.clear()
+    # Assert: project_dir is the nested workspace, not the raw root
+    assert state.project_dir == resolve_workspace(root)
+
+
+def test_api_compile_given_flat_workspace_working_dir_still_records_success(tmp_path):
+    # Arrange: legacy/standalone passes the WORKSPACE directly (no .scitex layer)
+    rf = RequestFactory()
+    workspace = tmp_path / "workspace"
+    (workspace / "00_shared").mkdir(parents=True)
+    (workspace / "01_manuscript").mkdir(parents=True)
+    (workspace / "compile.sh").write_text(
+        "#!/bin/bash\n"
+        "mkdir -p 01_manuscript\n"
+        "touch 01_manuscript/manuscript.pdf\n"
+        "exit 0\n"
+    )
+    # Act
+    services._project_cache.clear()
+    try:
+        _call(
+            rf,
+            "POST",
+            "api/compile",
+            str(workspace),
+            body=json.dumps({"doc_type": "manuscript", "draft": True}),
+        )
+        entry = services._project_cache.get(str(workspace))
+        deadline = time.time() + 20
+        while (
+            entry is not None
+            and entry[0]._compiling
+            and time.time() < deadline
+        ):
+            time.sleep(0.05)
+            entry = services._project_cache.get(str(workspace))
+        time.sleep(0.1)
+    finally:
+        services._project_cache.clear()
+    # Assert: the flat workspace still resolves to itself and the engine ran
+    kinds = [e["kind"] for e in read_events(workspace)]
+    assert "success" in kinds

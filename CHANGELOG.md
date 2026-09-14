@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.1] - 2026-09-14
+
+### Fixed
+
+- **The Django (hub-mounted) path now resolves the workspace at the single load point.**
+  #389 fixed the `_mcp` compile entry, but the hub mounts the `_django` path whose project is
+  loaded once in `get_or_create_project` — so `state.project_dir` was the raw PROJECT ROOT and
+  every `_django` handler (`compile.sh`, `bib.py`, `scholar.py`, `core.py`) composed against the
+  root, producing the 2.43.0 live failure `compile.sh not found at <root>/compile.sh`.
+  Now `get_or_create_project` resolves the workspace before caching, so `state.project_dir` is
+  the WORKSPACE whether the hub passes the ROOT or the legacy path passes the workspace. A bare
+  directory raises the named `NotAWriterWorkspaceError` (mapped to a clean 400 in the view),
+  and `remove_project` is consistent with the workspace cache key.
+
+### Added
+
+- Load-point unit tests (`test_services.py`) and end-to-end `api/compile` tests (`test_views.py`)
+  driving a ROOT `working_dir` (the hub's exact repro, no LaTeX, no mocks) plus the flat-workspace
+  no-regression case.
+
+
 ## [2.43.0] - 2026-09-14
 
 ### Added

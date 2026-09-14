@@ -49,26 +49,54 @@ def get_or_create_project(project_dir: str) -> ProjectState:
     if not path.exists():
         raise FileNotFoundError(f"Project directory not found: {path}")
 
-    key = str(path)
+    # The hub's leaf-v2 mount passes the PROJECT ROOT (?working_dir=<root>);
+    # the legacy/standalone path may already pass the WORKSPACE. The leaf owns
+    # root->workspace (scitex-hub contract 2026-09-14): resolve tolerantly so
+    # state.project_dir is ALWAYS the workspace from here on. Every downstream
+    # handler composes workspace-relative paths (compile.sh, 00_shared/, logs/,
+    # PDFs) against state.project_dir, so resolving once here fixes them all at
+    # the source. We do NOT scaffold here: the workspace must exist (the hub's
+    # project-state init and the standalone CLI both ensure it); a bare empty
+    # root raises the named NotAWriterWorkspaceError, consistent with the
+    # _mcp compile entry (#389).
+    from scitex_writer._ports.workspace import ensure_scholar_library_link
+    from scitex_writer.workspace_layout import resolve_workspace
+
+    workspace = resolve_workspace(path)
+
+    key = str(workspace)
     if key in _project_cache:
         state, _ = _project_cache[key]
         _project_cache[key] = (state, time.time())
         return state
 
-    state = ProjectState(project_dir=path)
+    state = ProjectState(project_dir=workspace)
     _project_cache[key] = (state, time.time())
-    logger.info("[Writer] Created project state for %s", path)
+    logger.info("[Writer] Created project state for %s", workspace)
 
-    from scitex_writer._ports.workspace import ensure_scholar_library_link
-
-    ensure_scholar_library_link(path)
+    ensure_scholar_library_link(workspace)
     return state
 
 
 def remove_project(project_dir: str) -> None:
-    """Evict a project from the cache."""
-    key = str(Path(project_dir).resolve())
-    _project_cache.pop(key, None)
+    """Evict a project from the cache.
+
+    Accepts either the PROJECT ROOT or the WORKSPACE and evicts the same key
+    the load point caches under (the resolved workspace), so a root passed by
+    the hub removes the state its compile created.
+    """
+    from scitex_writer.workspace_layout import resolve_workspace
+
+    path = Path(project_dir).resolve()
+    if not path.exists():
+        _project_cache.pop(str(path), None)
+        return
+    try:
+        workspace = resolve_workspace(path)
+    except ValueError:
+        workspace = path
+    _project_cache.pop(str(workspace), None)
+    _project_cache.pop(str(path), None)
 
 
 def _cleanup_expired() -> None:
