@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.2] - 2026-09-14
+
+### Fixed
+
+- **Existing workspaces now self-heal their vendored scripts on the compile path.**
+  The 2.43.1 refresh was wired only into `ensure_workspace`, but the `_django` editor compile
+  path (`handle_compile -> _do_compile -> sw_compile.manuscript -> _compile_manuscript ->
+  run_compile_script`) never calls `ensure_workspace` for an ALREADY-EXISTING workspace. So a
+  workspace created before the fix kept its stale `check_dependancy_commands.sh` and refused on
+  `Missing required tools: xlsx2csv, csv2latex` (2026-09-14 hub editor-v2 repro on v2.43.1 /
+  f41666be). `run_compile_script` — the single choke point every compile flows through (MCP
+  handlers AND the `_django` editor path) — now refreshes the workspace's vendored scripts from
+  the installed package before the engine runs, so existing workspaces heal on the very compile
+  that would have failed. Defensive (never blocks a compile); touches only `<ws>/scripts/...`,
+  never `01_manuscript/`/`00_shared/`.
+
+- **The refresh gate is now a content hash, not `__version__`.** The hub's editable dev container
+  reports a stale `__version__` (2.43.0) even at current code, so a version marker could never
+  detect a script that changed without a version bump. The sentinel is the sha256 of the key file
+  (`check_dependancy_commands.sh`); a legacy version-string marker is treated as a mismatch
+  (fires once, heals, re-stamps to the hash) — backward compatible.
+
+### Added
+
+- Regression: an existing workspace carrying the OLD check + a legacy version-marker self-heals to
+  the package's `check_dependancy_commands.sh` hash through `run_compile_script`.
+
+
 ## [2.43.1] - 2026-09-14
 
 ### Fixed
