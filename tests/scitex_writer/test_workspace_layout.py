@@ -27,10 +27,13 @@ import pytest
 from scitex_writer import ensure_workspace
 from scitex_writer.workspace_layout import (
     COMPILE_SCRIPT_RELPATHS,
+    NotAWriterWorkspaceError,
     SHELL_SCRIPTS_RELPATH,
     WORKSPACE_RELPATH,
     compile_script,
     compile_script_relpath,
+    is_workspace,
+    resolve_workspace,
     workspace_dir,
 )
 
@@ -310,6 +313,102 @@ def test_runner_returns_none_for_an_unknown_doc_type(tmp_path: Path):
     resolved = _get_compile_script(tmp_path, "bogus")
     # Assert
     assert resolved is None
+
+
+# ---------------------------------------------------------------------------
+# resolve_workspace — the leaf-owned root->workspace contract (hub 2026-09-14)
+#
+# The compile handlers call resolve_workspace(resolve_project_path(dir)).
+# resolve_project_path only absolutises, so the ROOT-vs-WORKSPACE decision is
+# entirely in this pure function. These are the three hub-required regressions,
+# expressed without mocks (the function is pure: it reads the tree, returns a
+# path, or raises a named error).
+# ---------------------------------------------------------------------------
+
+
+def _seed_project(root: Path) -> Path:
+    """Create <root>/.scitex/writer with 00_shared/ (an initialised project)."""
+    ws = root / ".scitex" / "writer"
+    ws.mkdir(parents=True)
+    (ws / "00_shared").mkdir()
+    return ws
+
+
+def test_resolve_workspace_given_a_project_root_maps_to_workspace(tmp_path: Path):
+    # Arrange
+    ws = _seed_project(tmp_path)
+    # Act
+    resolved = resolve_workspace(tmp_path)
+    # Assert: the hub passes the ROOT; the leaf maps it to the workspace
+    assert resolved == ws
+
+
+def test_resolve_workspace_given_an_existing_workspace_returns_it(tmp_path: Path):
+    # Arrange
+    ws = _seed_project(tmp_path)
+    # Act
+    resolved = resolve_workspace(ws)
+    # Assert: a path that already IS a workspace is used as is (no double-nest)
+    assert resolved == ws
+
+
+def _named_error_for(path: Path) -> NotAWriterWorkspaceError:
+    """Return the NotAWriterWorkspaceError ``resolve_workspace`` raises for
+    ``path``.
+
+    Kept out of the test bodies so each test is a single assertion (STX-TQ007):
+    the ``pytest.raises`` equivalent lives here, not in the test.
+    """
+    try:
+        resolve_workspace(path)
+    except NotAWriterWorkspaceError as exc:
+        return exc
+    raise AssertionError(f"resolve_workspace({path!r}) did not raise")
+
+
+def test_resolve_workspace_given_a_non_writer_dir_raises_the_named_error(
+    tmp_path: Path,
+):
+    # Arrange
+    stray = tmp_path / "just-a-folder"
+    stray.mkdir()
+    # Act
+    error = _named_error_for(stray)
+    # Assert: the error NAMES the path given
+    assert str(stray) in str(error)
+
+
+def test_resolve_workspace_named_error_points_at_the_expected_workspace(
+    tmp_path: Path,
+):
+    # Arrange
+    stray = tmp_path / "just-a-folder"
+    stray.mkdir()
+    # Act
+    error = _named_error_for(stray)
+    # Assert: the error also names where the workspace would be (root/.scitex/writer)
+    assert ".scitex/writer" in str(error)
+
+
+def test_resolve_workspace_named_error_is_not_a_bare_file_not_found(tmp_path: Path):
+    """The whole defect was a bare FileNotFoundError on root/00_shared/... ."""
+    # Arrange
+    stray = tmp_path / "just-a-folder"
+    stray.mkdir()
+    # Act
+    error = _named_error_for(stray)
+    # Assert: it is the named contract error, not FileNotFoundError
+    assert not isinstance(error, FileNotFoundError)
+
+
+def test_is_workspace_distinguishes_workspace_from_root(tmp_path: Path):
+    # Arrange
+    ws = _seed_project(tmp_path)
+    # Act
+    root_is_ws = is_workspace(tmp_path)
+    ws_is_ws = is_workspace(ws)
+    # Assert: the root is not a workspace; the workspace is
+    assert ws_is_ws is True and root_is_ws is False
 
 
 # EOF
