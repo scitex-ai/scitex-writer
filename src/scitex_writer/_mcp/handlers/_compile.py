@@ -5,6 +5,7 @@
 """Compilation handlers: manuscript, supplementary, revision."""
 
 from ..utils import resolve_project_path, run_compile_script
+from ...workspace_layout import resolve_workspace
 
 
 def _prepare(project_path, doc_type: str) -> None:
@@ -100,8 +101,15 @@ def compile_manuscript(
     verbose: bool = False,
     engine: str | None = None,
 ) -> dict:
-    """Compile manuscript to PDF."""
-    project_path = resolve_project_path(project_dir)
+    """Compile manuscript to PDF.
+
+    ``project_dir`` may be the project ROOT or the writer WORKSPACE; the leaf
+    owns root→workspace (scitex-hub leaf-v2 contract) and composes every
+    workspace-relative path (00_shared/, compile.sh, logs/) through
+    :func:`resolve_workspace` so a ROOT passed by the hub no longer fails with
+    a bare FileNotFoundError on ``root/00_shared/...``.
+    """
+    project_path = resolve_workspace(resolve_project_path(project_dir))
     _prepare(project_path, "manuscript")
     return run_compile_script(
         project_path,
@@ -130,7 +138,7 @@ def compile_supplementary(
     engine: str | None = None,
 ) -> dict:
     """Compile supplementary materials to PDF."""
-    project_path = resolve_project_path(project_dir)
+    project_path = resolve_workspace(resolve_project_path(project_dir))
     _prepare(project_path, "supplementary")
     return run_compile_script(
         project_path,
@@ -157,7 +165,7 @@ def compile_revision(
     engine: str | None = None,
 ) -> dict:
     """Compile revision document to PDF."""
-    project_path = resolve_project_path(project_dir)
+    project_path = resolve_workspace(resolve_project_path(project_dir))
     _prepare(project_path, "revision")
     return run_compile_script(
         project_path,
