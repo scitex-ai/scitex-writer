@@ -48,22 +48,31 @@ def _load_manifest() -> dict:
 
 
 def test_manifest_path_exists():
-    # Assert: the manifest the test guards is actually present (not a stale path).
+    # Arrange
+    # The path is a module constant; nothing to set up.
+    # Act
+    # (reading the filesystem is the assertion's own concern below)
+    # Assert
     assert MANIFEST.is_file()
 
 
 def test_writer_declares_project_scope():
-    # Act: read the real declaration.
+    # Arrange
     manifest = _load_manifest()
-    # Assert: Writer declares project scope (the leaf-side adoption, 1 line).
-    assert manifest.get("scope") == EXPECTED_SCOPE
+    # Act
+    scope = manifest.get("scope")
+    # Assert
+    # Writer declares project scope (the leaf-side adoption, 1 line).
+    assert scope == EXPECTED_SCOPE
 
 
 def test_declared_scope_is_a_member_of_the_closed_enum():
-    # Act: read the real declaration.
+    # Arrange
     manifest = _load_manifest()
+    # Act
     scope = manifest.get("scope")
-    # Assert: if present, it must be a member of the closed enum {"user","project"}.
+    # Assert
+    # If present, it must be a member of the closed enum {"user","project"}.
     # This is the guard that catches a typo the older (pre-d8528de4) scitex_app
     # validator would silently ignore.
     assert scope in ALLOWED_SCOPES
