@@ -12,6 +12,24 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 
+%% pdfTeX has no CJK glyphs: one stray IME 」 was a fatal compile error (XeTeX/tectonic read UTF-8 natively).
+\usepackage{iftex}
+\ifPDFTeX
+  \DeclareUnicodeCharacter{3000}{\ }%               ideographic space
+  \DeclareUnicodeCharacter{3001}{,}%                、
+  \DeclareUnicodeCharacter{3002}{.}%                。
+  \DeclareUnicodeCharacter{300C}{\textquoteleft}%   「
+  \DeclareUnicodeCharacter{300D}{\textquoteright}%  」
+  \DeclareUnicodeCharacter{300E}{\textquotedblleft}%  『
+  \DeclareUnicodeCharacter{300F}{\textquotedblright}% 』
+  \DeclareUnicodeCharacter{3010}{[}%                【
+  \DeclareUnicodeCharacter{3011}{]}%                】
+  \DeclareUnicodeCharacter{FF08}{(}%                （
+  \DeclareUnicodeCharacter{FF09}{)}%                ）
+  \DeclareUnicodeCharacter{FF0C}{,}%                ，
+  \DeclareUnicodeCharacter{FF1A}{:}%                ：
+\fi
+
 %% Colors (load early to avoid option clashes with tikz, pgfplots, tcolorbox)
 % Include all common color options: table (for colortbl), svgnames (for tcolorbox)
 \usepackage[table,svgnames]{xcolor}

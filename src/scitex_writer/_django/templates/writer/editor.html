@@ -1,11 +1,13 @@
 {% extends "scitex_ui/standalone_shell.html" %}
 {% load static %}
 {% block extra_css %}
-    {# The bare SVG icon link is NOT here: the scitex-ui shell emits it from
-       `favicon_href`, which views.py sets to writer/favicon.svg. Declaring it
-       here too would produce two identical rel="icon" links (scitex-ui 0.7.0
-       made the shell's link unconditional). Only the variants the shell cannot
-       express -- sizes= and apple-touch-icon -- belong in this block. #}
+    {% comment %}
+    The bare SVG icon link is NOT here: the scitex-ui shell emits it from
+    `favicon_href`, which views.py sets to writer/favicon.svg. Declaring it
+    here too would produce two identical rel="icon" links (scitex-ui 0.7.0
+    made the shell's link unconditional). Only the variants the shell cannot
+    express -- sizes= and apple-touch-icon -- belong in this block.
+    {% endcomment %}
     <link rel="icon"
           type="image/png"
           sizes="16x16"
@@ -23,6 +25,7 @@
           href="{% static 'writer/favicon-180x180.png' %}">
     <link rel="stylesheet" href="{% static 'writer/assets/index.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/editor.css' %}">
+    <link rel="stylesheet" href="{% static 'writer/css/editor-narrow-and-dock.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/annotations.css' %}">
 {% endblock %}
 {% block worktree_title_full %}Project files{% endblock %}

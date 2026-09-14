@@ -282,6 +282,7 @@ async function bootstrap(): Promise<void> {
   // Declare state BEFORE any loadSection trigger (TDZ guard).
   let currentPath: string | null = null;
   let saveTimer: number | null = null;
+  let isLoadingFile = false;
 
   // Claims tab (Living Paper #133): render claim cards with verification
   // badges + DAG; clicking "Find in source" searches the current file for
@@ -353,7 +354,12 @@ async function bootstrap(): Promise<void> {
     try {
       const file = await getFile(section.path);
       currentPath = section.path;
-      editor.setValue(file.content);
+      isLoadingFile = true;
+      try {
+        editor.setValue(file.content);
+      } finally {
+        isLoadingFile = false;
+      }
       updateWordCount();
       const currentFileEl = root?.querySelector<HTMLElement>("#current-file");
       if (currentFileEl) currentFileEl.textContent = file.name;
@@ -390,6 +396,8 @@ async function bootstrap(): Promise<void> {
   const mEditor = editor.getEditor();
   mEditor?.onDidChangeModelContent(() => {
     updateWordCount();
+    // Showing a file's own content is not an edit; saving it back rewrote the file on every open.
+    if (isLoadingFile) return;
     toolbar.setSavedStatus("saving");
     if (saveTimer) window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(flushSave, SAVE_DEBOUNCE_MS);
