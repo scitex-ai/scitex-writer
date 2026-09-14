@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# File: tests/scitex_writer/_django/test_editor_narrow_and_dock.py
+# File: tests/scitex_writer/_django/test_views_editor_narrow_and_dock.py
 
 """Editor-v2 at phone width, under the hub dock, and on file open.
 
