@@ -2,6 +2,7 @@
   "name": "writer_app",
   "slug": "writer",
   "label": "Writer",
+  "scope": "project",
   "pip_package": "scitex-writer",
   "icon": "fas fa-file-alt",
   "subtitle": "LaTeX manuscript editor with PDF preview and verifiable claims",
