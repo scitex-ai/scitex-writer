@@ -6,6 +6,7 @@
 """Utility functions for SciTeX Writer MCP handlers."""
 
 import subprocess
+import time
 from pathlib import Path
 
 
@@ -44,6 +45,8 @@ def run_compile_script(
         EXIT_PROMOTED_WITH_WARNINGS,
         _doc_latex_log,
     )
+    from .._compile._diagnostics import diagnose_compile, diagnose_exception
+    from .._compile._diagnostics._rules import MISSING_COMPILE_SCRIPT_HINT
     from .._compile._event_log import (
         EVENT_ATTEMPT,
         EVENT_FAILURE,
@@ -96,6 +99,9 @@ def run_compile_script(
         return {
             "success": False,
             "error": error,
+            "diagnostics": diagnose_exception(
+                error, cause="missing-file", hint=MISSING_COMPILE_SCRIPT_HINT
+            ),
         }
 
     # Build command
@@ -125,6 +131,8 @@ def run_compile_script(
     if engine:
         env["SCITEX_WRITER_ENGINE"] = engine
 
+    # One second of slack: some filesystems store mtimes at 1 s resolution.
+    started_at = time.time() - 1.0
     try:
         result = subprocess.run(
             cmd,
@@ -148,6 +156,16 @@ def run_compile_script(
         )
         stderr_tail = (
             result.stderr[-2_000:] if len(result.stderr) > 2_000 else result.stderr
+        )
+
+        diagnostics = diagnose_compile(
+            project_dir,
+            doc_type,
+            exit_code=result.returncode,
+            compile_failed=result.returncode != 0,
+            stdout=result.stdout,
+            stderr=result.stderr,
+            started_at=started_at,
         )
 
         promoted_pdf_pages = (
@@ -176,6 +194,7 @@ def run_compile_script(
                 "stderr": stderr_tail,
                 "warnings": [warning],
                 "message": f"{doc_type.title()} compiled WITH WARNINGS",
+                "diagnostics": diagnostics,
             }
         if result.returncode == 0:
             record_event(
@@ -196,6 +215,7 @@ def run_compile_script(
                 "exit_code": result.returncode,
                 "stdout": stdout_tail,
                 "message": f"{doc_type.title()} compiled successfully",
+                "diagnostics": diagnostics,
             }
         else:
             error = f"Compilation failed with exit code {result.returncode}"
@@ -217,9 +237,10 @@ def run_compile_script(
                 "stdout": stdout_tail,
                 "stderr": stderr_tail,
                 "error": error,
+                "diagnostics": diagnostics,
             }
 
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as expired:
         error = f"Compilation timed out after {timeout} seconds"
         record_event(
             project_dir,
@@ -234,6 +255,16 @@ def run_compile_script(
         return {
             "success": False,
             "error": error,
+            "diagnostics": diagnose_compile(
+                project_dir,
+                doc_type,
+                exit_code=None,
+                compile_failed=True,
+                stdout=_as_text(expired.stdout),
+                stderr=_as_text(expired.stderr),
+                started_at=started_at,
+                timed_out_after_seconds=timeout,
+            ),
         }
     except Exception as e:
         record_event(
@@ -248,7 +279,14 @@ def run_compile_script(
         return {
             "success": False,
             "error": str(e),
+            "diagnostics": diagnose_exception(e),
         }
+
+
+def _as_text(output: bytes | str | None) -> str:
+    if isinstance(output, bytes):
+        return output.decode("utf-8", "replace")
+    return output or ""
 
 
 __all__ = ["resolve_project_path", "run_compile_script"]

@@ -87,8 +87,10 @@ def test_the_scitex_dev_floor_carries_the_public_name_promise():
     # Arrange
     data = tomllib.loads((_ROOT / "pyproject.toml").read_text())
     # Act
-    pins = [
-        req for req in data["project"]["dependencies"] if req.startswith("scitex-dev")
+    floors = [
+        tuple(int(part) for part in req.split(">=")[1].split("."))
+        for req in data["project"]["dependencies"]
+        if req.startswith("scitex-dev>=")
     ]
-    # Assert
-    assert pins == ["scitex-dev>=0.30.0"]
+    # Assert (later features may raise the floor, never below the public name)
+    assert len(floors) == 1 and floors[0] >= (0, 30, 0)
