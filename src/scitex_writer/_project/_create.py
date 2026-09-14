@@ -18,8 +18,20 @@ from typing import Callable, Optional
 
 logger = getLogger(__name__)
 
-# Template repository URL
-TEMPLATE_REPO_URL = "https://github.com/ywatanabe1989/scitex-writer.git"
+# Template repository URL.
+#
+# canonical source of truth is the scitex-ai org (where releases land), NOT the
+# historical personal repo. A workspace is a full clone of this template, so the
+# clone's scripts/ must match the installed package; the vendored-script
+# refresh (scitex_writer._vendored_scripts) also overwrites any stale clone
+# from the installed package on load, so this URL is the fresh-workspace SSOT
+# and the refresh is the self-heal for existing ones.
+TEMPLATE_REPO_URL = "https://github.com/scitex-ai/scitex-writer.git"
+
+# The template's default branch when no branch/tag is given. develop is the
+# canonical source branch; releases cut tags from it, so a fresh clone tracks
+# the latest merged fixes (the refresh keeps the workspace in step regardless).
+DEFAULT_TEMPLATE_BRANCH = "develop"
 
 
 def clone_writer_project(
@@ -67,6 +79,11 @@ def clone_writer_project(
             cmd.extend(["--branch", branch])
         elif tag:
             cmd.extend(["--branch", tag])
+        else:
+            # No explicit branch/tag: clone the canonical default branch
+            # (develop) rather than the repo's default (historically main),
+            # so a fresh workspace tracks the latest merged fixes.
+            cmd.extend(["--branch", DEFAULT_TEMPLATE_BRANCH])
 
         cmd.extend([TEMPLATE_REPO_URL, str(project_path)])
 
@@ -172,6 +189,11 @@ def ensure_project_exists(
     return project_dir
 
 
-__all__ = ["ensure_project_exists", "clone_writer_project"]
+__all__ = [
+    "DEFAULT_TEMPLATE_BRANCH",
+    "TEMPLATE_REPO_URL",
+    "clone_writer_project",
+    "ensure_project_exists",
+]
 
 # EOF

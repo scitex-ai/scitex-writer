@@ -41,8 +41,10 @@ was trusted most.
 
 from __future__ import annotations
 
+import hashlib
+import shutil
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 __all__ = [
     "WORKSPACE_RELPATH",
@@ -54,6 +56,9 @@ __all__ = [
     "is_workspace",
     "resolve_workspace",
     "NotAWriterWorkspaceError",
+    "package_scripts_dir",
+    "vendored_script_sha256",
+    "refresh_vendored_scripts",
 ]
 
 PathLike = Union[str, Path]
@@ -252,6 +257,121 @@ class NotAWriterWorkspaceError(ValueError):
     workspace itself. Carries a message naming both the given path and the
     expected workspace, so the failure reads as a root-vs-workspace
     explanation rather than a bare ``FileNotFoundError``."""
+
+
+# ---------------------------------------------------------------------------
+# Vendored-scripts refresh: keep a workspace's package-owned scripts/ in step
+# with the INSTALLED package. A workspace is a full clone of the template, so
+# it carries its own scripts/shell/... which would otherwise stay stale forever
+# (2026-09-14 hub live repro: workspace check_dependancy_commands.sh = old hash
+# c78358d5 while the installed package carried the new conditional check
+# 796ca4da). The refresh overwrites those scripts from the installed package.
+# ---------------------------------------------------------------------------
+
+
+def _installed_version() -> str:
+    import scitex_writer
+
+    return str(scitex_writer.__version__)
+
+
+def package_scripts_dir() -> Optional[Path]:
+    """The installed package's canonical ``scripts/`` directory (or ``None``).
+
+    Resolves for both install modes:
+
+    * wheel  — ``pyproject`` force-includes the repo ``scripts/`` as
+      ``scitex_writer/scripts``, so ``<package>/scripts`` exists;
+    * editable — the package lives in the repo, so the repo-root ``scripts/``
+      (``<package>.parent.parent/scripts``) exists.
+
+    The hub's dev container is an editable install, so refresh is effective
+    there immediately without a rebuild; a wheel install picks it up once the
+    force-include is in the released wheel.
+    """
+    import scitex_writer
+
+    pkg = Path(scitex_writer.__file__).resolve().parent
+    candidates = [pkg / "scripts", pkg.parents[1] / "scripts"]
+    for candidate in candidates:
+        try:
+            if (candidate / "shell").is_dir():
+                return candidate
+        except OSError:
+            continue
+    return None
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def vendored_script_sha256(workspace: Path, relpath: str) -> Optional[str]:
+    """sha256 of a workspace's vendored script at ``relpath`` (or ``None``)."""
+    f = Path(workspace) / "scripts" / relpath
+    if not f.is_file():
+        return None
+    return _sha256(f)
+
+
+def refresh_vendored_scripts(
+    workspace: Path,
+    scripts_dir: Optional[Path] = None,
+) -> list[Path]:
+    """Overwrite a workspace's package-owned ``scripts/`` from the installed
+    package, gated on the installed version. Idempotent.
+
+    Fast path: a marker file (``<workspace>/scripts/.scitex_writer_scripts_
+    version``) records the installed version the scripts were last synced
+    against. If it equals the installed ``__version__``, nothing is touched.
+    On a version change (or a fresh workspace with no marker), every installed
+    ``scripts/`` file is hash-compared against its workspace copy and the
+    missing/differing ones overwritten; the marker is then set.
+
+    Only ``<workspace>/scripts/...`` is read or written — the user's
+    ``01_manuscript/`` and ``00_shared/`` content is never touched. Returns the
+    list of files written (empty when already in sync).
+
+    Parameters
+    ----------
+    workspace:
+        The writer workspace (the dir that contains ``scripts/``,
+        ``00_shared/``, ``compile.sh``, ...).
+    scripts_dir:
+        Explicit source ``scripts/`` dir. Defaults to
+        :func:`package_scripts_dir` (the installed package). Injectable so
+        tests can point at a fixture without touching the real package.
+    """
+    if scripts_dir is None:
+        scripts_dir = package_scripts_dir()
+    if scripts_dir is None:
+        return []
+    scripts_dir = Path(scripts_dir)
+    ws_scripts = Path(workspace) / "scripts"
+    if not ws_scripts.is_dir():
+        return []
+
+    installed = _installed_version()
+    marker = ws_scripts / ".scitex_writer_scripts_version"
+    if marker.is_file() and marker.read_text().strip() == installed:
+        return []
+
+    written: list[Path] = []
+    for src_file in sorted(p for p in scripts_dir.rglob("*") if p.is_file()):
+        rel = src_file.relative_to(scripts_dir)
+        dst_file = ws_scripts / rel
+        src_hash = _sha256(src_file)
+        if not dst_file.is_file() or _sha256(dst_file) != src_hash:
+            dst_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src_file, dst_file)
+            written.append(dst_file)
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(installed + "\n")
+    return written
 
 
 # EOF

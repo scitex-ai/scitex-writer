@@ -20,6 +20,7 @@ path that does not exist — which is exactly how full compilation shipped dead
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -33,7 +34,9 @@ from scitex_writer.workspace_layout import (
     compile_script,
     compile_script_relpath,
     is_workspace,
+    refresh_vendored_scripts,
     resolve_workspace,
+    vendored_script_sha256,
     workspace_dir,
 )
 
@@ -409,6 +412,159 @@ def test_is_workspace_distinguishes_workspace_from_root(tmp_path: Path):
     ws_is_ws = is_workspace(ws)
     # Assert: the root is not a workspace; the workspace is
     assert ws_is_ws is True and root_is_ws is False
+
+
+# ---------------------------------------------------------------------------
+# Vendored-scripts refresh (2.43.x): a workspace's package-owned scripts/ must
+# match the installed package. A workspace is a full template clone and would
+# otherwise keep stale scripts forever (2026-09-14 hub live repro: workspace
+# check_dependancy_commands.sh = old hash while the installed package carried
+# the new conditional check). Deterministic: builds a fixture source scripts/
+# and points refresh_vendored_scripts at it — no live git clone.
+# ---------------------------------------------------------------------------
+
+_VS_MARKER = ".scitex_writer_scripts_version"
+_VS_CHECK = "shell/modules/check_dependancy_commands.sh"
+
+
+def _vs_installed_version() -> str:
+    import scitex_writer
+
+    return str(scitex_writer.__version__)
+
+
+def _vs_make_source(root: Path, check_content: str) -> Path:
+    src = root / "src-scripts"
+    (src / "shell" / "modules").mkdir(parents=True)
+    (src / "shell" / "compile.sh").write_text("#!/bin/bash\nexit 0\n")
+    (src / _VS_CHECK).write_text(check_content)
+    return src
+
+
+def _vs_make_workspace(root: Path, check_content: str, marker: str | None) -> Path:
+    ws = root / "workspace"
+    (ws / "scripts" / "shell" / "modules").mkdir(parents=True)
+    (ws / "scripts" / "compile.sh").write_text("#!/bin/bash\nexit 0\n")
+    (ws / "scripts" / _VS_CHECK).write_text(check_content)
+    (ws / "01_manuscript").mkdir()  # user content — must never be touched
+    (ws / "01_manuscript" / "paper.tex").write_text("\\documentclass{article}\n")
+    if marker is not None:
+        (ws / "scripts" / _VS_MARKER).write_text(marker + "\n")
+    return ws
+
+
+_OLD_CHECK = "OLD TEMPLATE check_dependancy_commands.sh (c78358d5)\n"
+_NEW_CHECK = "NEW PACKAGE check_dependancy_commands.sh (796ca4da)\n"
+
+
+def test_refresh_vendored_scripts_fresh_workspace_gets_the_package_check_hash(
+    tmp_path: Path,
+):
+    # Arrange: source = the installed package scripts; workspace = a fresh
+    # clone that still carries the OLD check (the hub's probe shape).
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert: the workspace's check now hashes to the package's check.
+    assert vendored_script_sha256(ws, _VS_CHECK) == hashlib.sha256(
+        (src / _VS_CHECK).read_bytes()
+    ).hexdigest()
+
+
+def test_refresh_vendored_scripts_fresh_workspace_leaves_user_content_untouched(
+    tmp_path: Path,
+):
+    # Arrange
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    user_before = (ws / "01_manuscript" / "paper.tex").read_text()
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert: the user's manuscript content is byte-identical (never touched)
+    assert user_before == (ws / "01_manuscript" / "paper.tex").read_text()
+
+
+def test_refresh_vendored_scripts_fresh_workspace_reports_the_written_file(
+    tmp_path: Path,
+):
+    # Arrange
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    # Act
+    written = refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert
+    assert any(p.name == "check_dependancy_commands.sh" for p in written)
+
+
+def test_refresh_vendored_scripts_reheals_marker_on_version_change(tmp_path: Path):
+    # Arrange: workspace in sync at an OLD version marker; package now newer.
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker="2.0.0")
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert: the marker now records the installed version
+    assert (
+        ws / "scripts" / _VS_MARKER
+    ).read_text().strip() == _vs_installed_version()
+
+
+def test_refresh_vendored_scripts_reheals_check_hash_on_version_change(
+    tmp_path: Path,
+):
+    # Arrange
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker="2.0.0")
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert: the stale check was overwritten with the package's hash
+    assert vendored_script_sha256(ws, _VS_CHECK) == hashlib.sha256(
+        (src / _VS_CHECK).read_bytes()
+    ).hexdigest()
+
+
+def test_refresh_vendored_scripts_in_sync_workspace_is_a_noop(tmp_path: Path):
+    # Arrange: workspace already matches source AND marker == installed version.
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _NEW_CHECK, marker=_vs_installed_version())
+    # Act
+    written = refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert
+    assert written == []
+
+
+def test_refresh_vendored_scripts_second_pass_is_a_noop(tmp_path: Path):
+    # Arrange
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    # Act: refresh twice; the second pass is the assertion target.
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    second = refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert
+    assert second == []
+
+
+def test_refresh_vendored_scripts_first_pass_heals(tmp_path: Path):
+    # Arrange
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    # Act
+    written = refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert: the first pass wrote at least one file
+    assert len(written) >= 1
+
+
+def test_refresh_vendored_scripts_on_workspace_without_scripts_is_noop(
+    tmp_path: Path,
+):
+    # Arrange: a bare dir with no scripts/ subdir yet.
+    ws = tmp_path / "bare"
+    ws.mkdir()
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    # Act
+    written = refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert
+    assert written == []
 
 
 # EOF
