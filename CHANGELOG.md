@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.0] - 2026-09-14
+
+### Added
+- **`workspace_layout.resolve_workspace(project_dir)` + `is_workspace(path)` + `NotAWriterWorkspaceError`** — the leaf-owned, tolerant PROJECT-ROOT→WORKSPACE resolver (scitex-hub leaf-v2 contract, 2026-09-14). A path that is a root maps to its `.scitex/writer`; a path that already is a workspace is used as-is; a non-writer directory raises a named error that names BOTH the path given and the workspace expected, instead of a bare `FileNotFoundError` downstream.
+
+### Fixed
+- **Compile from a project ROOT no longer fails.** The hub's leaf-v2 mount (`WorkingDirScopedView`) hands the writer the project root, but the compile handlers composed `root/00_shared/...` and `root/compile.sh` literally — so a root (which holds `.scitex/writer/`, not `00_shared/`) died with `FileNotFoundError` on the default/example project (PR #389, cards blocker #2). Each compile entry now maps the given path through `resolve_workspace(resolve_project_path(dir))`. The legacy hub path (which passes the workspace) is unaffected — no double-nest. `resolve_project_path` is unchanged: `clone_project`/`update_project` still take the raw root.
+
+
 ### Changed
 - **CI adopts the canonical `ci.yml` caller, replacing the six hand-written per-workflow callers added earlier today.** Both shapes call the same org reusables; only one is the sanctioned shape. `main` already carried the canonical form — "the ONE per-repo shape", rendered by `scitex-dev ecosystem ci-template apply` per an operator decision of 2026-07-21 — while `develop` had my hand-rolled granular files. That divergence is what made the develop→main promotion PR unmergeable: three of the granular files were *deleted in main and modified in develop*, which no automatic merge can resolve.
 
