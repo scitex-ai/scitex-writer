@@ -21,6 +21,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   directory raises the named `NotAWriterWorkspaceError` (mapped to a clean 400 in the view),
   and `remove_project` is consistent with the workspace cache key.
 
+- **`compile.sh` no longer hard-fails on `xlsx2csv`/`csv2latex` for a table-less manuscript.**
+  Those tools are only required when the manuscript actually contains xlsx/csv table sources
+  (`01_manuscript/.../*.xlsx|xls|csv`). A default manuscript has none, so a fresh env missing
+  the two pip tools no longer refuses every compile with
+  `ERRO: Missing required tools: - xlsx2csv - csv2latex` (2026-09-14 hub live repro on
+  develop 34c6c9fc: pdflatex/latexmk present, xlsx2csv/csv2latex absent, doc table-less).
+  The same guard applies to `csv2latex`.
+
+- **`compile.sh` dependency-check failures now land on STDERR.**
+  The `ERRO: Missing required tools:` header and the per-tool install hints were going to stdout
+  before, so `run_compile_script` captured `stderr_tail: null` and the API surfaced only
+  `Compilation failed with exit code 1` — the cause was invisible in the UI. Both are now
+  routed to stderr so the UI can show them.
+
 ### Added
 
 - Load-point unit tests (`test_services.py`) and end-to-end `api/compile` tests (`test_views.py`)
