@@ -269,12 +269,6 @@ class NotAWriterWorkspaceError(ValueError):
 # ---------------------------------------------------------------------------
 
 
-def _installed_version() -> str:
-    import scitex_writer
-
-    return str(scitex_writer.__version__)
-
-
 def package_scripts_dir() -> Optional[Path]:
     """The installed package's canonical ``scripts/`` directory (or ``None``).
 
@@ -318,19 +312,53 @@ def vendored_script_sha256(workspace: Path, relpath: str) -> Optional[str]:
     return _sha256(f)
 
 
+_SCRIPTS_SENTINEL = ".scitex_writer_scripts_version"
+_SCRIPTS_KEY_FILE = "shell/modules/check_dependancy_commands.sh"
+
+
+def _source_sentinel_hash(scripts_dir: Path) -> str:
+    """Content hash identifying the installed package's ``scripts/``.
+
+    Hashes the key file (``check_dependancy_commands.sh``) when present — the
+    exact file the 2026-09-14 hub repro showed going stale — falling back to an
+    aggregate over the whole tree if the key file is renamed/absent, so the
+    sentinel is always stable and content-dependent. Deliberately NOT the
+    installed ``__version__``: the hub's editable dev container reports a stale
+    version (2.43.0) even at current code, so a version marker would never fire
+    for a script change that didn't bump the version.
+    """
+    key = scripts_dir / _SCRIPTS_KEY_FILE
+    if key.is_file():
+        return _sha256(key)
+    h = hashlib.sha256()
+    for p in sorted(f for f in scripts_dir.rglob("*") if f.is_file()):
+        h.update(str(p.relative_to(scripts_dir)).encode("utf-8"))
+        h.update(b"\0")
+        h.update(_sha256(p).encode("ascii"))
+        h.update(b"\0")
+    return h.hexdigest()
+
+
 def refresh_vendored_scripts(
     workspace: Path,
     scripts_dir: Optional[Path] = None,
 ) -> list[Path]:
     """Overwrite a workspace's package-owned ``scripts/`` from the installed
-    package, gated on the installed version. Idempotent.
+    package, gated on the scripts' content hash. Idempotent.
 
     Fast path: a marker file (``<workspace>/scripts/.scitex_writer_scripts_
-    version``) records the installed version the scripts were last synced
-    against. If it equals the installed ``__version__``, nothing is touched.
-    On a version change (or a fresh workspace with no marker), every installed
-    ``scripts/`` file is hash-compared against its workspace copy and the
-    missing/differing ones overwritten; the marker is then set.
+    version``) stores the content hash the workspace was last synced against.
+    If it equals :func:`_source_sentinel_hash` of the installed scripts, the
+    workspace is in step and nothing is touched. On a mismatch — a fresh
+    workspace, a script change, or an OLD marker (a version string from the
+    pre-hash gate) — every installed ``scripts/`` file is hash-compared against
+    its workspace copy and the missing/differing ones overwritten; the marker
+    is then set to the new content hash.
+
+    Gating on the content hash (not ``__version__``) makes this robust to a
+    stale version readout: the hub's editable dev container reports
+    ``__version__`` 2.43.0 even at current code, so a version marker could
+    never detect a script that changed without a version bump.
 
     Only ``<workspace>/scripts/...`` is read or written — the user's
     ``01_manuscript/`` and ``00_shared/`` content is never touched. Returns the
@@ -355,9 +383,9 @@ def refresh_vendored_scripts(
     if not ws_scripts.is_dir():
         return []
 
-    installed = _installed_version()
-    marker = ws_scripts / ".scitex_writer_scripts_version"
-    if marker.is_file() and marker.read_text().strip() == installed:
+    sentinel = _source_sentinel_hash(scripts_dir)
+    marker = ws_scripts / _SCRIPTS_SENTINEL
+    if marker.is_file() and marker.read_text().strip() == sentinel:
         return []
 
     written: list[Path] = []
@@ -370,7 +398,7 @@ def refresh_vendored_scripts(
             shutil.copy2(src_file, dst_file)
             written.append(dst_file)
     marker.parent.mkdir(parents=True, exist_ok=True)
-    marker.write_text(installed + "\n")
+    marker.write_text(sentinel + "\n")
     return written
 
 

@@ -47,6 +47,22 @@ def run_compile_script(
         new_attempt_id,
         record_event,
     )
+    from ..workspace_layout import refresh_vendored_scripts
+
+    # Self-heal the workspace's vendored scripts from the INSTALLED package
+    # before the engine runs. A workspace is a full template clone that would
+    # otherwise keep stale scripts forever (2026-09-14 hub repro: an EXISTING
+    # workspace — created before the fix — carried the OLD
+    # check_dependancy_commands.sh, so the conditional dep-check never reached
+    # the compile and it refused on xlsx2csv/csv2latex). run_compile_script is
+    # the single choke point every compile (MCP handler AND the _django editor
+    # path) flows through, so healing here covers fresh and existing workspaces
+    # alike. Idempotent + version-gated: a no-op when already in step; touches
+    # only <workspace>/scripts/..., never user content.
+    try:
+        refresh_vendored_scripts(project_dir)
+    except Exception:  # pragma: no cover - defensive: never block a compile
+        pass
 
     compile_script = project_dir / "compile.sh"
     attempt_id = new_attempt_id()

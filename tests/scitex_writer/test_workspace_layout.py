@@ -427,10 +427,13 @@ _VS_MARKER = ".scitex_writer_scripts_version"
 _VS_CHECK = "shell/modules/check_dependancy_commands.sh"
 
 
-def _vs_installed_version() -> str:
-    import scitex_writer
+def _vs_source_sentinel(src: Path) -> str:
+    """The content-hash the source's key file hashes to (what the marker holds).
 
-    return str(scitex_writer.__version__)
+    Mirrors ``workspace_layout._source_sentinel_hash``: since ``_VS_CHECK`` is
+    the key file, the sentinel is simply its sha256.
+    """
+    return hashlib.sha256((src / _VS_CHECK).read_bytes()).hexdigest()
 
 
 def _vs_make_source(root: Path, check_content: str) -> Path:
@@ -497,24 +500,26 @@ def test_refresh_vendored_scripts_fresh_workspace_reports_the_written_file(
     assert any(p.name == "check_dependancy_commands.sh" for p in written)
 
 
-def test_refresh_vendored_scripts_reheals_marker_on_version_change(tmp_path: Path):
-    # Arrange: workspace in sync at an OLD version marker; package now newer.
+def test_refresh_vendored_scripts_reheals_marker_on_source_change(tmp_path: Path):
+    # Arrange: workspace synced to an OLD source (marker = OLD source hash); the
+    # installed package's source is now different. The hash gate must fire even
+    # though __version__ never changed (the hub's stale-2.43.0 readout).
     src = _vs_make_source(tmp_path, _NEW_CHECK)
-    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker="2.0.0")
+    old_src = _vs_make_source(tmp_path / "old", _OLD_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=_vs_source_sentinel(old_src))
     # Act
     refresh_vendored_scripts(ws, scripts_dir=src)
-    # Assert: the marker now records the installed version
-    assert (
-        ws / "scripts" / _VS_MARKER
-    ).read_text().strip() == _vs_installed_version()
+    # Assert: the marker now records the CURRENT source's content hash
+    assert (ws / "scripts" / _VS_MARKER).read_text().strip() == _vs_source_sentinel(src)
 
 
-def test_refresh_vendored_scripts_reheals_check_hash_on_version_change(
+def test_refresh_vendored_scripts_reheals_check_hash_on_source_change(
     tmp_path: Path,
 ):
     # Arrange
     src = _vs_make_source(tmp_path, _NEW_CHECK)
-    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker="2.0.0")
+    old_src = _vs_make_source(tmp_path / "old", _OLD_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=_vs_source_sentinel(old_src))
     # Act
     refresh_vendored_scripts(ws, scripts_dir=src)
     # Assert: the stale check was overwritten with the package's hash
@@ -524,13 +529,31 @@ def test_refresh_vendored_scripts_reheals_check_hash_on_version_change(
 
 
 def test_refresh_vendored_scripts_in_sync_workspace_is_a_noop(tmp_path: Path):
-    # Arrange: workspace already matches source AND marker == installed version.
+    # Arrange: workspace already matches source AND marker == source sentinel.
     src = _vs_make_source(tmp_path, _NEW_CHECK)
-    ws = _vs_make_workspace(tmp_path, _NEW_CHECK, marker=_vs_installed_version())
+    ws = _vs_make_workspace(tmp_path, _NEW_CHECK, marker=_vs_source_sentinel(src))
     # Act
     written = refresh_vendored_scripts(ws, scripts_dir=src)
     # Assert
     assert written == []
+
+
+def test_refresh_vendored_scripts_existing_old_workspace_with_legacy_marker_self_heals(
+    tmp_path: Path,
+):
+    # Arrange: the hub's exact repro — an EXISTING workspace created before the
+    # fix, carrying the OLD check_dependancy_commands.sh and a legacy VERSION-
+    # STRING marker (e.g. "2.43.0") from the pre-hash gate. The version string
+    # is NOT the current source content hash, so the hash gate must fire and the
+    # stale script must be replaced even though __version__ reads 2.43.0.
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker="2.43.0")
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert: the workspace now carries the PACKAGE's check hash (self-healed)
+    assert vendored_script_sha256(ws, _VS_CHECK) == hashlib.sha256(
+        (src / _VS_CHECK).read_bytes()
+    ).hexdigest()
 
 
 def test_refresh_vendored_scripts_second_pass_is_a_noop(tmp_path: Path):
