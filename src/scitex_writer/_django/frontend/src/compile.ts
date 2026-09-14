@@ -4,6 +4,12 @@
  */
 
 import { apiPost, apiGet } from "./api";
+import {
+  type CompileDiagnostics,
+  type JumpToLocation,
+  renderCompileDiagnostics,
+} from "./compile-diagnostics";
+import { diagnosticsTranslate as t } from "./compile-diagnostics-i18n";
 import type { PDFViewer } from "./pdf-viewer";
 
 export type CompileMode = "preview" | "full";
@@ -11,7 +17,12 @@ export type LampStatus = "idle" | "compiling" | "ok" | "error";
 
 interface CompileStatusResponse {
   compiling: boolean;
-  result: { success?: boolean; error?: string; log?: string } | null;
+  result: {
+    success?: boolean;
+    error?: string;
+    log?: string;
+    diagnostics?: CompileDiagnostics;
+  } | null;
   log: string;
 }
 
@@ -19,6 +30,11 @@ interface CompileOptions {
   lamp: HTMLElement | null;
   logContent: HTMLElement | null;
   logPanel: HTMLElement | null;
+  logTitle?: HTMLElement | null;
+  diagnosticsContent?: HTMLElement | null;
+  fullLogToggleBtn?: HTMLElement | null;
+  /** Reveal a diagnostic's file:line in the editor. */
+  onJumpToLocation?: JumpToLocation;
   toggleLogBtn: HTMLElement | null;
   closeLogBtn: HTMLElement | null;
   compileBtn: HTMLElement | null;
@@ -55,6 +71,10 @@ export class CompileController {
       this.setLogOpen(false),
     );
     this.opts.modeToggleBtn?.addEventListener("click", () => this.toggleMode());
+    this.opts.fullLogToggleBtn?.addEventListener("click", () =>
+      this.setFullLogVisible(this.fullLogHidden()),
+    );
+    if (this.opts.logTitle) this.opts.logTitle.textContent = t("panelTitle");
     window.addEventListener("keydown", (event) => {
       if (
         (event.ctrlKey || event.metaKey) &&
@@ -72,6 +92,7 @@ export class CompileController {
     const docType = this.opts.getDocType();
     this.updateLamp("compiling");
     this.setLog("");
+    this.showDiagnostics(null, true);
     try {
       const { effectivePdfDarkMode } = await import("./pdf-theme");
       await apiPost("api/compile", {
@@ -81,9 +102,35 @@ export class CompileController {
       });
       this.pollStatus(docType);
     } catch (err) {
-      this.setLog(String(err));
-      this.updateLamp("error");
+      this.showRequestFailure(err);
     }
+  }
+
+  /** A compile request that never reached the engine still explains itself. */
+  private showRequestFailure(err: unknown): void {
+    const message = String(err);
+    this.setLog(message);
+    this.updateLamp("error");
+    this.showDiagnostics(
+      {
+        status: { kind: "scitex", code: "request-failed", message },
+        report: { package: "scitex-writer", ok: false, checks: [], summary: message },
+        items: [
+          {
+            cause: "unknown",
+            severity: "error",
+            message: t("requestFailed", { error: message }),
+            hint: t("requestFailedHint"),
+            context: "",
+            file: null,
+            line: null,
+          },
+        ],
+        log_path: null,
+      },
+      false,
+    );
+    this.setLogOpen(true);
   }
 
   private pollStatus(docType: string): void {
@@ -99,12 +146,16 @@ export class CompileController {
         }
         const success = status.result?.success ?? false;
         this.updateLamp(success ? "ok" : "error");
-        if (success) {
-          await this.opts.pdf.load(docType);
-        } else if (status.result?.error) {
+        if (!status.log && status.result?.error) {
           this.setLog(status.result.error);
-          this.setLogOpen(true);
         }
+        const diagnostics = status.result?.diagnostics;
+        this.showDiagnostics(diagnostics, success);
+        const hasErrors = (diagnostics?.items ?? []).some(
+          (item) => item.severity === "error",
+        );
+        if (!success || hasErrors) this.setLogOpen(true);
+        if (success) await this.opts.pdf.load(docType);
         for (const cb of this.afterCompileListeners) {
           try {
             cb(success);
@@ -113,8 +164,7 @@ export class CompileController {
           }
         }
       } catch (err) {
-        this.setLog(String(err));
-        this.updateLamp("error");
+        this.showRequestFailure(err);
       }
     };
     this.polling = window.setTimeout(tick, 400);
@@ -136,6 +186,34 @@ export class CompileController {
       lamp.title = title;
     }
     this.opts.onStatusChange?.(this.mode, status);
+  }
+
+  /** Render the diagnostics list; the raw log stays behind "Show full log". */
+  private showDiagnostics(
+    diagnostics: CompileDiagnostics | null | undefined,
+    success: boolean,
+  ): void {
+    const container = this.opts.diagnosticsContent;
+    if (!container) return;
+    const shown = renderCompileDiagnostics(container, diagnostics, {
+      success,
+      onJump: this.opts.onJumpToLocation,
+    });
+    container.classList.toggle("u-hidden", shown === 0);
+    this.setFullLogVisible(shown === 0);
+  }
+
+  private fullLogHidden(): boolean {
+    return this.opts.logContent?.classList.contains("u-hidden") ?? false;
+  }
+
+  private setFullLogVisible(visible: boolean): void {
+    this.opts.logContent?.classList.toggle("u-hidden", !visible);
+    const button = this.opts.fullLogToggleBtn;
+    if (button) {
+      button.textContent = visible ? t("hideFullLog") : t("showFullLog");
+      button.setAttribute("aria-expanded", String(visible));
+    }
   }
 
   private setLog(text: string): void {

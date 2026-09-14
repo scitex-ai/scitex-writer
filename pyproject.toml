@@ -41,15 +41,13 @@ classifiers = [
 dependencies = [
     "click>=8.0",
     "fastmcp>=2.0.0",
-    # FLOOR IS 0.30.0, not 0.11.7: `_cli/commands/__init__.py` imports
-    # `attach_shell_completion` from the PUBLIC `scitex_dev.cli` (in its
-    # __all__, behind a lazy re-export) rather than the private
-    # `_cli._completion`. That public name does not exist on older releases,
-    # and the import is deliberately UNGUARDED — scitex-dev is a hard
-    # dependency, so a guard would swallow a real breakage rather than cover a
-    # missing optional. Below this floor the CLI fails to import at all, which
-    # is why the floor has to carry the promise instead of a try/except.
-    "scitex-dev>=0.30.0",
+    # FLOOR IS 0.48.0: compile diagnostics (_compile/_diagnostics/_report.py)
+    # publish a `scitex_dev.status` Check/Report, first shipped in 0.48.0.
+    # (0.30.0 was the earlier floor for the public `scitex_dev.cli`
+    # `attach_shell_completion` import.) The imports are deliberately
+    # UNGUARDED — scitex-dev is a hard dependency, so a guard would swallow a
+    # real breakage rather than cover a missing optional.
+    "scitex-dev>=0.48.0",
     # The compile event log (_compile/_event_log.py) emits every attempt /
     # refusal / failure / success through scitex_logging.getLogger so the
     # records join whatever sink the host configured, in addition to the

@@ -30,8 +30,27 @@ def _refuse(project, reason: str, doc_type, detail: str) -> None:
     )
 
 
+MAX_FULL_LOG_CHARS = 400_000
+
+
+def _full_log_text(project, result: dict) -> str:
+    """The console output plus the LaTeX log, for the editor's "Show full log"."""
+    parts = [result.get("stdout") or "", result.get("stderr") or ""]
+    log_path = (result.get("diagnostics") or {}).get("log_path")
+    if log_path:
+        try:
+            parts.append((project.project_dir / log_path).read_text(errors="replace"))
+        except OSError:
+            pass
+    if not any(parts):
+        parts.append(result.get("error") or "")
+    text = "\n".join(part for part in parts if part)
+    return text[-MAX_FULL_LOG_CHARS:]
+
+
 def _do_compile(project, doc_type: str, draft: bool, dark_mode: bool) -> None:
     from scitex_writer import compile as sw_compile
+    from scitex_writer._compile._diagnostics import diagnose_exception
     from scitex_writer._compile._event_log import EVENT_FAILURE, record_event
 
     project_str = str(project.project_dir)
@@ -46,11 +65,17 @@ def _do_compile(project, doc_type: str, draft: bool, dark_mode: bool) -> None:
         else:
             error = f"Unknown doc_type: {doc_type}"
             _refuse(project, "bad-request", doc_type, error)
-            result = {"success": False, "error": error}
+            result = {
+                "success": False,
+                "error": error,
+                "diagnostics": diagnose_exception(
+                    error, hint="Choose manuscript, supplementary or revision"
+                ),
+            }
 
         project._compile_result = result
         if isinstance(result, dict):
-            project._compile_log = result.get("log", result.get("output", ""))
+            project._compile_log = result.get("log") or _full_log_text(project, result)
         else:
             project._compile_log = str(result)
     except Exception as exc:
@@ -66,7 +91,11 @@ def _do_compile(project, doc_type: str, draft: bool, dark_mode: bool) -> None:
             entry_point="django",
             detail=f"{type(exc).__name__}: {exc}",
         )
-        project._compile_result = {"success": False, "error": str(exc)}
+        project._compile_result = {
+            "success": False,
+            "error": str(exc),
+            "diagnostics": diagnose_exception(exc),
+        }
         project._compile_log = str(exc)
     finally:
         project._compiling = False

@@ -125,6 +125,12 @@ async function bootstrap(): Promise<void> {
         lamp: root.querySelector<HTMLElement>("#compile-lamp"),
         logContent: root.querySelector<HTMLElement>("#log-content"),
         logPanel: root.querySelector<HTMLElement>("#log-panel"),
+        logTitle: root.querySelector<HTMLElement>("#log-title"),
+        diagnosticsContent: root.querySelector<HTMLElement>("#log-diagnostics"),
+        fullLogToggleBtn: root.querySelector<HTMLElement>("#btn-toggle-full-log"),
+        onJumpToLocation: (file, line) => {
+          void jumpToSourceLocation(file, line);
+        },
         toggleLogBtn: root.querySelector<HTMLElement>("#btn-toggle-log"),
         closeLogBtn: root.querySelector<HTMLElement>("#btn-close-log"),
         compileBtn: root.querySelector<HTMLElement>("#btn-compile"),

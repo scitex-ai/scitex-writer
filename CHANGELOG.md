@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Every compile now explains itself (`diagnostics`).** A table-driven LaTeX log analyser
+  (`_compile/_diagnostics/`) reads the document `.log`, `.blg` and console output and returns
+  each error/warning with `file`, `line` (mapped from the flattened `manuscript.tex` back to the
+  `contents/*.tex` file the user edits), `message`, `context`, a `cause` from a closed set
+  (undefined-control-sequence, missing-package, unicode-char-not-set-up, missing-file,
+  bibtex-error, biber-error, citation-undefined, reference-undefined, runaway-argument,
+  emergency-stop, overfull-only-warning, timeout, engine-not-found, unknown) and one actionable
+  `hint`. Nothing matched still yields an `unknown` diagnostic with the last 30 meaningful log
+  lines. `run_compile_script` (MCP and the `_django` editor) adds `diagnostics` in the
+  `scitex_dev.status` shape (a Report with one Check per issue plus the exit StatusCode) to
+  every outcome; existing fields are unchanged. The editor log panel renders the list (EN/JA)
+  with file:line links that jump the editor, the hint, and a "Show full log" toggle; the status
+  `log` now carries the console output plus the LaTeX log. `scitex-dev` floor raised to 0.48.0.
+
 ## [2.43.2] - 2026-09-14
 
 ### Fixed

@@ -27,6 +27,7 @@
     <link rel="stylesheet" href="{% static 'writer/css/editor.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/editor-narrow-and-dock.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/annotations.css' %}">
+    <link rel="stylesheet" href="{% static 'writer/css/compile-diagnostics.css' %}">
 {% endblock %}
 {% block worktree_title_full %}Project files{% endblock %}
 {% block worktree_data_attrs %}data-working-dir="{{ project_dir|default:'' }}"{% endblock %}
@@ -177,10 +178,23 @@
         </div>
         <div class="log-panel u-hidden" id="log-panel">
             <div class="log-header">
-                <span>Compilation Log</span>
-                <button id="btn-close-log" class="btn btn-icon btn-sm">&times;</button>
+                <span id="log-title">Compilation Log</span>
+                <span class="log-header-actions">
+                    <button id="btn-toggle-full-log"
+                            class="btn btn-sm log-full-toggle"
+                            type="button"
+                            aria-controls="log-content"
+                            aria-expanded="true">Show full log</button>
+                    <button id="btn-close-log" class="btn btn-icon btn-sm">&times;</button>
+                </span>
             </div>
-            <pre class="log-content" id="log-content"></pre>
+            <div class="log-body">
+                <div class="compile-diagnostics u-hidden"
+                     id="log-diagnostics"
+                     role="status"
+                     aria-live="polite"></div>
+                <pre class="log-content" id="log-content"></pre>
+            </div>
         </div>
     </div>
 {% endblock %}
