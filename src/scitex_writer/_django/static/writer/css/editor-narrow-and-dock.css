@@ -1,0 +1,52 @@
+/* Writer layout at narrow widths and under the hub's fixed site dock.
+ * Loaded after editor.css; overrides only what those two contexts break.
+ */
+
+/* Narrow toolbar: wrap so Compile stays on screen. The first row is the
+   document picker and section tabs; status and actions wrap below it. */
+@media (max-width: 768px) {
+  .writer-toolbar {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .writer-toolbar-left {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .writer-section-tabs {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+  /* Never shrink below its content: squeezed, the save status slid under the compile lamp. */
+  .writer-toolbar-center {
+    flex: 1 0 auto;
+    justify-content: flex-start;
+  }
+  .writer-toolbar-right {
+    margin-left: auto;
+  }
+  /* Keyboard-only controls earn no row space on a touch screen. */
+  #font-size-select,
+  #btn-show-shortcuts,
+  .current-file {
+    display: none;
+  }
+}
+
+/* The fixed log panel sits at the viewport bottom, where the hub's site dock
+   (or the iOS home bar when standalone) would cover its last lines. */
+.writer-app .log-panel {
+  --log-panel-bottom-inset: var(
+    --site-dock-clearance,
+    env(safe-area-inset-bottom, 0px)
+  );
+  height: calc(200px + var(--log-panel-bottom-inset));
+  padding-bottom: var(--log-panel-bottom-inset);
+}
+
+/* The hub site dock already offers a way out; the shell's floating
+   "Back to Store" link would only cover the document picker. */
+body:has(> .site-dock) > .stx-shell-launcher-link {
+  display: none;
+}

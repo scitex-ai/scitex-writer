@@ -39,6 +39,11 @@ def run_compile_script(
     compile.sh is a REFUSAL (the engine was never started); everything after
     the subprocess launches is a failure or a success.
     """
+    from .._compile._artifacts import (
+        _PROMOTED_WARNING,
+        EXIT_PROMOTED_WITH_WARNINGS,
+        _doc_latex_log,
+    )
     from .._compile._event_log import (
         EVENT_ATTEMPT,
         EVENT_FAILURE,
@@ -47,6 +52,7 @@ def run_compile_script(
         new_attempt_id,
         record_event,
     )
+    from .._utils._pdf_pages import produced_page_count
     from ..workspace_layout import refresh_vendored_scripts
 
     # Self-heal the workspace's vendored scripts from the INSTALLED package
@@ -144,6 +150,33 @@ def run_compile_script(
             result.stderr[-2_000:] if len(result.stderr) > 2_000 else result.stderr
         )
 
+        promoted_pdf_pages = (
+            produced_page_count(output_pdf, _doc_latex_log(project_dir, doc_type))
+            if result.returncode == EXIT_PROMOTED_WITH_WARNINGS and pdf_present
+            else 0
+        )
+        if promoted_pdf_pages > 0:
+            warning = _PROMOTED_WARNING.format(pages=promoted_pdf_pages)
+            record_event(
+                project_dir,
+                EVENT_SUCCESS,
+                doc_type=doc_type,
+                entry_point="mcp",
+                attempt_id=attempt_id,
+                exit_code=result.returncode,
+                output_pdf=output_pdf,
+                pages=promoted_pdf_pages,
+                detail=warning,
+            )
+            return {
+                "success": True,
+                "output_pdf": str(output_pdf),
+                "exit_code": result.returncode,
+                "stdout": stdout_tail,
+                "stderr": stderr_tail,
+                "warnings": [warning],
+                "message": f"{doc_type.title()} compiled WITH WARNINGS",
+            }
         if result.returncode == 0:
             record_event(
                 project_dir,
