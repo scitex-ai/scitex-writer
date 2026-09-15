@@ -1,0 +1,31 @@
+/* Writer's project picker bar (SDK scitex_project_picker), above the panes. */
+.writer-project-scope {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 48px;
+  padding: 6px 12px;
+  border-bottom: 1px solid
+    var(--workspace-border-default, var(--border-default, #d0d7de));
+  background: var(--workspace-bg-secondary, var(--bg-secondary, #f6f8fa));
+}
+
+.writer-project-scope:not(:has(.stx-app-project-selector)) {
+  display: none;
+}
+
+.writer-project-scope + .writer-workspace {
+  min-height: 0;
+}
+
+@media (max-width: 767px) {
+  .writer-project-scope {
+    min-height: 56px;
+  }
+
+  .writer-project-scope .stx-app-project-selector {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
