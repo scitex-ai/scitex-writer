@@ -42,7 +42,7 @@ was trusted most.
 from __future__ import annotations
 
 import hashlib
-import shutil
+import os
 from pathlib import Path
 from typing import Optional, Union
 
@@ -357,6 +357,86 @@ def is_inside(child: PathLike, parent: PathLike) -> bool:
     return child_path == parent_path or parent_path in child_path.parents
 
 
+def _open_or_make_dir(parent_fd: int, name: str) -> Optional[int]:
+    """Open ``name`` under ``parent_fd`` as a directory, creating it if absent.
+
+    ``O_NOFOLLOW`` refuses a symlinked component, and ``dir_fd`` keeps every
+    lookup relative to an already-open descriptor — so a path can be swapped for
+    a link after any earlier check without redirecting this open. Returns the new
+    fd, or ``None`` when the component exists as something other than a real
+    directory (a symlink, a file) or cannot be created.
+    """
+    try:
+        return os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+    except FileNotFoundError:
+        pass
+    except OSError:
+        return None  # ELOOP (a symlink), ENOTDIR, EACCES ...
+    try:
+        os.mkdir(name, dir_fd=parent_fd)
+    except FileExistsError:
+        pass  # raced with another writer; the open below decides
+    except OSError:
+        return None
+    try:
+        return os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+    except OSError:
+        return None
+
+
+def _write_under(root: Path, rel_parts: tuple, data: bytes, mode: int = 0o644) -> bool:
+    """Write ``root/rel_parts`` with descriptor-relative, no-follow operations.
+
+    THE WRITE BOUNDARY, and the reason this is not a pathname check: a check
+    followed by ``shutil.copy2(path)`` is a race — a reviewer swapped an
+    already-checked destination parent for an external symlink in that window and
+    the copy followed it out of the workspace. Here the walk descends by
+    ``dir_fd`` with ``O_NOFOLLOW`` at EVERY component, the payload goes to a
+    temporary name through an fd obtained the same way, and the final step is
+    ``os.rename`` — which REPLACES whatever entry holds the name and never
+    follows it. An fd pins an inode, not a name, so swapping a path after this
+    point cannot redirect the write.
+
+    Returns ``True`` only when the file is in place; anything else (a symlinked
+    component, a file where a directory belongs, an I/O error) returns ``False``
+    and leaves nothing behind — callers treat that as an incomplete refresh.
+    """
+    try:
+        root_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    except OSError:
+        return False
+
+    fd = root_fd
+    try:
+        for part in rel_parts[:-1]:
+            child_fd = _open_or_make_dir(fd, part)
+            if child_fd is None:
+                return False
+            os.close(fd)
+            fd = child_fd
+        name = rel_parts[-1]
+        tmp_name = f".{name}.scitex-tmp"
+        try:
+            tmp_fd = os.open(
+                tmp_name,
+                os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW,
+                mode,
+                dir_fd=fd,
+            )
+        except OSError:
+            return False
+        try:
+            os.write(tmp_fd, data)
+        finally:
+            os.close(tmp_fd)
+        os.rename(tmp_name, name, src_dir_fd=fd, dst_dir_fd=fd)
+        return True
+    except OSError:
+        return False
+    finally:
+        os.close(fd)
+
+
 def refresh_vendored_scripts(
     workspace: Path,
     scripts_dir: Optional[Path] = None,
@@ -370,8 +450,13 @@ def refresh_vendored_scripts(
     workspace is in step and nothing is touched. On a mismatch — a fresh
     workspace, a script change, or an OLD marker (a version string from the
     pre-hash gate) — every installed ``scripts/`` file is hash-compared against
-    its workspace copy and the missing/differing ones overwritten; the marker
-    is then set to the new content hash.
+    its workspace copy and the missing/differing ones overwritten.
+
+    THE MARKER MEANS "EVERYTHING IS IN STEP", so it is written only when every
+    destination actually completed: a refusal or a failed write leaves the
+    previous marker untouched and the next run retries. Writing it after a
+    partial refresh made an incomplete ``scripts/`` tree look current forever —
+    the fast path short-circuits on the marker's own hash.
 
     Gating on the content hash (not ``__version__``) makes this robust to a
     stale version readout: the hub's editable dev container reports
@@ -401,15 +486,10 @@ def refresh_vendored_scripts(
     if not ws_scripts.is_dir():
         return []
 
-    # NEVER WRITE OUTSIDE THE WORKSPACE, and never THROUGH a link to get there.
-    # The caller's authority covers the workspace it named, not wherever a link
-    # points: measured before this guard, a project whose `.scitex/writer` was a
-    # symlink to a victim directory had the whole vendored tree copied into the
-    # victim (158 files) and two of its files overwritten, while the verb
-    # reported "already present, nothing to do". Declining is a no-op refresh —
-    # the safe direction, since the compile then runs with whatever the
-    # workspace already has, exactly as it did before this refresh existed.
-    ws_root = Path(workspace).resolve()
+    # A quick static refusal for the shape that needs no race to explain (a
+    # workspace or scripts/ that IS a link), so the common bad case reads as a
+    # refusal rather than as a mysterious incomplete refresh. The fd-based walk
+    # below refuses it too — that is what makes the RACE harmless.
     if Path(workspace).is_symlink() or ws_scripts.is_symlink():
         return []
 
@@ -419,25 +499,20 @@ def refresh_vendored_scripts(
         return []
 
     written: list[Path] = []
+    incomplete = False
     for src_file in sorted(p for p in scripts_dir.rglob("*") if p.is_file()):
         rel = src_file.relative_to(scripts_dir)
         dst_file = ws_scripts / rel
-        # A symlinked DIRECTORY inside scripts/ (or a symlinked file) would
-        # redirect this write wherever it points, so containment is enforced per
-        # destination rather than only at the workspace boundary.
-        if not is_inside(dst_file.parent.resolve(), ws_root):
-            continue
-        if dst_file.is_symlink():
-            continue
         src_hash = _sha256(src_file)
-        if not dst_file.is_file() or _sha256(dst_file) != src_hash:
-            dst_file.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src_file, dst_file)
+        if dst_file.is_file() and _sha256(dst_file) == src_hash:
+            continue  # already in step: not a skip, and not an incompletion
+        if _write_under(ws_scripts, rel.parts, src_file.read_bytes()):
             written.append(dst_file)
-    if is_inside(marker.parent.resolve(), ws_root):
-        marker.parent.mkdir(parents=True, exist_ok=True)
-        marker.write_text(sentinel + "\n")
-    return written
+        else:
+            incomplete = True
 
+    if not incomplete:
+        _write_under(ws_scripts, (_SCRIPTS_SENTINEL,), (sentinel + "\n").encode("utf-8"))
+    return written
 
 # EOF

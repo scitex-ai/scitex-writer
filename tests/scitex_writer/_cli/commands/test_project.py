@@ -15,12 +15,9 @@ import importlib
 import json
 from pathlib import Path
 
-
-
 from scitex_writer._cli import main
 from scitex_writer._cli.commands import project as project_module
 from scitex_writer._cli.commands.project import refuse_reason
-
 
 
 def test_module_exposes_update_project():
