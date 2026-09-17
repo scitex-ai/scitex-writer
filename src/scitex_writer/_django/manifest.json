@@ -23,6 +23,7 @@
   "standalone_command": "scitex-writer gui",
   "standalone_port": 31298,
   "frontend_type": "vanilla",
+  "mobile_layout": true,
   "embedded_package": true,
   "dependencies": {
     "python": ["scitex-writer", "django"]
