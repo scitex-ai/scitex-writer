@@ -766,6 +766,27 @@ def test_writer_css_does_not_target_scitex_ui_internals(internal: str):
 # ---------------------------------------------------------------------------
 
 
+_ONE_PAGE_PDF = b"%PDF-1.4\n1 0 obj << /Type /Page >> endobj\n%%EOF\n"
+
+
+def _stub_compile_sh(workspace: Path) -> None:
+    """A trivial compile.sh that SUCCEEDS: exit 0 and a one-page PDF.
+
+    This used to `touch 01_manuscript/manuscript.pdf` — an EMPTY file — and the
+    tests below asserted a success event. That expectation held only while the
+    ``_django`` path judged the exit code and never looked at the artifact; the
+    shared verdict (``_compile/_verdict.py``) reads the page count, so a husk is
+    ``exit-zero-no-pdf`` and a faithful stub has to produce a real page.
+    """
+    (workspace / "fixture.pdf").write_bytes(_ONE_PAGE_PDF)
+    (workspace / "compile.sh").write_text(
+        "#!/bin/bash\n"
+        "mkdir -p 01_manuscript\n"
+        "cp fixture.pdf 01_manuscript/manuscript.pdf\n"
+        "exit 0\n"
+    )
+
+
 @pytest.fixture
 def root_with_workspace(tmp_path):
     """A PROJECT ROOT with its writer WORKSPACE nested at .scitex/writer/.
@@ -779,12 +800,7 @@ def root_with_workspace(tmp_path):
     workspace = root / ".scitex" / "writer"
     (workspace / "00_shared").mkdir(parents=True)
     (workspace / "01_manuscript").mkdir(parents=True)
-    (workspace / "compile.sh").write_text(
-        "#!/bin/bash\n"
-        "mkdir -p 01_manuscript\n"
-        "touch 01_manuscript/manuscript.pdf\n"
-        "exit 0\n"
-    )
+    _stub_compile_sh(workspace)
     return root
 
 
@@ -866,12 +882,7 @@ def test_api_compile_given_flat_workspace_working_dir_still_records_success(tmp_
     workspace = tmp_path / "workspace"
     (workspace / "00_shared").mkdir(parents=True)
     (workspace / "01_manuscript").mkdir(parents=True)
-    (workspace / "compile.sh").write_text(
-        "#!/bin/bash\n"
-        "mkdir -p 01_manuscript\n"
-        "touch 01_manuscript/manuscript.pdf\n"
-        "exit 0\n"
-    )
+    _stub_compile_sh(workspace)
     # Act
     services._project_cache.clear()
     try:

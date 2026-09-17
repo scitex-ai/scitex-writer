@@ -43,6 +43,62 @@ def _compile_sh_that_promotes_a_pdf(workspace: Path, pdf: bytes | None) -> None:
     script.chmod(0o755)
 
 
+def _compile_sh_that_exits(workspace: Path, code: int, pdf: bytes | None) -> None:
+    """compile.sh that exits ``code``, optionally leaving a PDF where the run
+    expects it. Unlike the exit-3 helper above, the code is the parameter — this
+    is what lets a test ask about exit 0 with nothing to show for it."""
+    body = f"exit {code}"
+    if pdf is not None:
+        (workspace / "fixture.pdf").write_bytes(pdf)
+        body = (
+            "mkdir -p 01_manuscript && "
+            f"cp fixture.pdf 01_manuscript/manuscript.pdf && exit {code}"
+        )
+    script = workspace / "compile.sh"
+    script.write_text("#!/bin/bash\n" + body + "\n")
+    script.chmod(0o755)
+
+
+def test_exit_0_without_a_pdf_is_a_failure(tmp_path):
+    # Arrange: the divergence this path carried for weeks — the runner recorded
+    # `exit-zero-no-pdf` while this one answered "compiled successfully" with
+    # output_pdf None. Both read the same verdict now, so this cannot come back
+    # on one side only.
+    _compile_sh_that_exits(tmp_path, 0, None)
+    # Act
+    result = run_compile_script(tmp_path, "manuscript")
+    # Assert
+    assert result["success"] is False
+
+
+def test_exit_0_without_a_pdf_records_the_shared_reason(tmp_path):
+    # Arrange
+    _compile_sh_that_exits(tmp_path, 0, None)
+    # Act
+    run_compile_script(tmp_path, "manuscript")
+    # Assert
+    assert read_events(tmp_path)[-1]["reason"] == "exit-zero-no-pdf"
+
+
+def test_exit_0_with_a_real_pdf_is_a_success(tmp_path):
+    # Arrange: the other half of the same pair — the fix must not turn a good
+    # clean compile into a failure.
+    _compile_sh_that_exits(tmp_path, 0, ONE_PAGE_PDF)
+    # Act
+    result = run_compile_script(tmp_path, "manuscript")
+    # Assert
+    assert result["success"] is True
+
+
+def test_exit_0_success_records_the_page_count(tmp_path):
+    # Arrange
+    _compile_sh_that_exits(tmp_path, 0, ONE_PAGE_PDF)
+    # Act
+    run_compile_script(tmp_path, "manuscript")
+    # Assert
+    assert read_events(tmp_path)[-1]["pages"] == 1
+
+
 def test_exit_3_with_a_produced_pdf_counts_as_success(tmp_path):
     # Arrange
     _compile_sh_that_promotes_a_pdf(tmp_path, ONE_PAGE_PDF)

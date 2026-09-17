@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from .._dataclasses import CompilationResult
-from .._utils._pdf_pages import produced_page_count
 from ..workspace_layout import (
     COMPILE_SCRIPT_RELPATHS,
     WORKSPACE_RELPATH,
@@ -25,10 +24,10 @@ from ..workspace_layout import (
 )
 
 # The WHERE questions (script, log, PDF) live in _artifacts; re-exported so
-# existing imports of these private names from _runner keep resolving.
+# existing imports of these private names from _runner keep resolving. The
+# decision about what a run AMOUNTED to is not here — it is `._verdict`, which
+# both compile paths call.
 from ._artifacts import (
-    _PROMOTED_WARNING,
-    EXIT_PROMOTED_WITH_WARNINGS,
     _doc_latex_log,
     _find_output_files,
     _get_compile_script,
@@ -44,6 +43,7 @@ from ._event_log import (
 from ._execute import _execute_with_callbacks, _run_sh_command
 from ._parser import parse_output
 from ._validator import validate_before_compile
+from ._verdict import compile_verdict, engine_finished
 
 logger = getLogger(__name__)
 
@@ -298,8 +298,10 @@ def run_compile(
         # Find output files. Exit 3 means the script PRODUCED and promoted a PDF
         # and told us so; its artifacts must be located exactly as on exit 0 --
         # blanking them out is what USED to throw away a perfectly good PDF.
-        promoted = result.returncode == EXIT_PROMOTED_WITH_WARNINGS
-        if result.returncode == 0 or promoted:
+        # (Whether that run is then a SUCCESS is `_verdict`'s call, one step
+        # below: locating an artifact and accepting it are different questions,
+        # and conflating them is how a zero-page husk became a success.)
+        if engine_finished(result.returncode):
             progress(90, "Compilation finished, locating output files...")
             output_pdf, diff_pdf, log_file = _find_output_files(project_dir, doc_type)
             if output_pdf:
@@ -326,33 +328,35 @@ def run_compile(
         # which is the false-success shape this guard exists to prevent
         # (nv-incident-compile-false-success-deficient-pdf-20260630, which asked
         # for a page-count check and only ever got half of one).
-        success = result.returncode == 0
-        if success or promoted:
-            pages = (
-                produced_page_count(output_pdf, _doc_latex_log(project_dir, doc_type))
-                if output_pdf
-                else 0
+        # THE VERDICT IS SHARED (_compile/_verdict.py), NOT RE-DERIVED HERE. The
+        # history above is WHY the artifact decides; the rule itself now lives in
+        # exactly one place, because these two paths had already grown apart —
+        # the MCP path answered "compiled successfully" for exit 0 with no PDF
+        # while this one recorded `exit-zero-no-pdf`. Two verdicts that happen to
+        # agree are one local edit away from disagreeing again, and the next
+        # divergence would be just as invisible.
+        verdict = compile_verdict(
+            result.returncode, output_pdf, _doc_latex_log(project_dir, doc_type)
+        )
+        promoted, success, pages = verdict.promoted, verdict.success, verdict.pages
+        if verdict.success:
+            if verdict.warning:
+                warnings.insert(0, verdict.warning)
+                log(f"[WARNING] {verdict.warning}")
+        else:
+            output_pdf = None
+            errors.insert(
+                0,
+                (
+                    "Compile reported a promoted PDF (exit 3) but no PDF "
+                    "with pages > 0 exists. Treating as a FAILURE."
+                    if promoted
+                    else "Compile exited 0 but produced no PDF with "
+                    "pages > 0. Treating as a FAILURE: a clean exit code "
+                    "is not evidence that an artifact exists."
+                ),
             )
-            if pages > 0:
-                success = True
-                if promoted:
-                    warnings.insert(0, _PROMOTED_WARNING.format(pages=pages))
-                    log(f"[WARNING] {_PROMOTED_WARNING.format(pages=pages)}")
-            else:
-                success = False
-                output_pdf = None
-                errors.insert(
-                    0,
-                    (
-                        "Compile reported a promoted PDF (exit 3) but no PDF "
-                        "with pages > 0 exists. Treating as a FAILURE."
-                        if promoted
-                        else "Compile exited 0 but produced no PDF with "
-                        "pages > 0. Treating as a FAILURE: a clean exit code "
-                        "is not evidence that an artifact exists."
-                    ),
-                )
-                log(f"[ERROR] {errors[0]}")
+            log(f"[ERROR] {errors[0]}")
 
         compilation_result = CompilationResult(
             success=success,
@@ -377,7 +381,7 @@ def run_compile(
         # never a refusal. Name the failure precisely: the three shapes need
         # three different fixes (read the engine errors / find why the script
         # claimed a PDF it did not make / find why exit 0 made nothing).
-        pages_seen = pages if (result.returncode == 0 or promoted) else None
+        pages_seen = pages if engine_finished(result.returncode) else None
         if compilation_result.success:
             record_event(
                 project_dir,
@@ -392,12 +396,10 @@ def run_compile(
                 detail=compilation_result.message,
             )
         else:
-            if result.returncode not in (0, EXIT_PROMOTED_WITH_WARNINGS):
-                failure_reason = "engine-nonzero"
-            elif promoted:
-                failure_reason = "promoted-without-pdf"
-            else:
-                failure_reason = "exit-zero-no-pdf"
+            # The reason comes from the SAME verdict the success path used —
+            # `_verdict` names it from the event log's own vocabulary, so the
+            # record and the response cannot describe different runs.
+            failure_reason = verdict.detail
             record_event(
                 project_dir,
                 EVENT_FAILURE,

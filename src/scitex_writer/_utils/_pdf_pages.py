@@ -29,6 +29,7 @@ from __future__ import annotations
 import re
 import zlib
 from pathlib import Path
+from typing import Optional
 
 _OUTPUT_WRITTEN_RE = re.compile(r"Output written on .*?\((\d+) pages?[,)]")
 """pdfTeX's per-run "I finalized a PDF" line, with its page count."""
@@ -73,7 +74,7 @@ def pages_in_pdf(pdf_file: Path) -> int:
     return _page_objects(data)
 
 
-def produced_page_count(pdf_file: Path, log_file: Path = None) -> int:
+def produced_page_count(pdf_file: Path, log_file: Optional[Path] = None) -> int:
     """Return the page count of the PDF produced by this run (0 = none produced).
 
     Prefers the LaTeX log's ``Output written on ... (N pages`` line -- it is

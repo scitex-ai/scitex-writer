@@ -40,11 +40,8 @@ def run_compile_script(
     compile.sh is a REFUSAL (the engine was never started); everything after
     the subprocess launches is a failure or a success.
     """
-    from .._compile._artifacts import (
-        _PROMOTED_WARNING,
-        EXIT_PROMOTED_WITH_WARNINGS,
-        _doc_latex_log,
-    )
+    from .._compile._artifacts import _doc_latex_log
+    from .._compile._verdict import compile_verdict
     from .._compile._diagnostics import diagnose_compile, diagnose_exception
     from .._compile._diagnostics._rules import MISSING_COMPILE_SCRIPT_HINT
     from .._compile._event_log import (
@@ -55,7 +52,6 @@ def run_compile_script(
         new_attempt_id,
         record_event,
     )
-    from .._utils._pdf_pages import produced_page_count
     from ..workspace_layout import refresh_vendored_scripts
 
     # Self-heal the workspace's vendored scripts from the INSTALLED package
@@ -150,7 +146,6 @@ def run_compile_script(
             "revision": project_dir / "03_revision" / "revision.pdf",
         }
         output_pdf = pdf_paths.get(doc_type)
-        pdf_present = bool(output_pdf and output_pdf.exists())
         stdout_tail = (
             result.stdout[-2_000:] if len(result.stdout) > 2_000 else result.stdout
         )
@@ -168,13 +163,19 @@ def run_compile_script(
             started_at=started_at,
         )
 
-        promoted_pdf_pages = (
-            produced_page_count(output_pdf, _doc_latex_log(project_dir, doc_type))
-            if result.returncode == EXIT_PROMOTED_WITH_WARNINGS and pdf_present
-            else 0
+        # THE VERDICT IS SHARED, NOT LOCAL (_compile/_verdict.py): the artifact
+        # decides and the exit code only says how loud to be. This path used to
+        # carry its own ladder, and it disagreed with the runner on exit 0
+        # WITHOUT a PDF — the runner recorded `exit-zero-no-pdf` while this path
+        # answered "compiled successfully" with `output_pdf: None`, i.e. the
+        # false-success shape the June 2026 page-count incident asked us to
+        # close. One rule, two callers, so the next divergence is not possible by
+        # construction rather than by agreement.
+        verdict = compile_verdict(
+            result.returncode, output_pdf, _doc_latex_log(project_dir, doc_type)
         )
-        if promoted_pdf_pages > 0:
-            warning = _PROMOTED_WARNING.format(pages=promoted_pdf_pages)
+
+        if verdict.success:
             record_event(
                 project_dir,
                 EVENT_SUCCESS,
@@ -183,8 +184,8 @@ def run_compile_script(
                 attempt_id=attempt_id,
                 exit_code=result.returncode,
                 output_pdf=output_pdf,
-                pages=promoted_pdf_pages,
-                detail=warning,
+                pages=verdict.pages,
+                detail=verdict.warning,
             )
             return {
                 "success": True,
@@ -192,53 +193,36 @@ def run_compile_script(
                 "exit_code": result.returncode,
                 "stdout": stdout_tail,
                 "stderr": stderr_tail,
-                "warnings": [warning],
-                "message": f"{doc_type.title()} compiled WITH WARNINGS",
+                "warnings": [verdict.warning] if verdict.warning else [],
+                "message": (
+                    f"{doc_type.title()} compiled WITH WARNINGS"
+                    if verdict.warning
+                    else f"{doc_type.title()} compiled successfully"
+                ),
                 "diagnostics": diagnostics,
             }
-        if result.returncode == 0:
-            record_event(
-                project_dir,
-                EVENT_SUCCESS,
-                doc_type=doc_type,
-                entry_point="mcp",
-                attempt_id=attempt_id,
-                exit_code=result.returncode,
-                output_pdf=output_pdf if pdf_present else None,
-                detail=None
-                if pdf_present
-                else "exit 0 but no PDF at the expected path",
-            )
-            return {
-                "success": True,
-                "output_pdf": str(output_pdf) if pdf_present else None,
-                "exit_code": result.returncode,
-                "stdout": stdout_tail,
-                "message": f"{doc_type.title()} compiled successfully",
-                "diagnostics": diagnostics,
-            }
-        else:
-            error = f"Compilation failed with exit code {result.returncode}"
-            record_event(
-                project_dir,
-                EVENT_FAILURE,
-                reason="engine-nonzero",
-                doc_type=doc_type,
-                entry_point="mcp",
-                attempt_id=attempt_id,
-                exit_code=result.returncode,
-                output_pdf=output_pdf if pdf_present else None,
-                stderr=result.stderr,
-                detail=error,
-            )
-            return {
-                "success": False,
-                "exit_code": result.returncode,
-                "stdout": stdout_tail,
-                "stderr": stderr_tail,
-                "error": error,
-                "diagnostics": diagnostics,
-            }
+
+        error = f"Compilation failed with exit code {result.returncode}"
+        record_event(
+            project_dir,
+            EVENT_FAILURE,
+            reason=verdict.detail,
+            doc_type=doc_type,
+            entry_point="mcp",
+            attempt_id=attempt_id,
+            exit_code=result.returncode,
+            output_pdf=output_pdf,
+            stderr=result.stderr,
+            detail=error,
+        )
+        return {
+            "success": False,
+            "exit_code": result.returncode,
+            "stdout": stdout_tail,
+            "stderr": stderr_tail,
+            "error": error,
+            "diagnostics": diagnostics,
+        }
 
     except subprocess.TimeoutExpired as expired:
         error = f"Compilation timed out after {timeout} seconds"
