@@ -4,8 +4,8 @@
 
 """Compilation handlers: manuscript, supplementary, revision."""
 
-from ..utils import resolve_project_path, run_compile_script
 from ...workspace_layout import resolve_workspace
+from ..utils import resolve_project_path, run_compile_script
 
 
 def _prepare(project_path, doc_type: str) -> None:
@@ -76,15 +76,9 @@ def _inject_version_stamp(project_path) -> None:
     that did not build it, and swallowing a write failure would make a stamp
     that never happened indistinguishable from a clean compile.
     """
-    from scitex_writer import __version__
+    from ._version_truth import stamp_version, version_stamp_tex
 
-    from ._version_truth import (
-        installed_versions,
-        resolve_stamp_version,
-        version_stamp_tex,
-    )
-
-    version = resolve_stamp_version(installed_versions(), __version__)
+    version = stamp_version()
     version_tex = project_path / "00_shared" / "scitex_writer_version.tex"
     version_tex.write_text(version_stamp_tex(version))
 

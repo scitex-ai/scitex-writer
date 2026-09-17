@@ -20,6 +20,8 @@ tested against real inputs instead of a patched interpreter.
 
 from __future__ import annotations
 
+from typing import Optional
+
 REMEDY = (
     "Remove the stale distribution so the version is unambiguous:\n"
     "    pip uninstall -y scitex-writer && pip install 'scitex-writer[all]'"
@@ -75,3 +77,66 @@ def installed_versions(name: str = "scitex-writer") -> list[str]:
         for d in md.distributions()
         if (d.metadata["Name"] or "").lower().replace("_", "-") == want
     ]
+
+
+def _source_tree_version(package_file: str, name: str = "scitex-writer") -> Optional[str]:
+    """The version declared by the source tree the RUNNING CODE sits in.
+
+    THE CASE THIS EXISTS FOR, measured 2026-09-17 on this container's dev
+    checkout: ``importlib.metadata.version("scitex-writer")`` said **2.42.0**
+    while the code being executed was 2.43.5's. An editable install's metadata
+    is written once and never updated by later commits, so the compile stamped a
+    PDF with a version that DID NOT COMPILE IT — the durable falsehood this
+    module's docstring is about, arriving from the direction the ambiguity veto
+    cannot see (one distribution, wrong version, so nothing looks ambiguous).
+
+    A checkout's own ``pyproject.toml`` cannot lag its code: it IS the code's
+    declaration. So when it sits where the running package expects it — two
+    levels above the package directory, ``<repo>/src/scitex_writer/`` — and names
+    this project, it wins.
+
+    IN A WHEEL INSTALL NOTHING CHANGES: ``site-packages`` has no ``pyproject.toml``
+    two levels up (and if some unrelated project's did sit there, the name check
+    refuses it), so this returns ``None`` and metadata supplies the version.
+    """
+    from pathlib import Path
+
+    candidate = Path(package_file).resolve().parents[2] / "pyproject.toml"
+    if not candidate.is_file():
+        return None
+    try:
+        for line in candidate.read_text(encoding="utf-8").splitlines():
+            if line.startswith("name") and "=" in line:
+                declared_name = line.split("=", 1)[1].strip().strip('"').strip("'")
+                if declared_name.lower().replace("_", "-") != name.lower().replace("_", "-"):
+                    return None  # someone else's pyproject.toml, not ours
+            if line.startswith("version") and "=" in line:
+                return line.split("=", 1)[1].strip().strip('"').strip("'")
+    except OSError:
+        return None
+    return None
+
+
+def stamp_version(name: str = "scitex-writer") -> str:
+    """THE version to stamp: one resolver for every writer of the stamp.
+
+    Two writers put a version into a compiled manuscript's provenance metadata —
+    the compile path (``_mcp/handlers/_compile.py``) and the re-vendor path
+    (``_mcp/handlers/_update/_handler.py``) — and before this they resolved it two
+    different ways (``importlib.metadata`` vs a hand-rolled pyproject read), which
+    is how one PDF came to carry claims that disagreed with each other and with
+    the code that produced it.
+
+    Order, and why: the SOURCE TREE the running code lives in (it describes what
+    is executing, and cannot lag it), then the installed distribution's version.
+    Ambiguity — more than one distribution claiming the name — still raises
+    rather than picking one by scan order, because a guessed version in a
+    published artifact outlives the environment that guessed it.
+    """
+    import scitex_writer
+
+    installed = installed_versions(name)
+    distinct = sorted(set(installed))
+    if len(distinct) > 1:
+        raise RuntimeError(describe_ambiguous_metadata(distinct))
+    return _source_tree_version(scitex_writer.__file__, name) or scitex_writer.__version__
