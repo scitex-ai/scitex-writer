@@ -213,6 +213,21 @@ packages = ["src/scitex_writer"]
 # dev container masked it, because there the repo-root `scripts/` resolves.
 force-include = { "scripts" = "scitex_writer/scripts" }
 
+[tool.scitex_dev]
+# §6a (env-var namespacing): the vendored script helpers
+# (`scripts/python/_build_id.py`, `scripts/python/manage_builds.py`) read a
+# project root from `PROJECT_ROOT`.
+#
+# WHY THIS IS AN EXEMPTION AND NOT A RENAME. Two reasons, both about scope.
+# §6a scans the INSTALLED distribution, so it never saw these files until the
+# force-include above put `scripts/` in the wheel — the reading is old, the
+# visibility is new, and this PR's job is the packaging. And the scripts are
+# VENDORED into user workspaces: `PROJECT_ROOT` is a shipped interface there,
+# so namespacing it needs its own compatibility story (and a refresh, which the
+# force-include is what makes possible). Tracked separately; this entry says
+# what is intentional in the meantime rather than leaving the audit to guess.
+env_allowlist = ["PROJECT_ROOT"]
+
 [tool.hatch.build.targets.sdist]
 # Ship only the Python package + project metadata in sdist. Top-level
 # manuscript / scratch directories (00_shared, 01_manuscript, …) contain
