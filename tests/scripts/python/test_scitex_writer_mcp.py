@@ -110,14 +110,19 @@ class TestInstructionsContent:
     """Test instructions content."""
 
     def test_instructions_has_setup(self):
-        """Test that instructions contains setup/clone info."""
+        """Test that instructions contain setup instructions for a first-time user.
+
+        They used to hand the reader `git clone <personal repo>`; the verb exists
+        now, and a hand clone is how the missing-create-verb gap stayed invisible
+        for weeks (blocker #1 of the standalone-readiness card).
+        """
         # Arrange
         from scitex_writer._core._branding import get_mcp_instructions
 
         # Act
         instructions = get_mcp_instructions()
         # Assert
-        assert ("git clone" in instructions) and ("scitex-writer" in instructions)
+        assert ("create-project" in instructions) and ("scitex-writer" in instructions)
 
     def test_instructions_has_structure(self):
         """Test that instructions contains project structure info."""

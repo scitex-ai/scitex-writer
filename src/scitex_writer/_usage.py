@@ -16,10 +16,11 @@ _USAGE_TEMPLATE = """
 ================================================================================
 
 Setup:
-  git clone https://github.com/ywatanabe1989/scitex-writer.git my-paper
+  scitex-writer create-project my-paper     # creates my-paper/.scitex/writer
   cd my-paper
 
 <SCITEX_WRITER_ROOT> = Directory where compile.sh is located
+                       (my-paper/.scitex/writer for a project created above)
 
 ================================================================================
 Project Structure
