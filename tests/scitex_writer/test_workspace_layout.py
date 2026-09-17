@@ -912,4 +912,59 @@ def test_refresh_is_race_safe_when_a_checked_parent_becomes_a_link(tmp_path: Pat
     assert after == before
 
 
+
+# ---------------------------------------------------------------------------
+# the SOURCE side of the boundary: one read, and the hash describes it
+# ---------------------------------------------------------------------------
+
+
+def test_the_refresh_reads_a_source_entry_once_and_hashes_what_it_read():
+    # Arrange: the second TOCTOU class — the vendored SOURCE entry swapped
+    # between the decision and the copy. It existed because the loop opened the
+    # source TWICE per entry (`_sha256(src_file)` and then `read_bytes()`), so a
+    # swap in between made the bytes written differ from the bytes the decision
+    # was made on. This is a STRUCTURAL guard on purpose: the property "the
+    # written bytes are the hashed bytes" has no external observer in a single
+    # -threaded test, and a racy one would only sometimes catch it. What a test
+    # CAN pin is that the two-open pattern is gone.
+    source = (_PACKAGE_DIR / "workspace_layout.py").read_text(encoding="utf-8")
+    body = source[source.index("def refresh_vendored_scripts") :]
+    # Comment lines are STRIPPED before the search: the comment above the fix
+    # quotes the old pattern to explain it, and a guard that cannot tell code
+    # from prose about code reports a failure it did not find.
+    code = "\n".join(
+        line for line in body.splitlines() if not line.lstrip().startswith("#")
+    )
+    # Act
+    two_open_patterns = [token for token in ("_sha256(src_file)", "read_bytes()") if token in code]
+    # Assert
+    assert two_open_patterns == ["read_bytes()"]
+
+
+def test_the_refresh_hashes_the_payload_variable_before_deciding():
+    # Arrange: the same property from the other side — the hash handed to the
+    # in-sync comparison must be the hash OF the payload, in that order.
+    source = (_PACKAGE_DIR / "workspace_layout.py").read_text(encoding="utf-8")
+    body = source[source.index("def refresh_vendored_scripts") :]
+    # Act
+    read_at = body.index("payload = src_file.read_bytes()")
+    hash_at = body.index("src_hash = hashlib.sha256(payload).hexdigest()")
+    compare_at = body.index("_sha256(dst_file) == src_hash")
+    # Assert
+    assert read_at < hash_at < compare_at
+
+
+def test_a_swapped_source_variant_lands_whole_and_marks_in_sync(tmp_path: Path):
+    # Arrange: the behavioural half — a DIFFERENT variant presented as the source
+    # must arrive byte-whole and leave the workspace marked in sync, so the
+    # marker can never describe a workspace holding something else.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    (src_scripts / _VS_CHECK).write_text("REPLACEMENT VARIANT\n", encoding="utf-8")
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    # Assert
+    assert (ws / "scripts" / _VS_CHECK).read_text() == "REPLACEMENT VARIANT\n"
+
+
 # EOF

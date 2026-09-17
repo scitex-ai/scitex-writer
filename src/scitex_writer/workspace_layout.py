@@ -503,10 +503,21 @@ def refresh_vendored_scripts(
     for src_file in sorted(p for p in scripts_dir.rglob("*") if p.is_file()):
         rel = src_file.relative_to(scripts_dir)
         dst_file = ws_scripts / rel
-        src_hash = _sha256(src_file)
+        # ONE READ, AND IT IS THE THING WE HASH. This used to hash the source
+        # (`_sha256(src_file)`) and then read it AGAIN to copy — two opens of a
+        # path, so an entry swapped in between made the bytes written differ from
+        # the bytes the decision was made on (the reviewer's second TOCTOU:
+        # "vendored source entry swapped between type check and copy"). With the
+        # payload in hand, the hash describes exactly what gets written.
+        try:
+            payload = src_file.read_bytes()
+        except OSError:
+            incomplete = True
+            continue
+        src_hash = hashlib.sha256(payload).hexdigest()
         if dst_file.is_file() and _sha256(dst_file) == src_hash:
             continue  # already in step: not a skip, and not an incompletion
-        if _write_under(ws_scripts, rel.parts, src_file.read_bytes()):
+        if _write_under(ws_scripts, rel.parts, payload):
             written.append(dst_file)
         else:
             incomplete = True
