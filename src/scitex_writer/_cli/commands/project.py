@@ -109,6 +109,38 @@ def update_project(project, branch, tag, dry_run, force, yes, allow_outdated, as
 # =========================================================================
 
 
+def refuse_reason(project_path: Path, *, yes: bool) -> str | None:
+    """Why ``create-project`` will not write here, or ``None`` to proceed.
+
+    Pure and separate from the clone, because the guard is the part worth
+    testing: a test that drove the real command would have to reach the network.
+
+    A MISSING PATH IS NOT A REFUSAL. ``create-project my-paper`` is what a
+    first-time user types, and it names a directory that does not exist yet —
+    which is why the first published version of this verb was wrong to borrow
+    ``update-project``'s "Project not found" check, whose target necessarily
+    exists. ``ensure_workspace`` creates the root, the workspace and every
+    parent, measured in a clean venv against the 2.43.5 wheel. What IS worth
+    stopping on: the path is a FILE, or it is a directory that already holds
+    someone else's files and has no workspace — additive or not, that is a
+    decision the caller should make explicitly with ``--yes``.
+    """
+    if project_path.exists() and not project_path.is_dir():
+        return (
+            f"Error: {project_path} exists and is not a directory.\n"
+            "Nothing was created."
+        )
+    if (project_path / ".scitex" / "writer").exists():
+        return None  # an existing workspace is reported, never re-cloned
+    if project_path.is_dir() and any(project_path.iterdir()) and not yes:
+        return (
+            f"Error: {project_path} is not empty and has no writer workspace.\n"
+            "Nothing was created. To create the workspace here anyway:\n"
+            f"  scitex-writer create-project {project_path} --yes"
+        )
+    return None
+
+
 @main_group.command("create-project")
 @click.argument("project", default=".", required=False)
 @click.option(
@@ -159,10 +191,6 @@ def create_project(project, git_strategy, branch, tag, dry_run, yes, as_json):
     from ... import ensure_workspace
 
     project_path = Path(project).resolve()
-    if not project_path.exists():
-        click.echo(f"Error: Project not found: {project_path}", err=True)
-        return 1
-
     workspace = project_path / ".scitex" / "writer"
     existed = workspace.exists() and any(workspace.iterdir())
 
@@ -193,14 +221,12 @@ def create_project(project, git_strategy, branch, tag, dry_run, yes, as_json):
     # case worth a stop: it is additive (only .scitex/writer is written, never
     # the user's files), but a fleet agent runs non-interactively, so this
     # REFUSES with the exact command to proceed rather than prompting (audit
-    # §2: no interactive prompts; `--yes` is the answer).
-    if not existed and any(project_path.iterdir()) and not yes:
-        click.echo(
-            f"Error: {project_path} is not empty and has no writer workspace.\n"
-            "Nothing was created. To create the workspace here anyway:\n"
-            f"  scitex-writer create-project {project_path} --yes",
-            err=True,
-        )
+    # §2: no interactive prompts; `--yes` is the answer). A path that does not
+    # exist yet is NOT that case — `create-project my-paper` is the normal first
+    # run, and the workspace takes its root with it.
+    refusal = refuse_reason(project_path, yes=yes)
+    if refusal is not None:
+        click.echo(refusal, err=True)
         return 1
 
     try:

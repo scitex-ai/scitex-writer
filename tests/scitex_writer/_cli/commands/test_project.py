@@ -18,6 +18,7 @@ from pathlib import Path
 
 
 from scitex_writer._cli import main
+from scitex_writer._cli.commands.project import refuse_reason
 
 
 
@@ -86,26 +87,93 @@ def test_the_usage_guide_no_longer_points_at_the_personal_repo(capsys):
 
 
 # ---------------------------------------------------------------------------
-# it fails honestly
+# the guard: what is refused, and what is normal
 # ---------------------------------------------------------------------------
+#
+# These drive `refuse_reason` directly rather than the command, because the
+# command's next step is a template clone and the guard is the part worth
+# pinning. The end-to-end run is recorded on the PR (clean venv, published
+# wheel): `create-project my-paper` on a path that does not exist yet creates
+# the root and the workspace, measured, not assumed.
 
 
-def test_a_missing_directory_fails(tmp_path):
-    # Arrange: the exit code is the console script's own contract.
-    missing = tmp_path / "not-here"
+def test_a_path_that_does_not_exist_yet_is_not_a_refusal(tmp_path):
+    # Arrange: `create-project my-paper` is the FIRST RUN, and it names a
+    # directory that does not exist. The first published version of this verb
+    # borrowed update-project's "Project not found" check and refused exactly
+    # this case — the bug this test exists to keep out.
+    missing = tmp_path / "my-paper"
     # Act
-    code = main(["create-project", str(missing)])
+    reason = refuse_reason(missing, yes=False)
+    # Assert
+    assert reason is None
+
+
+def test_an_empty_directory_is_not_a_refusal(tmp_path):
+    # Arrange
+    # Act
+    reason = refuse_reason(tmp_path, yes=False)
+    # Assert
+    assert reason is None
+
+
+def test_an_existing_workspace_is_not_a_refusal(tmp_path):
+    # Arrange: an existing project is reported and left alone, not refused.
+    _workspace_fixture(tmp_path)
+    # Act
+    reason = refuse_reason(tmp_path, yes=False)
+    # Assert
+    assert reason is None
+
+
+def test_a_file_in_the_way_is_refused(tmp_path):
+    # Arrange: a path that is a FILE cannot hold a workspace.
+    target = tmp_path / "my-paper"
+    target.write_text("not a directory\n")
+    # Act
+    reason = refuse_reason(target, yes=False)
+    # Assert
+    assert "not a directory" in (reason or "")
+
+
+def test_a_directory_with_files_is_refused(tmp_path):
+    # Arrange: additive or not, the verb does not silently write into a
+    # directory that already holds someone's files (audit §2: mutating verbs do
+    # not prompt — they refuse and name the flag).
+    (tmp_path / "notes.txt").write_text("mine\n")
+    # Act
+    reason = refuse_reason(tmp_path, yes=False)
+    # Assert
+    assert reason is not None
+
+
+def test_the_refusal_names_the_flag_that_proceeds(tmp_path):
+    # Arrange: a refusal an agent cannot act on is a dead end.
+    (tmp_path / "notes.txt").write_text("mine\n")
+    # Act
+    reason = refuse_reason(tmp_path, yes=False)
+    # Assert
+    assert "--yes" in (reason or "")
+
+
+def test_yes_is_the_way_through_that_refusal(tmp_path):
+    # Arrange
+    (tmp_path / "notes.txt").write_text("mine\n")
+    # Act
+    reason = refuse_reason(tmp_path, yes=True)
+    # Assert
+    assert reason is None
+
+
+def test_a_non_empty_directory_is_still_not_written_without_yes(tmp_path):
+    # Arrange: the guard is wired, not merely available — the command must not
+    # reach the clone for this case (which is also why this test needs no
+    # network).
+    (tmp_path / "notes.txt").write_text("mine\n")
+    # Act
+    code = main(["create-project", str(tmp_path)])
     # Assert
     assert code == 1
-
-
-def test_a_missing_directory_says_what_was_not_found(tmp_path, capsys):
-    # Arrange
-    missing = tmp_path / "not-here"
-    # Act
-    main(["create-project", str(missing)])
-    # Assert
-    assert str(missing) in capsys.readouterr().err
 
 
 # ---------------------------------------------------------------------------
@@ -199,36 +267,6 @@ def test_dry_run_reports_whether_it_would_create(tmp_path, capsys):
     main(["create-project", str(tmp_path), "--dry-run", "--json"])
     # Assert
     assert json.loads(capsys.readouterr().out)["would_create"] is True
-
-
-def test_a_directory_with_files_refuses_without_yes(tmp_path):
-    # Arrange: additive or not, the verb does not silently write into a
-    # directory that already holds someone's files (audit §2: mutating verbs do
-    # not prompt — they refuse and name the flag).
-    (tmp_path / "notes.txt").write_text("mine\n")
-    # Act
-    code = main(["create-project", str(tmp_path)])
-    # Assert
-    assert code == 1
-
-
-def test_a_directory_with_files_creates_nothing_when_it_refuses(tmp_path, capsys):
-    # Arrange
-    (tmp_path / "notes.txt").write_text("mine\n")
-    # Act
-    main(["create-project", str(tmp_path)])
-    capsys.readouterr()
-    # Assert
-    assert not (tmp_path / ".scitex").exists()
-
-
-def test_the_refusal_names_the_flag_that_proceeds(tmp_path, capsys):
-    # Arrange: a refusal an agent cannot act on is a dead end.
-    (tmp_path / "notes.txt").write_text("mine\n")
-    # Act
-    main(["create-project", str(tmp_path)])
-    # Assert
-    assert "--yes" in capsys.readouterr().err
 
 
 # ---------------------------------------------------------------------------
