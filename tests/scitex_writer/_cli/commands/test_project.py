@@ -18,6 +18,7 @@ from pathlib import Path
 
 
 from scitex_writer._cli import main
+from scitex_writer._cli.commands import project as project_module
 from scitex_writer._cli.commands.project import refuse_reason
 
 
@@ -293,6 +294,171 @@ def test_the_verb_does_not_shell_out_to_git():
     # Assert
     assert "subprocess" not in body and "git clone" not in body
 
+
+
+# ---------------------------------------------------------------------------
+# adversarial: what a hostile or malformed target must NOT be able to do
+# ---------------------------------------------------------------------------
+
+
+def _victim_with_scripts(root: Path) -> Path:
+    """A directory that is NOT the project, holding its own vendored scripts.
+
+    This is the shape the escape actually damaged (another workspace, or any
+    directory that happens to contain scripts/), and byte-identity is the
+    assertion — so the exact contents matter more than their plausibility.
+    """
+    victim = root / "victim"
+    (victim / "scripts" / "shell" / "modules").mkdir(parents=True)
+    (victim / "scripts" / "README.md").write_text("victim readme\n")
+    (victim / "scripts" / "shell" / "modules" / "check_dependancy_commands.sh").write_text(
+        "VICTIM OWN CONTENT\n"
+    )
+    return victim
+
+
+def _tree_bytes(root: Path) -> dict:
+    return {
+        str(p.relative_to(root)): p.read_bytes()
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
+    }
+
+
+def _project_with_symlinked_workspace(tmp_path: Path, victim: Path) -> Path:
+    project = tmp_path / "proj"
+    (project / ".scitex").mkdir(parents=True)
+    (project / ".scitex" / "writer").symlink_to(victim)
+    return project
+
+
+def test_a_symlinked_workspace_is_refused(tmp_path):
+    # Arrange: before this guard, `.scitex/writer -> victim` was accepted, and
+    # the vendored-script refresh wrote THROUGH the link — the victim's
+    # check_dependancy_commands.sh hash went 5ed0d8a9… -> 796ca4da… and 158
+    # files landed outside the project, with no --yes.
+    project = _project_with_symlinked_workspace(tmp_path, _victim_with_scripts(tmp_path))
+    # Act
+    code = main(["create-project", str(project)])
+    # Assert
+    assert code == 1
+
+
+def test_a_symlinked_workspace_leaves_the_victim_byte_identical(tmp_path, capsys):
+    # Arrange
+    victim = _victim_with_scripts(tmp_path)
+    project = _project_with_symlinked_workspace(tmp_path, victim)
+    before = _tree_bytes(victim)
+    # Act
+    main(["create-project", str(project)])
+    capsys.readouterr()
+    # Assert
+    assert _tree_bytes(victim) == before
+
+
+def test_a_symlinked_workspace_refusal_names_the_link(tmp_path, capsys):
+    # Arrange: the message must say what to remove, or the operator is stuck.
+    project = _project_with_symlinked_workspace(tmp_path, _victim_with_scripts(tmp_path))
+    # Act
+    main(["create-project", str(project)])
+    # Assert
+    assert "symlink" in capsys.readouterr().err
+
+
+def test_a_symlinked_scitex_directory_is_refused(tmp_path):
+    # Arrange: the PARENT link — `.scitex -> victim` — is the same escape one
+    # level up, so it is refused by the same check.
+    victim = _victim_with_scripts(tmp_path)
+    project = tmp_path / "proj2"
+    project.mkdir()
+    (project / ".scitex").symlink_to(victim)
+    # Act
+    code = main(["create-project", str(project)])
+    # Assert
+    assert code == 1
+
+
+def test_a_regular_file_workspace_is_refused(tmp_path):
+    # Arrange: `<project>/.scitex/writer` as a regular FILE used to raise an
+    # uncaught NotADirectoryError from `any(workspace.iterdir())`, which ran
+    # before the guard.
+    project = tmp_path / "proj3"
+    (project / ".scitex").mkdir(parents=True)
+    (project / ".scitex" / "writer").write_text("not a directory\n")
+    # Act
+    code = main(["create-project", str(project)])
+    # Assert
+    assert code == 1
+
+
+def test_a_regular_file_workspace_reports_instead_of_tracing(tmp_path, capsys):
+    # Arrange
+    project = tmp_path / "proj4"
+    (project / ".scitex").mkdir(parents=True)
+    (project / ".scitex" / "writer").write_text("not a directory\n")
+    # Act
+    main(["create-project", str(project)])
+    captured = capsys.readouterr()
+    # Assert
+    assert "Traceback" not in captured.out + captured.err
+
+
+# ---------------------------------------------------------------------------
+# delegation: the case refuse_reason alone cannot see
+# ---------------------------------------------------------------------------
+
+
+def _with_stubbed_ensure_workspace(stub):
+    """Install a stub via DIRECT ATTRIBUTE ASSIGNMENT.
+
+    PA-306 bans mock-shaped tests (the ``monkeypatch`` fixture), and this is the
+    idiom scitex-dev itself uses instead: every caller in the command module
+    resolves ``ensure_workspace`` from that module's globals at call time, so
+    assigning the attribute IS the seam. The caller restores it in a finally.
+    """
+    saved = project_module.ensure_workspace
+    project_module.ensure_workspace = stub
+    return saved
+
+
+def test_the_command_delegates_to_ensure_workspace_for_a_missing_target(tmp_path):
+    # Arrange: THE case refuse_reason cannot cover — it says "proceed" for a
+    # missing path, so if a `if not project_path.exists(): return 1` early
+    # return were ever restored in the command body, the guard tests would all
+    # still pass. Only a command-level run can tell.
+    calls = []
+
+    def _stub(project_dir, **kwargs):
+        calls.append(Path(project_dir))
+        return Path(project_dir) / ".scitex" / "writer"
+
+    saved = _with_stubbed_ensure_workspace(_stub)
+    try:
+        # Act
+        code = main(["create-project", str(tmp_path / "my-paper")])
+    finally:
+        project_module.ensure_workspace = saved
+    # Assert
+    assert (code, len(calls)) == (0, 1)
+
+
+def test_the_delegated_target_is_the_path_the_user_gave(tmp_path):
+    # Arrange
+    calls = []
+
+    def _stub(project_dir, **kwargs):
+        calls.append(Path(project_dir))
+        return Path(project_dir) / ".scitex" / "writer"
+
+    saved = _with_stubbed_ensure_workspace(_stub)
+    missing = tmp_path / "my-paper"
+    try:
+        # Act
+        main(["create-project", str(missing)])
+    finally:
+        project_module.ensure_workspace = saved
+    # Assert
+    assert calls == [missing.resolve()]
 
 
 # EOF

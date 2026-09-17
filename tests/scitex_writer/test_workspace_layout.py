@@ -35,6 +35,7 @@ from scitex_writer.workspace_layout import (
     WORKSPACE_RELPATH,
     compile_script,
     compile_script_relpath,
+    is_inside,
     is_workspace,
     package_scripts_dir,
     refresh_vendored_scripts,

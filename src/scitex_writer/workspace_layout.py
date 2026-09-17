@@ -59,6 +59,7 @@ __all__ = [
     "package_scripts_dir",
     "vendored_script_sha256",
     "refresh_vendored_scripts",
+    "is_inside",
 ]
 
 PathLike = Union[str, Path]
@@ -339,6 +340,23 @@ def _source_sentinel_hash(scripts_dir: Path) -> str:
     return h.hexdigest()
 
 
+def is_inside(child: PathLike, parent: PathLike) -> bool:
+    """True when ``child`` is ``parent`` or lives under it, AFTER resolution.
+
+    The containment predicate for every write this package performs inside
+    somebody else's project. Resolution is the point: a plain textual prefix
+    check would accept ``<parent>/../elsewhere`` and a link to anywhere, which
+    is exactly the shape that let a symlinked workspace redirect the
+    vendored-script refresh out of the project (2026-09-17 review finding).
+
+    Lives here rather than beside its callers because ``workspace_layout`` owns
+    what a workspace path MEANS; callers that write use this instead of
+    re-deriving it.
+    """
+    child_path, parent_path = Path(child).resolve(), Path(parent).resolve()
+    return child_path == parent_path or parent_path in child_path.parents
+
+
 def refresh_vendored_scripts(
     workspace: Path,
     scripts_dir: Optional[Path] = None,
@@ -383,6 +401,18 @@ def refresh_vendored_scripts(
     if not ws_scripts.is_dir():
         return []
 
+    # NEVER WRITE OUTSIDE THE WORKSPACE, and never THROUGH a link to get there.
+    # The caller's authority covers the workspace it named, not wherever a link
+    # points: measured before this guard, a project whose `.scitex/writer` was a
+    # symlink to a victim directory had the whole vendored tree copied into the
+    # victim (158 files) and two of its files overwritten, while the verb
+    # reported "already present, nothing to do". Declining is a no-op refresh —
+    # the safe direction, since the compile then runs with whatever the
+    # workspace already has, exactly as it did before this refresh existed.
+    ws_root = Path(workspace).resolve()
+    if Path(workspace).is_symlink() or ws_scripts.is_symlink():
+        return []
+
     sentinel = _source_sentinel_hash(scripts_dir)
     marker = ws_scripts / _SCRIPTS_SENTINEL
     if marker.is_file() and marker.read_text().strip() == sentinel:
@@ -392,13 +422,21 @@ def refresh_vendored_scripts(
     for src_file in sorted(p for p in scripts_dir.rglob("*") if p.is_file()):
         rel = src_file.relative_to(scripts_dir)
         dst_file = ws_scripts / rel
+        # A symlinked DIRECTORY inside scripts/ (or a symlinked file) would
+        # redirect this write wherever it points, so containment is enforced per
+        # destination rather than only at the workspace boundary.
+        if not is_inside(dst_file.parent.resolve(), ws_root):
+            continue
+        if dst_file.is_symlink():
+            continue
         src_hash = _sha256(src_file)
         if not dst_file.is_file() or _sha256(dst_file) != src_hash:
             dst_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src_file, dst_file)
             written.append(dst_file)
-    marker.parent.mkdir(parents=True, exist_ok=True)
-    marker.write_text(sentinel + "\n")
+    if is_inside(marker.parent.resolve(), ws_root):
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(sentinel + "\n")
     return written
 
 
