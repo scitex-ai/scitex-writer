@@ -641,19 +641,16 @@ def test_the_force_include_destination_is_where_resolution_looks():
     assert f'pkg / "{packaged}"' in candidates
 
 
-def test_a_wheel_without_the_scripts_cannot_heal_a_workspace(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
-    # Arrange: the failure the force-include exists to prevent. With no scripts
-    # in the installed package, `package_scripts_dir()` IS None — the state of
-    # every wheel install before this fix — and the refresh must decline rather
-    # than half-copy from nowhere.
+def test_a_source_with_no_scripts_writes_nothing(tmp_path: Path):
+    # Arrange: the pre-fix wheel state, as far as the refresh can see it — a
+    # resolvable source that holds no scripts (a wheel without the force-include
+    # has no source at all, which `refresh_vendored_scripts` answers the same
+    # way: decline, never a partial copy). No mock: an empty real directory.
     ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
-    monkeypatch.setattr(
-        "scitex_writer.workspace_layout.package_scripts_dir", lambda: None
-    )
+    empty = tmp_path / "empty-scripts"
+    empty.mkdir()
     # Act
-    written = refresh_vendored_scripts(ws)
+    written = refresh_vendored_scripts(ws, scripts_dir=empty)
     # Assert
     assert written == []
 
