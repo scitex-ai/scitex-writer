@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.4] - 2026-09-17
+
+### Fixed
+
+- **2.43.3's wheel shipped 4 files where the source tree has 122 under
+  `scitex_writer/scripts/` — the vendored-script self-heal was still ineffective on a wheel
+  install.** `python -m build` builds the wheel FROM THE SDIST, the sdist `include` list never
+  named `scripts/`, and the only members it kept were the READMEs (the pattern `"README.md"` is
+  unanchored, so hatchling matches it at any depth). The wheel's `force-include` then found a
+  source tree that had already been emptied, and no gate noticed because nothing about it breaks
+  an import. The sdist now ships the anchored `"/scripts"`, and the release pipeline's post-build
+  gate asserts the key file is a member of the built wheel before publish — so this fails the
+  pipeline instead of the field. Verified end to end: `uv build --sdist` → unpack →
+  `uv build --wheel` yields 662 files with 119 under `scitex_writer/scripts/` including
+  `shell/modules/check_dependancy_commands.sh`.
+
 ## [2.43.3] - 2026-09-17
 
 ### Added
