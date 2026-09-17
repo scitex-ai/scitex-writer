@@ -655,4 +655,44 @@ def test_a_source_with_no_scripts_writes_nothing(tmp_path: Path):
     assert written == []
 
 
+def test_the_sdist_ships_the_vendored_scripts():
+    # Arrange: `python -m build` builds the WHEEL FROM THE SDIST, so the
+    # force-include above can only copy what the sdist still has. The published
+    # 2.43.3 wheel shipped 4 files under scitex_writer/scripts/ instead of 122
+    # for exactly this reason: `scripts/` was not in the sdist include list, and
+    # the unanchored "README.md" pattern only matched its READMEs.
+    pyproject = REPO_ROOT / "pyproject.toml"
+    # Act
+    with pyproject.open("rb") as handle:
+        config = tomllib.load(handle)
+    included = config["tool"]["hatch"]["build"]["targets"]["sdist"]["include"]
+    # Assert
+    assert "/scripts" in included
+
+
+def test_the_sdist_does_not_ship_the_test_scripts_tree():
+    # Arrange: `/scripts` is ANCHORED so the sdist does not drag tests/scripts/
+    # along — hatchling matches an unanchored name at any depth, which is how
+    # this repo once shipped a wheel without `WriterConfig`.
+    pyproject = REPO_ROOT / "pyproject.toml"
+    # Act
+    with pyproject.open("rb") as handle:
+        config = tomllib.load(handle)
+    included = config["tool"]["hatch"]["build"]["targets"]["sdist"]["include"]
+    # Assert
+    assert "scripts" not in included and not any(
+        entry.startswith("tests") for entry in included
+    )
+
+
+def test_the_release_build_gates_on_the_shipped_scripts():
+    # Arrange: the artifact-level gate, where a missing file fails the pipeline
+    # before publish rather than in the field.
+    script = REPO_ROOT / ".github" / "ci" / "build-in-sif.sh"
+    # Act
+    body = script.read_text(encoding="utf-8")
+    # Assert
+    assert "scitex_writer/scripts/shell/modules/check_dependancy_commands.sh" in body
+
+
 # EOF

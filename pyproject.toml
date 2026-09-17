@@ -235,6 +235,15 @@ env_allowlist = ["PROJECT_ROOT"]
 # that tarfile rejects, and aren't useful in a wheel anyway.
 include = [
     "src/scitex_writer",
+    # ANCHORED, and load-bearing: `python -m build` builds the WHEEL FROM THE
+    # SDIST, so whatever the sdist leaves out, the wheel cannot force-include.
+    # Without this, `scripts/` was only present to the depth of its READMEs
+    # (the unanchored "README.md" above matches at ANY depth) and the published
+    # 2.43.3 wheel carried 4 script files instead of 122 — the force-include
+    # found a source tree that had already been emptied. Measured on that
+    # artifact, 2026-09-17. The `tests/scripts/` tree is deliberately NOT
+    # shipped: `/scripts` is anchored to the repo root.
+    "/scripts",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",
