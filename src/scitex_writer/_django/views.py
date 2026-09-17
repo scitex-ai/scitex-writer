@@ -34,6 +34,45 @@ from ..workspace_layout import NotAWriterWorkspaceError
 logger = logging.getLogger(__name__)
 
 
+def _app_config():
+    """The registered writer Django app config (its manifest is the SDK's view)."""
+    from django.apps import apps
+
+    return apps.get_app_config("writer_editor")
+
+
+def _leaf_identity() -> dict:
+    """Title + version for the leaf header, read through the scitex-app manifest.
+
+    WHICH VERSION: the LEAF's, from the app's own `manifest.json` (`version`),
+    which `ScitexAppConfig.app_version` reads — the same field a host reads when
+    it wants to know what it mounted, and the reason the key is pinned to
+    pyproject by a test. It is deliberately NOT the host's version (the hub's
+    header showed `v0.20.0-alpha` for a writer build) and not a hand-written
+    string in a source comment: both are claims about someone else's package.
+    """
+    config = _app_config()
+    manifest = config.manifest
+    return {
+        "writer_version": config.app_version,
+        "writer_label": manifest.get("label", "Writer"),
+    }
+
+
+def _project_picker_available() -> bool:
+    """True when the host registered the `scitex_project_picker` tag library.
+
+    Writer's picker PARTIAL ships in this package; its TAG comes from the host
+    (the hub ships it and includes the partial into its header). Standalone
+    `scitex-writer gui` has no such library and serves no project list, and
+    `{% load %}`ing a library that is not installed is a hard
+    TemplateSyntaxError — so the slot is rendered only when the tag resolves.
+    """
+    from django.template import engines
+
+    return "scitex_project_picker" in engines["django"].engine.template_libraries
+
+
 def _get_project(request):
     """Resolve the current project from ?working_dir= or SCITEX_WRITER_WORKING_DIR.
 
@@ -160,6 +199,14 @@ def editor_page(request):
             "app_name": "writer",
             "project_dir": project_dir,
             "dark_mode": project.dark_mode if project else False,
+            # The leaf header: our title + OUR version, and the picker slot only
+            # when the host registered its tag library.
+            **_leaf_identity(),
+            "project_picker_available": _project_picker_available(),
+            # A host embedding this page renders its own header and includes
+            # writer/_app_header.html; that host sets this True so the page
+            # keeps exactly one header. Standalone renders the leaf one.
+            "app_header_rendered": False,
             **_shell_context("SciTeX Writer"),
         },
         request=request,

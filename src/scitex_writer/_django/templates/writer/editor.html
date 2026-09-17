@@ -25,9 +25,18 @@
           href="{% static 'writer/favicon-180x180.png' %}">
     <link rel="stylesheet" href="{% static 'writer/assets/index.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/editor.css' %}">
+    <link rel="stylesheet" href="{% static 'writer/css/app-header.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/editor-narrow-and-dock.css' %}">
+    <link rel="stylesheet" href="{% static 'writer/css/editor-mobile.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/annotations.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/compile-diagnostics.css' %}">
+    {% comment %}
+       Generic version metadata: the leaf states which package and version is
+       serving this page, so a host can read it without knowing writer's slug or
+       trusting its own header's number (the hub's header showed the HUB's
+       v0.20.0-alpha for a writer build).
+    {% endcomment %}
+    <meta name="scitex-app-version" content="writer@{{ writer_version }}">
 {% endblock %}
 {% block worktree_title_full %}Project files{% endblock %}
 {% block worktree_data_attrs %}data-working-dir="{{ project_dir|default:'' }}"{% endblock %}
@@ -35,6 +44,30 @@
     <div class="writer-app"
          data-api-base="{{ api_base|default:'/' }}"
          data-project-dir="{{ project_dir|default:'' }}">
+        {% if not app_header_rendered %}
+            {% comment %}
+               The leaf header — title, OUR version, picker slot. A host that
+               renders its own header includes this partial and sets
+               app_header_rendered, so the page never carries two.
+            {% endcomment %}
+            {% include "writer/_app_header.html" %}
+        {% endif %}
+        <!-- Phone layout (<=768px): one pane at a time. The state lives on
+             <body data-writer-mobile-pane>, set before first paint by the
+             inline script below, because the editor, the preview and the
+             section list are siblings inside .writer-app while the stylesheet
+             that swaps them is viewport-scoped. On a wide viewport this nav and
+             the action bar are `display: none` and nothing below changes. -->
+        <nav class="writer-mobile-panes"
+             id="writer-mobile-panes"
+             aria-label="Writer panes">
+            <button type="button" class="writer-mobile-pane-btn" data-mobile-pane="files">Files</button>
+            <button type="button"
+                    class="writer-mobile-pane-btn is-active"
+                    data-mobile-pane="editor"
+                    aria-current="true">Editor</button>
+            <button type="button" class="writer-mobile-pane-btn" data-mobile-pane="preview">PDF</button>
+        </nav>
         <header class="writer-toolbar">
             <div class="writer-toolbar-left">
                 <select id="doc-type-select" class="writer-select" title="Document type">
@@ -88,6 +121,11 @@
             </div>
         </header>
         <div class="writer-split">
+            <div class="writer-mobile-files" id="writer-mobile-files">
+                <div class="writer-mobile-files-list"
+                     id="writer-mobile-section-list"
+                     aria-label="Sections"></div>
+            </div>
             <div class="writer-editor-pane" id="editor-panel">
                 <div class="editor-container" id="editor-container">
                     <div class="welcome-message" id="welcome-message">
@@ -196,9 +234,37 @@
                 <pre class="log-content" id="log-content"></pre>
             </div>
         </div>
+        <!-- Bottom action bar (<=768px). Compile forwards to #btn-compile, so
+             the one CompileController stays the only compile entry point; Save
+             goes through the same flushSave path Ctrl+S takes. -->
+        <div class="writer-mobile-actions" id="writer-mobile-actions">
+            <button id="btn-mobile-save"
+                    type="button"
+                    class="btn btn-secondary writer-mobile-action">
+                <i class="fas fa-floppy-disk"></i><span>Save</span>
+            </button>
+            <button id="btn-mobile-log"
+                    type="button"
+                    class="btn btn-secondary writer-mobile-action">
+                <i class="fas fa-terminal"></i><span>Log</span>
+            </button>
+            <button id="btn-mobile-compile"
+                    type="button"
+                    class="btn btn-primary writer-mobile-action">
+                <i class="fas fa-hammer"></i><span>Compile</span>
+            </button>
+        </div>
     </div>
 {% endblock %}
 {% block extra_js %}
+    <script>
+    /* The pane the phone layout opens on, set before the deferred module bundle
+       runs so the first paint is already the right pane instead of the desktop
+       split flickering into place. A classic inline script executes during
+       parsing; the module script does not. Desktop ignores the attribute --
+       every rule that reads it is inside @media (max-width: 768px). */
+    document.body.dataset.writerMobilePane = "editor";
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
     <script type="module" src="{% static 'writer/assets/index.js' %}"></script>
 {% endblock %}

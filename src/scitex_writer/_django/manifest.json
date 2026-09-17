@@ -2,6 +2,7 @@
   "name": "writer_app",
   "slug": "writer",
   "label": "Writer",
+  "version": "2.43.2",
   "scope": "project",
   "pip_package": "scitex-writer",
   "icon": "fas fa-file-alt",
@@ -23,6 +24,7 @@
   "standalone_command": "scitex-writer gui",
   "standalone_port": 31298,
   "frontend_type": "vanilla",
+  "mobile_layout": true,
   "embedded_package": true,
   "dependencies": {
     "python": ["scitex-writer", "django"]

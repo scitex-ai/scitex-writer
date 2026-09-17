@@ -14,6 +14,7 @@ import { getFile, saveFile, projectInfo } from "./api";
 import type { SectionEntry } from "./api";
 import { SectionTabs } from "./sections";
 import { countWords, mountToolbar } from "./toolbar";
+import { MobileLayout, isMobileViewport } from "./mobile";
 import { PDFViewer } from "./pdf-viewer";
 import { type AnnotationUIHandle, mountAnnotationUI } from "./annotation-ui";
 import { CompileController } from "./compile";
@@ -72,10 +73,20 @@ async function bootstrap(): Promise<void> {
 
   // Toolbar wiring
   const tabsEl = root.querySelector<HTMLElement>("#section-tabs");
+  const mobileListEl = root.querySelector<HTMLElement>(
+    "#writer-mobile-section-list",
+  );
   const sections = tabsEl
-    ? new SectionTabs(tabsEl, (section) => {
-        void loadSection(section);
-      })
+    ? new SectionTabs(
+        tabsEl,
+        (section) => {
+          void loadSection(section);
+          // Tapping a file on a phone means "open it": the pane the writer
+          // wanted is the editor, not the list they picked from.
+          if (isMobileViewport()) mobile.setPane("editor");
+        },
+        { listContainer: mobileListEl ?? undefined },
+      )
     : null;
 
   // PDF viewer + annotation UI (ADR 0001). The viewer produces marks into its
@@ -151,6 +162,28 @@ async function bootstrap(): Promise<void> {
     ?.addEventListener("click", () => {
       details?.openSection("shortcuts");
     });
+
+  // Phone layout (<=768px): Files / Editor / PDF, one at a time, plus the
+  // bottom action bar. Built after the viewer and the compile controller so a
+  // pane change can re-lay-out what they own.
+  const mobile = new MobileLayout(root, {
+    onSave: () => {
+      // Same path Ctrl+S takes: cancel the pending debounce, save now.
+      if (saveTimer) window.clearTimeout(saveTimer);
+      void flushSave();
+    },
+    onToggleLog: () => {
+      root.querySelector<HTMLElement>("#btn-toggle-log")?.click();
+    },
+    onPaneChange: (pane) => {
+      if (!isMobileViewport()) return;
+      if (pane === "editor") {
+        compactPhoneEditor();
+        editor.getEditor()?.layout();
+      }
+      if (pane === "preview") pdf?.setFitWidth();
+    },
+  });
 
   // Download PDF
   root
@@ -397,6 +430,25 @@ async function bootstrap(): Promise<void> {
 
   function updateWordCount(): void {
     toolbar.setWordCount(countWords(editor.getValue()));
+  }
+
+  /**
+   * Monaco's desktop chrome costs a 390px viewport real code width: the gutter,
+   * the glyph margin (~20px of breakpoint dots), the folding arrows and the
+   * minimap together leave roughly half the width for the manuscript. Applied
+   * whenever the phone layout is entered, with the numbers still readable
+   * (3 line-number chars covers a 3-digit LaTeX file).
+   */
+  function compactPhoneEditor(): void {
+    if (!isMobileViewport()) return;
+    editor.getEditor()?.updateOptions({
+      minimap: { enabled: false },
+      glyphMargin: false,
+      folding: false,
+      lineDecorationsWidth: 2,
+      lineNumbersMinChars: 3,
+      scrollBeyondLastLine: false,
+    });
   }
 
   const mEditor = editor.getEditor();

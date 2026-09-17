@@ -1,0 +1,80 @@
+/* Writer's leaf header (templates/writer/_app_header.html).
+ *
+ * Slim identity bar: app title + the LEAF package version, then the host's
+ * project-selector slot. Writer's own app actions are deliberately NOT here —
+ * Compile / Save / Log live in the editor toolbar and, on a phone, in the
+ * bottom action bar, which already own their state; a second set in the header
+ * would be a second source of truth for the same buttons.
+ *
+ * The header must survive being the first child of a 390px column: it wraps
+ * instead of scrolling, and every control inside it (the picker, when the host
+ * supplies one) is a 44px finger target at phone width.
+ */
+
+.writer-app-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 13px;
+}
+
+.writer-app-header__identity {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.writer-app-header__title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.writer-app-header__version {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.writer-app-header__slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* The picker takes the room that is left; the actions slot keeps its own. */
+.writer-app-header__picker {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 768px) {
+  .writer-app-header {
+    padding: 6px 8px;
+  }
+
+  .writer-app-header__identity {
+    flex: 1 1 auto;
+  }
+
+  /* Whatever the host puts in the slots is a finger target here, not a 25px
+     mouse target. --writer-touch-target-min is declared by editor-mobile.css
+     on `.writer-app`, which this header is inside. */
+  .writer-app-header select,
+  .writer-app-header button,
+  .writer-app-header a {
+    min-height: var(--writer-touch-target-min, 44px);
+  }
+
+  /* A host picker with a long project name must not push the bar sideways. */
+  .writer-app-header select {
+    max-width: 100%;
+  }
+}
