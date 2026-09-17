@@ -21,6 +21,8 @@ path that does not exist — which is exactly how full compilation shipped dead
 from __future__ import annotations
 
 import hashlib
+import re
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -34,6 +36,7 @@ from scitex_writer.workspace_layout import (
     compile_script,
     compile_script_relpath,
     is_workspace,
+    package_scripts_dir,
     refresh_vendored_scripts,
     resolve_workspace,
     vendored_script_sha256,
@@ -41,6 +44,7 @@ from scitex_writer.workspace_layout import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+_PACKAGE_DIR = REPO_ROOT / "src" / "scitex_writer"
 
 DOC_TYPES = ("manuscript", "supplementary", "revision")
 
@@ -586,6 +590,70 @@ def test_refresh_vendored_scripts_on_workspace_without_scripts_is_noop(
     src = _vs_make_source(tmp_path, _NEW_CHECK)
     # Act
     written = refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert
+    assert written == []
+
+
+# ---------------------------------------------------------------------------
+# the wheel must carry the vendored scripts, or refresh cannot work at all
+# ---------------------------------------------------------------------------
+
+#: The packaged location `package_scripts_dir()` looks for FIRST, and therefore
+#: the destination the wheel force-include has to produce.
+PACKAGED_SCRIPTS_DESTINATION = "scitex_writer/scripts"
+
+
+def test_package_scripts_dir_resolves_in_a_source_checkout():
+    # Arrange
+    scripts = package_scripts_dir()
+    # Act
+    marker = (
+        scripts / "shell" / "modules" / "check_dependancy_commands.sh"
+        if scripts
+        else None
+    )
+    # Assert
+    assert marker is not None and marker.is_file()
+
+
+def test_wheel_force_includes_the_vendored_scripts():
+    # Arrange: measured on the published 2.43.2 wheel — 0 files under
+    # scitex_writer/scripts/, so every wheel install silently kept stale
+    # vendored scripts while the editable dev container healed correctly.
+    pyproject = REPO_ROOT / "pyproject.toml"
+    # Act
+    with pyproject.open("rb") as handle:
+        config = tomllib.load(handle)
+    forced = config["tool"]["hatch"]["build"]["targets"]["wheel"]["force-include"]
+    # Assert
+    assert forced == {"scripts": PACKAGED_SCRIPTS_DESTINATION}
+
+
+def test_the_force_include_destination_is_where_resolution_looks():
+    # Arrange: two independent statements of one location — the packaging
+    # config above, and package_scripts_dir()'s OWN candidate list. If either
+    # moves, the wheel ships the scripts somewhere nothing reads.
+    packaged = PACKAGED_SCRIPTS_DESTINATION.split("/", 1)[1]
+    source = (_PACKAGE_DIR / "workspace_layout.py").read_text(encoding="utf-8")
+    # Act
+    candidates = re.search(r"candidates = \[(.*?)\]", source, re.S).group(1)
+    # Assert
+    assert f'pkg / "{packaged}"' in candidates
+
+
+def test_a_wheel_without_the_scripts_cannot_heal_a_workspace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    # Arrange: the failure the force-include exists to prevent. With no scripts
+    # in the installed package, `package_scripts_dir()` IS None — the state of
+    # every wheel install before this fix — and the refresh must decline rather
+    # than half-copy from nowhere.
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    monkeypatch.setattr(
+        "scitex_writer.workspace_layout.package_scripts_dir", lambda: None
+    )
+    # Act
+    written = refresh_vendored_scripts(ws)
     # Assert
     assert written == []
 

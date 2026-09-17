@@ -203,6 +203,15 @@ Issues = "https://github.com/ywatanabe1989/scitex-writer/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/scitex_writer"]
+# The vendored-script refresh reads the INSTALLED package's scripts/
+# (`workspace_layout.package_scripts_dir`), so a wheel that does not carry them
+# cannot heal an existing workspace at all: `package_scripts_dir()` finds
+# neither `<pkg>/scripts` nor the repo root's `scripts/` in site-packages, and
+# the refresh silently no-ops. Measured on the published 2.43.2 wheel: 0 files
+# under `scitex_writer/scripts/`. Every wheel install — which is what the hub and
+# every user installs — therefore kept its stale vendored scripts; the editable
+# dev container masked it, because there the repo-root `scripts/` resolves.
+force-include = { "scripts" = "scitex_writer/scripts" }
 
 [tool.hatch.build.targets.sdist]
 # Ship only the Python package + project metadata in sdist. Top-level
