@@ -25,10 +25,18 @@
           href="{% static 'writer/favicon-180x180.png' %}">
     <link rel="stylesheet" href="{% static 'writer/assets/index.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/editor.css' %}">
+    <link rel="stylesheet" href="{% static 'writer/css/app-header.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/editor-narrow-and-dock.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/editor-mobile.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/annotations.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/compile-diagnostics.css' %}">
+    {% comment %}
+       Generic version metadata: the leaf states which package and version is
+       serving this page, so a host can read it without knowing writer's slug or
+       trusting its own header's number (the hub's header showed the HUB's
+       v0.20.0-alpha for a writer build).
+    {% endcomment %}
+    <meta name="scitex-app-version" content="writer@{{ writer_version }}">
 {% endblock %}
 {% block worktree_title_full %}Project files{% endblock %}
 {% block worktree_data_attrs %}data-working-dir="{{ project_dir|default:'' }}"{% endblock %}
@@ -36,6 +44,14 @@
     <div class="writer-app"
          data-api-base="{{ api_base|default:'/' }}"
          data-project-dir="{{ project_dir|default:'' }}">
+        {% if not app_header_rendered %}
+            {% comment %}
+               The leaf header — title, OUR version, picker slot. A host that
+               renders its own header includes this partial and sets
+               app_header_rendered, so the page never carries two.
+            {% endcomment %}
+            {% include "writer/_app_header.html" %}
+        {% endif %}
         <!-- Phone layout (<=768px): one pane at a time. The state lives on
              <body data-writer-mobile-pane>, set before first paint by the
              inline script below, because the editor, the preview and the

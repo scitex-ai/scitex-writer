@@ -1,0 +1,37 @@
+{% comment %}
+ Writer's leaf header — THE one app header, owned by the leaf.
+   Included by editor.html (standalone) and available to a host that mounts this
+   app, INSTEAD OF a bare `writer/_project_picker.html` include: one header, one
+   title, one version, one picker, whichever side renders it.
+
+   Contract, so a host does not have to know writer's internals:
+     * identity  — `Writer` (manifest `label`) + the LEAF package version, never
+                   the host's own version. This is a writer header that a host
+                   sheds light on, not a host header a writer writes into.
+     * picker    — `.stx-app-header__slot--project-selector`, between identity
+                   and actions, exactly as scitex-ui 0.22.0 specifies. The slot
+                   renders the leaf picker ONLY when the host registered the
+                   `scitex_project_picker` tag library (see
+                   `views._project_picker_available`), because `{% load %}`ing a
+                   library that is not installed is a hard TemplateSyntaxError:
+                   standalone `scitex-writer gui` serves no projects.
+     * actions   — `.stx-app-header__slot--actions`, EMPTY on purpose. Writer's
+                   app actions (Compile / Save / Log) live in the editor's own
+                   toolbar, which already knows their state; a second set here
+                   would be a second source of truth for the same buttons.
+
+   Set `app_header_rendered=True` in the template context when a host renders
+   its own header and includes this one: editor.html then skips it and the page
+   keeps exactly one header.
+{% endcomment %}
+<header class="writer-app-header" id="writer-app-header">
+    <div class="writer-app-header__identity">
+        <span class="writer-app-header__title">{{ writer_label|default:"Writer" }}</span>
+        <span class="writer-app-header__version"
+              title="scitex-writer package serving this page">v{{ writer_version }}</span>
+    </div>
+    <div class="stx-app-header__slot--project-selector writer-app-header__slot writer-app-header__picker">
+        {% if project_picker_available %}{% include "writer/_project_picker.html" %}{% endif %}
+    </div>
+    <div class="stx-app-header__slot--actions writer-app-header__slot"></div>
+</header>
