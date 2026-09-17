@@ -7,7 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.3] - 2026-09-17
+
 ### Added
+
+- **Writer works on a phone now (390x844), as one pane at a time.** Below 768px the shell
+  stacks every pane vertically, which left the editor off screen behind the section nav and the
+  compile controls unreachable; measured at 390 the app filled 318px of an 844px viewport
+  (`height: 100%` inside an auto-height flex parent resolves to CONTENT height). Writer now
+  declares its own phone layout inside `.writer-app`, state on `body[data-writer-mobile-pane]`,
+  every rule inside `@media (max-width: 768px)`: an explicit **Files / Editor / PDF** switcher
+  (taps, not swipes — a horizontal gesture over the editor races Monaco's selection), a bottom
+  action bar with **Save / Log / Compile** at 44px above the hub dock and the iOS home bar, the
+  Files pane showing the same sections as the desktop dropdown as 44px rows, fit-width PDF with
+  the viewer gutter dropped at phone width, and a compact Monaco (no minimap/glyph
+  margin/folding). Compile in the bar forwards to the one `CompileController`, so there is still
+  a single compile path; Save takes the Ctrl+S path. Measured in chromium at 390x844:
+  `scrollWidth == clientWidth == 390`, no page scroll, exactly one pane per state, no PDF canvas
+  past the viewport; desktop at 1440 is unchanged. `mobile_layout: true` in the manifest.
+
+- **A leaf header that states its own identity.** `writer/_app_header.html` is THE one writer
+  header: the manifest `label` as the title, the LEAF package version (from the app manifest,
+  read through `ScitexAppConfig.app_version` and pinned to `pyproject` by a test — never the
+  host's version and never a comment), and the canonical
+  `.stx-app-header__slot--project-selector` / `--actions` slots. A host that draws its own header
+  includes the partial and sets `app_header_rendered=True`, so the page never carries two; the
+  picker renders only when the host's `scitex_project_picker` tag library is installed, because
+  `{% load %}`ing a library that is not there is a hard `TemplateSyntaxError`. Also emits
+  `<meta name="scitex-app-version" content="writer@<version>">`.
 
 - **Every compile now explains itself (`diagnostics`).** A table-driven LaTeX log analyser
   (`_compile/_diagnostics/`) reads the document `.log`, `.blg` and console output and returns
@@ -22,6 +49,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every outcome; existing fields are unchanged. The editor log panel renders the list (EN/JA)
   with file:line links that jump the editor, the hint, and a "Show full log" toggle; the status
   `log` now carries the console output plus the LaTeX log. `scitex-dev` floor raised to 0.48.0.
+
+### Fixed
+
+- **The wheel now ships its vendored scripts.** The self-heal refresh reads the INSTALLED
+  package's `scripts/`, and the published 2.43.2 wheel carried none (measured: 0 files under
+  `scitex_writer/scripts/`), so on a wheel install — the hub's pin and every user's install —
+  `package_scripts_dir()` returned `None` and an existing workspace kept its stale vendored
+  scripts forever, while only the editable dev container healed. `pyproject` now force-includes
+  `scripts/` as `scitex_writer/scripts` (665 files in the wheel, 122 of them scripts), pinned by
+  tests that tie the packaging destination to the FIRST path `package_scripts_dir()` looks for.
+  `PROJECT_ROOT`, read by two of those now-shipped helpers and newly visible to audit §6a because
+  the distribution grew, is declared in `[tool.scitex_dev] env_allowlist` rather than renamed
+  here: it is an interface of scripts VENDORED into user workspaces, and renaming it needs its
+  own compatibility story.
 
 ## [2.43.2] - 2026-09-14
 
