@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.5] - 2026-09-17
+
+### Added
+
+- **`scitex-writer create-project <dir>` — the first step had no verb.** A clean-venv first
+  run could not create a project at all: `create-project` / `init` / `new` / `create` /
+  `init-project` all answered "No such command", and `show-usage` told the reader to `git clone`
+  the personal repository by hand. The verb wraps the public API (`ensure_workspace`), prints the
+  WORKSPACE path (`<project>/.scitex/writer`, where `compile.sh` and the content live, while the
+  root is what the compile/editor entry points accept), and is idempotent — an existing workspace
+  is reported and left alone with no re-clone and no network. `--dry-run` previews and touches
+  nothing; a directory that already has files refuses without `--yes` and names the flag;
+  `--json` for machine callers. `show-usage`'s Setup section names the verb now
+  (blocker #1 of the standalone-readiness card, measured 2026-09-02).
+
+### Fixed
+
+- **Both compile paths now read ONE verdict.** The runner and `run_compile_script` each carried
+  a local exit-code judgement, and they had drifted apart: a clean exit that produced nothing was
+  `exit-zero-no-pdf` to the runner and `"success": True` with `output_pdf: None` to the path the
+  MCP tools and the `_django` editor use — the false-success shape the June 2026 page-count
+  incident asked us to close. The rule now lives once in `_compile/_verdict.py` (the artifact
+  decides; the exit code only says how loud to be), both paths call it and spell none of it
+  locally, and two guards assert that relationship rather than two implementations agreeing.
+  Deliberate behaviour change: exit 0 with no PDF (or a zero-page husk) is a failure on the
+  editor path too.
+
 ## [2.43.4] - 2026-09-17
 
 ### Fixed
