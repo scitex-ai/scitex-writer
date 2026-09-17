@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.6] - 2026-09-17
+
+### Fixed
+
+- Made compiled PDF provenance use the running source tree's version when an editable install's distribution metadata is stale.
+- Made compile and re-vendor paths render the same version-stamp template, preventing contradictory version claims in one PDF.
+
 ## [2.43.5] - 2026-09-17
 
 ### Added
