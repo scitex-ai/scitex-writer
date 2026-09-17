@@ -22,19 +22,24 @@ from __future__ import annotations
 
 import hashlib
 import re
-import tomllib
+import shutil
+import threading
 from pathlib import Path
 
 import pytest
+import tomllib
 
 from scitex_writer import ensure_workspace
 from scitex_writer.workspace_layout import (
+    _SCRIPTS_SENTINEL,
     COMPILE_SCRIPT_RELPATHS,
-    NotAWriterWorkspaceError,
     SHELL_SCRIPTS_RELPATH,
     WORKSPACE_RELPATH,
+    NotAWriterWorkspaceError,
+    _write_under,
     compile_script,
     compile_script_relpath,
+    is_inside,
     is_workspace,
     package_scripts_dir,
     refresh_vendored_scripts,
@@ -693,6 +698,273 @@ def test_the_release_build_gates_on_the_shipped_scripts():
     body = script.read_text(encoding="utf-8")
     # Assert
     assert "scitex_writer/scripts/shell/modules/check_dependancy_commands.sh" in body
+
+
+
+# ---------------------------------------------------------------------------
+# containment predicate
+# ---------------------------------------------------------------------------
+
+
+def test_is_inside_accepts_a_child(tmp_path: Path):
+    # Arrange
+    child = tmp_path / "ws" / "scripts" / "shell"
+    child.mkdir(parents=True)
+    # Act
+    result = is_inside(child, tmp_path / "ws")
+    # Assert
+    assert result is True
+
+
+def test_is_inside_accepts_the_path_itself(tmp_path: Path):
+    # Arrange
+    # Act
+    result = is_inside(tmp_path / "ws", tmp_path / "ws")
+    # Assert
+    assert result is True
+
+
+def test_is_inside_rejects_a_sibling(tmp_path: Path):
+    # Arrange
+    (tmp_path / "victim").mkdir()
+    # Act
+    result = is_inside(tmp_path / "victim", tmp_path / "ws")
+    # Assert
+    assert result is False
+
+
+def test_is_inside_resolves_a_link_before_deciding(tmp_path: Path):
+    # Arrange: a link that LOOKS like a child and points elsewhere — the shape a
+    # textual prefix check cannot see, and the reason this predicate resolves.
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (tmp_path / "ws").mkdir()
+    (tmp_path / "ws" / "escape").symlink_to(outside)
+    # Act
+    result = is_inside(tmp_path / "ws" / "escape", tmp_path / "ws")
+    # Assert
+    assert result is False
+
+
+# ---------------------------------------------------------------------------
+# the write boundary: descriptor-relative, no-follow, marker gated on success
+# ---------------------------------------------------------------------------
+
+
+def test_refresh_declines_a_symlinked_workspace(tmp_path: Path):
+    # Arrange: the escape that was measured end to end — the refresh must not
+    # follow a link out of the caller's authority, whichever caller reached it
+    # (create-project AND the compile path both call this).
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    victim = tmp_path / "victim"
+    (victim / "scripts" / "shell" / "modules").mkdir(parents=True)
+    (victim / "scripts" / "README.md").write_text("victim readme\n")
+    before = {p: p.read_bytes() for p in sorted(victim.rglob("*")) if p.is_file()}
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "linked").symlink_to(victim)
+    # Act
+    written = refresh_vendored_scripts(work / "linked", scripts_dir=src_scripts)
+    after = {p: p.read_bytes() for p in sorted(victim.rglob("*")) if p.is_file()}
+    # Assert
+    assert (written, after) == ([], before)
+
+
+def test_refresh_declines_a_symlinked_scripts_directory(tmp_path: Path):
+    # Arrange: `<ws>/scripts -> victim` — the leaf link, same escape.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    victim_scripts = tmp_path / "victim-scripts"
+    (victim_scripts / "shell" / "modules").mkdir(parents=True)
+    (victim_scripts / "README.md").write_text("victim readme\n")
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    (ws / "scripts").symlink_to(victim_scripts)
+    # Act
+    written = refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    # Assert
+    assert written == []
+
+
+def test_write_under_refuses_a_symlinked_component(tmp_path: Path):
+    # Arrange: the boundary itself, with no pathname check in front of it — the
+    # walk opens each component O_NOFOLLOW|O_DIRECTORY by dir_fd, so a link
+    # cannot be traversed even when nothing looked beforehand.
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    ws = tmp_path / "ws" / "scripts"
+    ws.mkdir(parents=True)
+    (ws / "shell").symlink_to(victim)
+    # Act
+    landed = _write_under(ws, ("shell", "modules", "x.sh"), b"payload\n")
+    # Assert
+    assert (landed, list(victim.rglob("*"))) == (False, [])
+
+
+def test_write_under_replaces_a_symlinked_file_without_following_it(tmp_path: Path):
+    # Arrange: a link where the FILE belongs. os.rename replaces the entry, so
+    # the link's TARGET must not be written.
+    victim_file = tmp_path / "victim.sh"
+    victim_file.write_bytes(b"victim bytes\n")
+    ws = tmp_path / "ws" / "scripts"
+    ws.mkdir(parents=True)
+    (ws / "compile.sh").symlink_to(victim_file)
+    # Act
+    _write_under(ws, ("compile.sh",), b"package bytes\n")
+    # Assert
+    assert victim_file.read_bytes() == b"victim bytes\n"
+
+
+def test_write_under_lands_the_payload(tmp_path: Path):
+    # Arrange
+    ws = tmp_path / "ws" / "scripts"
+    ws.mkdir(parents=True)
+    # Act
+    landed = _write_under(ws, ("shell", "modules", "x.sh"), b"payload\n")
+    # Assert
+    assert (landed, (ws / "shell" / "modules" / "x.sh").read_bytes()) == (True, b"payload\n")
+
+
+def test_refresh_does_not_write_the_marker_when_a_destination_is_skipped(tmp_path: Path):
+    # Arrange: an intermediate DIRECTORY replaced by a link makes one destination
+    # impossible to write safely. The marker means "everything is in step", so it
+    # must NOT be written — otherwise the fast path treats a partial tree as
+    # current forever.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = tmp_path / "ws"
+    (ws / "scripts").mkdir(parents=True)
+    (ws / "scripts" / "shell").symlink_to(tmp_path / "elsewhere")
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    # Assert
+    assert not (ws / "scripts" / _SCRIPTS_SENTINEL).exists()
+
+
+def test_an_incomplete_refresh_leaves_the_previous_marker_unchanged(tmp_path: Path):
+    # Arrange: the prior marker is the record of what WAS complete; a partial
+    # refresh must not overwrite it with the new sentinel.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = tmp_path / "ws"
+    (ws / "scripts").mkdir(parents=True)
+    (ws / "scripts" / "shell").symlink_to(tmp_path / "elsewhere")
+    marker = ws / "scripts" / _SCRIPTS_SENTINEL
+    marker.write_text("PREVIOUS SENTINEL\n")
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    # Assert
+    assert marker.read_text() == "PREVIOUS SENTINEL\n"
+
+
+def test_a_complete_refresh_writes_the_marker(tmp_path: Path):
+    # Arrange: the positive half — the marker must still be written when every
+    # destination completed, or the refresh would re-copy forever.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    # Assert
+    assert (ws / "scripts" / _SCRIPTS_SENTINEL).is_file()
+
+
+def test_refresh_is_race_safe_when_a_checked_parent_becomes_a_link(tmp_path: Path):
+    # Arrange: the reviewer's TOCTOU — the destination parent is swapped between
+    # the check and the write. With descriptor-relative opens an fd pins an
+    # inode, not a name, so NO interleaving can redirect the write; the assertion
+    # therefore holds under every schedule rather than under a lucky one.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    (victim / "keep.txt").write_bytes(b"victim bytes\n")
+    before = {p: p.read_bytes() for p in sorted(victim.rglob("*")) if p.is_file()}
+    ws = tmp_path / "ws"
+    (ws / "scripts").mkdir(parents=True)
+    parent = ws / "scripts" / "shell"
+    stop = threading.Event()
+
+    def swap() -> None:
+        while not stop.is_set():
+            try:
+                if parent.is_symlink():
+                    parent.unlink()
+                else:
+                    if parent.is_dir():
+                        shutil.rmtree(parent)
+                parent.symlink_to(victim)
+            except OSError:
+                pass
+            try:
+                if parent.is_symlink():
+                    parent.unlink()
+                parent.mkdir(exist_ok=True)
+            except OSError:
+                pass
+
+    swapper = threading.Thread(target=swap, daemon=True)
+    swapper.start()
+    try:
+        # Act: many passes, so the swap lands in the check-to-write window
+        for _ in range(40):
+            refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    finally:
+        stop.set()
+        swapper.join(timeout=5)
+    after = {p: p.read_bytes() for p in sorted(victim.rglob("*")) if p.is_file()}
+    # Assert
+    assert after == before
+
+
+
+# ---------------------------------------------------------------------------
+# the SOURCE side of the boundary: one read, and the hash describes it
+# ---------------------------------------------------------------------------
+
+
+def test_the_refresh_reads_a_source_entry_once_and_hashes_what_it_read():
+    # Arrange: the second TOCTOU class — the vendored SOURCE entry swapped
+    # between the decision and the copy. It existed because the loop opened the
+    # source TWICE per entry (`_sha256(src_file)` and then `read_bytes()`), so a
+    # swap in between made the bytes written differ from the bytes the decision
+    # was made on. This is a STRUCTURAL guard on purpose: the property "the
+    # written bytes are the hashed bytes" has no external observer in a single
+    # -threaded test, and a racy one would only sometimes catch it. What a test
+    # CAN pin is that the two-open pattern is gone.
+    source = (_PACKAGE_DIR / "workspace_layout.py").read_text(encoding="utf-8")
+    body = source[source.index("def refresh_vendored_scripts") :]
+    # Comment lines are STRIPPED before the search: the comment above the fix
+    # quotes the old pattern to explain it, and a guard that cannot tell code
+    # from prose about code reports a failure it did not find.
+    code = "\n".join(
+        line for line in body.splitlines() if not line.lstrip().startswith("#")
+    )
+    # Act
+    two_open_patterns = [token for token in ("_sha256(src_file)", "read_bytes()") if token in code]
+    # Assert
+    assert two_open_patterns == ["read_bytes()"]
+
+
+def test_the_refresh_hashes_the_payload_variable_before_deciding():
+    # Arrange: the same property from the other side — the hash handed to the
+    # in-sync comparison must be the hash OF the payload, in that order.
+    source = (_PACKAGE_DIR / "workspace_layout.py").read_text(encoding="utf-8")
+    body = source[source.index("def refresh_vendored_scripts") :]
+    # Act
+    read_at = body.index("payload = src_file.read_bytes()")
+    hash_at = body.index("src_hash = hashlib.sha256(payload).hexdigest()")
+    compare_at = body.index("_sha256(dst_file) == src_hash")
+    # Assert
+    assert read_at < hash_at < compare_at
+
+
+def test_a_swapped_source_variant_lands_whole_and_marks_in_sync(tmp_path: Path):
+    # Arrange: the behavioural half — a DIFFERENT variant presented as the source
+    # must arrive byte-whole and leave the workspace marked in sync, so the
+    # marker can never describe a workspace holding something else.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    (src_scripts / _VS_CHECK).write_text("REPLACEMENT VARIANT\n", encoding="utf-8")
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    # Assert
+    assert (ws / "scripts" / _VS_CHECK).read_text() == "REPLACEMENT VARIANT\n"
 
 
 # EOF

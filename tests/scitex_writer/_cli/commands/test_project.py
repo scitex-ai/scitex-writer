@@ -15,10 +15,9 @@ import importlib
 import json
 from pathlib import Path
 
-
-
 from scitex_writer._cli import main
-
+from scitex_writer._cli.commands import project as project_module
+from scitex_writer._cli.commands.project import refuse_reason
 
 
 def test_module_exposes_update_project():
@@ -86,26 +85,93 @@ def test_the_usage_guide_no_longer_points_at_the_personal_repo(capsys):
 
 
 # ---------------------------------------------------------------------------
-# it fails honestly
+# the guard: what is refused, and what is normal
 # ---------------------------------------------------------------------------
+#
+# These drive `refuse_reason` directly rather than the command, because the
+# command's next step is a template clone and the guard is the part worth
+# pinning. The end-to-end run is recorded on the PR (clean venv, published
+# wheel): `create-project my-paper` on a path that does not exist yet creates
+# the root and the workspace, measured, not assumed.
 
 
-def test_a_missing_directory_fails(tmp_path):
-    # Arrange: the exit code is the console script's own contract.
-    missing = tmp_path / "not-here"
+def test_a_path_that_does_not_exist_yet_is_not_a_refusal(tmp_path):
+    # Arrange: `create-project my-paper` is the FIRST RUN, and it names a
+    # directory that does not exist. The first published version of this verb
+    # borrowed update-project's "Project not found" check and refused exactly
+    # this case — the bug this test exists to keep out.
+    missing = tmp_path / "my-paper"
     # Act
-    code = main(["create-project", str(missing)])
+    reason = refuse_reason(missing, yes=False)
+    # Assert
+    assert reason is None
+
+
+def test_an_empty_directory_is_not_a_refusal(tmp_path):
+    # Arrange
+    # Act
+    reason = refuse_reason(tmp_path, yes=False)
+    # Assert
+    assert reason is None
+
+
+def test_an_existing_workspace_is_not_a_refusal(tmp_path):
+    # Arrange: an existing project is reported and left alone, not refused.
+    _workspace_fixture(tmp_path)
+    # Act
+    reason = refuse_reason(tmp_path, yes=False)
+    # Assert
+    assert reason is None
+
+
+def test_a_file_in_the_way_is_refused(tmp_path):
+    # Arrange: a path that is a FILE cannot hold a workspace.
+    target = tmp_path / "my-paper"
+    target.write_text("not a directory\n")
+    # Act
+    reason = refuse_reason(target, yes=False)
+    # Assert
+    assert "not a directory" in (reason or "")
+
+
+def test_a_directory_with_files_is_refused(tmp_path):
+    # Arrange: additive or not, the verb does not silently write into a
+    # directory that already holds someone's files (audit §2: mutating verbs do
+    # not prompt — they refuse and name the flag).
+    (tmp_path / "notes.txt").write_text("mine\n")
+    # Act
+    reason = refuse_reason(tmp_path, yes=False)
+    # Assert
+    assert reason is not None
+
+
+def test_the_refusal_names_the_flag_that_proceeds(tmp_path):
+    # Arrange: a refusal an agent cannot act on is a dead end.
+    (tmp_path / "notes.txt").write_text("mine\n")
+    # Act
+    reason = refuse_reason(tmp_path, yes=False)
+    # Assert
+    assert "--yes" in (reason or "")
+
+
+def test_yes_is_the_way_through_that_refusal(tmp_path):
+    # Arrange
+    (tmp_path / "notes.txt").write_text("mine\n")
+    # Act
+    reason = refuse_reason(tmp_path, yes=True)
+    # Assert
+    assert reason is None
+
+
+def test_a_non_empty_directory_is_still_not_written_without_yes(tmp_path):
+    # Arrange: the guard is wired, not merely available — the command must not
+    # reach the clone for this case (which is also why this test needs no
+    # network).
+    (tmp_path / "notes.txt").write_text("mine\n")
+    # Act
+    code = main(["create-project", str(tmp_path)])
     # Assert
     assert code == 1
-
-
-def test_a_missing_directory_says_what_was_not_found(tmp_path, capsys):
-    # Arrange
-    missing = tmp_path / "not-here"
-    # Act
-    main(["create-project", str(missing)])
-    # Assert
-    assert str(missing) in capsys.readouterr().err
 
 
 # ---------------------------------------------------------------------------
@@ -201,36 +267,6 @@ def test_dry_run_reports_whether_it_would_create(tmp_path, capsys):
     assert json.loads(capsys.readouterr().out)["would_create"] is True
 
 
-def test_a_directory_with_files_refuses_without_yes(tmp_path):
-    # Arrange: additive or not, the verb does not silently write into a
-    # directory that already holds someone's files (audit §2: mutating verbs do
-    # not prompt — they refuse and name the flag).
-    (tmp_path / "notes.txt").write_text("mine\n")
-    # Act
-    code = main(["create-project", str(tmp_path)])
-    # Assert
-    assert code == 1
-
-
-def test_a_directory_with_files_creates_nothing_when_it_refuses(tmp_path, capsys):
-    # Arrange
-    (tmp_path / "notes.txt").write_text("mine\n")
-    # Act
-    main(["create-project", str(tmp_path)])
-    capsys.readouterr()
-    # Assert
-    assert not (tmp_path / ".scitex").exists()
-
-
-def test_the_refusal_names_the_flag_that_proceeds(tmp_path, capsys):
-    # Arrange: a refusal an agent cannot act on is a dead end.
-    (tmp_path / "notes.txt").write_text("mine\n")
-    # Act
-    main(["create-project", str(tmp_path)])
-    # Assert
-    assert "--yes" in capsys.readouterr().err
-
-
 # ---------------------------------------------------------------------------
 # one creation path, not two
 # ---------------------------------------------------------------------------
@@ -255,6 +291,171 @@ def test_the_verb_does_not_shell_out_to_git():
     # Assert
     assert "subprocess" not in body and "git clone" not in body
 
+
+
+# ---------------------------------------------------------------------------
+# adversarial: what a hostile or malformed target must NOT be able to do
+# ---------------------------------------------------------------------------
+
+
+def _victim_with_scripts(root: Path) -> Path:
+    """A directory that is NOT the project, holding its own vendored scripts.
+
+    This is the shape the escape actually damaged (another workspace, or any
+    directory that happens to contain scripts/), and byte-identity is the
+    assertion — so the exact contents matter more than their plausibility.
+    """
+    victim = root / "victim"
+    (victim / "scripts" / "shell" / "modules").mkdir(parents=True)
+    (victim / "scripts" / "README.md").write_text("victim readme\n")
+    (victim / "scripts" / "shell" / "modules" / "check_dependancy_commands.sh").write_text(
+        "VICTIM OWN CONTENT\n"
+    )
+    return victim
+
+
+def _tree_bytes(root: Path) -> dict:
+    return {
+        str(p.relative_to(root)): p.read_bytes()
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
+    }
+
+
+def _project_with_symlinked_workspace(tmp_path: Path, victim: Path) -> Path:
+    project = tmp_path / "proj"
+    (project / ".scitex").mkdir(parents=True)
+    (project / ".scitex" / "writer").symlink_to(victim)
+    return project
+
+
+def test_a_symlinked_workspace_is_refused(tmp_path):
+    # Arrange: before this guard, `.scitex/writer -> victim` was accepted, and
+    # the vendored-script refresh wrote THROUGH the link — the victim's
+    # check_dependancy_commands.sh hash went 5ed0d8a9… -> 796ca4da… and 158
+    # files landed outside the project, with no --yes.
+    project = _project_with_symlinked_workspace(tmp_path, _victim_with_scripts(tmp_path))
+    # Act
+    code = main(["create-project", str(project)])
+    # Assert
+    assert code == 1
+
+
+def test_a_symlinked_workspace_leaves_the_victim_byte_identical(tmp_path, capsys):
+    # Arrange
+    victim = _victim_with_scripts(tmp_path)
+    project = _project_with_symlinked_workspace(tmp_path, victim)
+    before = _tree_bytes(victim)
+    # Act
+    main(["create-project", str(project)])
+    capsys.readouterr()
+    # Assert
+    assert _tree_bytes(victim) == before
+
+
+def test_a_symlinked_workspace_refusal_names_the_link(tmp_path, capsys):
+    # Arrange: the message must say what to remove, or the operator is stuck.
+    project = _project_with_symlinked_workspace(tmp_path, _victim_with_scripts(tmp_path))
+    # Act
+    main(["create-project", str(project)])
+    # Assert
+    assert "symlink" in capsys.readouterr().err
+
+
+def test_a_symlinked_scitex_directory_is_refused(tmp_path):
+    # Arrange: the PARENT link — `.scitex -> victim` — is the same escape one
+    # level up, so it is refused by the same check.
+    victim = _victim_with_scripts(tmp_path)
+    project = tmp_path / "proj2"
+    project.mkdir()
+    (project / ".scitex").symlink_to(victim)
+    # Act
+    code = main(["create-project", str(project)])
+    # Assert
+    assert code == 1
+
+
+def test_a_regular_file_workspace_is_refused(tmp_path):
+    # Arrange: `<project>/.scitex/writer` as a regular FILE used to raise an
+    # uncaught NotADirectoryError from `any(workspace.iterdir())`, which ran
+    # before the guard.
+    project = tmp_path / "proj3"
+    (project / ".scitex").mkdir(parents=True)
+    (project / ".scitex" / "writer").write_text("not a directory\n")
+    # Act
+    code = main(["create-project", str(project)])
+    # Assert
+    assert code == 1
+
+
+def test_a_regular_file_workspace_reports_instead_of_tracing(tmp_path, capsys):
+    # Arrange
+    project = tmp_path / "proj4"
+    (project / ".scitex").mkdir(parents=True)
+    (project / ".scitex" / "writer").write_text("not a directory\n")
+    # Act
+    main(["create-project", str(project)])
+    captured = capsys.readouterr()
+    # Assert
+    assert "Traceback" not in captured.out + captured.err
+
+
+# ---------------------------------------------------------------------------
+# delegation: the case refuse_reason alone cannot see
+# ---------------------------------------------------------------------------
+
+
+def _with_stubbed_ensure_workspace(stub):
+    """Install a stub via DIRECT ATTRIBUTE ASSIGNMENT.
+
+    PA-306 bans mock-shaped tests (the ``monkeypatch`` fixture), and this is the
+    idiom scitex-dev itself uses instead: every caller in the command module
+    resolves ``ensure_workspace`` from that module's globals at call time, so
+    assigning the attribute IS the seam. The caller restores it in a finally.
+    """
+    saved = project_module.ensure_workspace
+    project_module.ensure_workspace = stub
+    return saved
+
+
+def test_the_command_delegates_to_ensure_workspace_for_a_missing_target(tmp_path):
+    # Arrange: THE case refuse_reason cannot cover — it says "proceed" for a
+    # missing path, so if a `if not project_path.exists(): return 1` early
+    # return were ever restored in the command body, the guard tests would all
+    # still pass. Only a command-level run can tell.
+    calls = []
+
+    def _stub(project_dir, **kwargs):
+        calls.append(Path(project_dir))
+        return Path(project_dir) / ".scitex" / "writer"
+
+    saved = _with_stubbed_ensure_workspace(_stub)
+    try:
+        # Act
+        code = main(["create-project", str(tmp_path / "my-paper")])
+    finally:
+        project_module.ensure_workspace = saved
+    # Assert
+    assert (code, len(calls)) == (0, 1)
+
+
+def test_the_delegated_target_is_the_path_the_user_gave(tmp_path):
+    # Arrange
+    calls = []
+
+    def _stub(project_dir, **kwargs):
+        calls.append(Path(project_dir))
+        return Path(project_dir) / ".scitex" / "writer"
+
+    saved = _with_stubbed_ensure_workspace(_stub)
+    missing = tmp_path / "my-paper"
+    try:
+        # Act
+        main(["create-project", str(missing)])
+    finally:
+        project_module.ensure_workspace = saved
+    # Assert
+    assert calls == [missing.resolve()]
 
 
 # EOF
