@@ -20,9 +20,13 @@ import json
 import os
 import re
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _project_root import resolve_project_root  # noqa: E402
 
 
 def _git_head_sha() -> Optional[str]:
@@ -70,7 +74,7 @@ def register_build(
     """
     try:
         if project_root is None:
-            project_root = Path(os.environ.get("PROJECT_ROOT") or os.getcwd()).resolve()
+            project_root = Path(resolve_project_root()).resolve()
         # Canonical location per PS-102: regenerable data under runtime/
         registry_dir = project_root / ".scitex" / "writer" / "runtime" / "builds"
         registry_dir.mkdir(parents=True, exist_ok=True)

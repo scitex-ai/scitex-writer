@@ -25,6 +25,9 @@ MODULES_DIR="$THIS_DIR/process_figures_modules"
 # Resolve project root from script location (safe for nested repos)
 PROJECT_ROOT="$(cd "$THIS_DIR/../../.." && pwd)"
 export PROJECT_ROOT
+# Both names go out: the refreshed vendored helpers read the prefixed name, and
+# a workspace whose helpers have not been refreshed yet still reads this one.
+export SCITEX_WRITER_PROJECT_ROOT="$PROJECT_ROOT"
 cd "$PROJECT_ROOT" || exit 1
 
 # Source configuration
