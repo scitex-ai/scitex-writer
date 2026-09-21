@@ -214,19 +214,15 @@ packages = ["src/scitex_writer"]
 force-include = { "scripts" = "scitex_writer/scripts" }
 
 [tool.scitex_dev]
-# §6a (env-var namespacing): the vendored script helpers
-# (`scripts/python/_build_id.py`, `scripts/python/manage_builds.py`) read a
-# project root from `PROJECT_ROOT`.
-#
-# WHY THIS IS AN EXEMPTION AND NOT A RENAME. Two reasons, both about scope.
-# §6a scans the INSTALLED distribution, so it never saw these files until the
-# force-include above put `scripts/` in the wheel — the reading is old, the
-# visibility is new, and this PR's job is the packaging. And the scripts are
-# VENDORED into user workspaces: `PROJECT_ROOT` is a shipped interface there,
-# so namespacing it needs its own compatibility story (and a refresh, which the
-# force-include is what makes possible). Tracked separately; this entry says
-# what is intentional in the meantime rather than leaving the audit to guess.
-env_allowlist = ["PROJECT_ROOT"]
+# §6a (env-var namespacing): the exemption for a bare `PROJECT_ROOT` is GONE,
+# because the read is gone. `scripts/python/_project_root.py` now resolves
+# `SCITEX_WRITER_PROJECT_ROOT`, and the retired unprefixed spelling lives there
+# as a CONSTANT (honoured for one migration cycle, with a warning that names
+# the replacement) rather than as a literal at the two read sites. That was
+# the point of the previous entry's "tracked separately": the scripts are
+# vendored into user workspaces, so the rename needed a compatibility story
+# and a refresh path, and the `force-include` above is what makes the refresh
+# possible. Nothing here needs an exemption now.
 
 [tool.hatch.build.targets.sdist]
 # Ship only the Python package + project metadata in sdist. Top-level

@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _project_root import resolve_project_root  # noqa: E402
 
 GREEN = "\033[0;32m"
 YELLOW = "\033[1;33m"
@@ -119,8 +121,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--project-root",
-        default=os.environ.get("PROJECT_ROOT", os.getcwd()),
-        help="Project root (default: PROJECT_ROOT env var or cwd)",
+        default=resolve_project_root(),
+        help="Project root (default: SCITEX_WRITER_PROJECT_ROOT env var or cwd)",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 

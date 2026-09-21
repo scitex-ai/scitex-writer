@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The editor header now speaks the shared scitex-ui app-header contract: the row is `.stx-app-header`, the title/version/actions slot carry the canonical class names, and the SDK's `css/app/app-header.css` is loaded by the header partial. Writer's own stylesheet keeps only what the shared sheet does not cover (the identity grouping and the picker control's phone sizing), so the row has one definition instead of two.
+- The vendored scripts read their project root from `SCITEX_WRITER_PROJECT_ROOT` (fleet convention) instead of the unprefixed `PROJECT_ROOT`, and the scitex-dev §6a exemption in `pyproject.toml` is gone with it. The old name is still honoured for one migration cycle — a workspace that exports it keeps compiling — but never silently: reading it prints a warning naming the replacement. `manage_builds --help` now names the new variable too.
 
 ## [2.43.6] - 2026-09-17
 
