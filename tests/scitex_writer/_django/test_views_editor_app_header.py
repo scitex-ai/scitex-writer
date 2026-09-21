@@ -29,7 +29,10 @@ _MANIFEST = _DJANGO_DIR / "manifest.json"
 _PYPROJECT = _PROJECT_ROOT / "pyproject.toml"
 _HEADER_CSS = _DJANGO_DIR / "static" / "writer" / "css" / "app-header.css"
 
-_HEADER_OPEN = '<header class="writer-app-header" id="writer-app-header">'
+_HEADER_OPEN = (
+    '<header class="stx-app-header writer-app-header" id="writer-app-header">'
+)
+_SHARED_HEADER_CSS = "scitex_ui/css/app/app-header.css"
 
 
 @pytest.fixture
@@ -196,11 +199,40 @@ def test_the_header_offers_the_canonical_project_selector_slot(project_dir):
 
 def test_the_header_offers_the_actions_slot(project_dir):
     # Arrange
-    slot = "stx-app-header__slot--actions"
+    slot = 'class="stx-app-header__actions"'
     # Act
     block = _header_block(_editor_html(project_dir))
     # Assert
     assert slot in block
+
+
+def test_the_header_carries_the_shared_class_vocabulary(project_dir):
+    """Adoption of the scitex-ui app-header primitive, not a parallel copy.
+
+    The row, the title, the version and the actions slot carry the canonical
+    class names the shared stylesheet defines.
+    """
+    # Arrange
+    canonical = (
+        'class="stx-app-header writer-app-header"',
+        'class="stx-app-header__title writer-app-header__title"',
+        'class="stx-app-header__version writer-app-header__version"',
+        'class="stx-app-header__actions"',
+    )
+    # Act
+    block = _header_block(_editor_html(project_dir))
+    # Assert
+    assert [markup for markup in canonical if markup not in block] == []
+
+
+def test_the_retired_slot_adapter_classes_are_gone(project_dir):
+    """The leaf-only classes that shadowed the shared slot must not come back."""
+    # Arrange
+    retired = ("writer-app-header__slot", "writer-app-header__picker")
+    # Act
+    block = _header_block(_editor_html(project_dir))
+    # Assert
+    assert [markup for markup in retired if markup in block] == []
 
 
 def test_the_picker_renders_only_when_its_tag_library_is_installed(project_dir):
@@ -236,13 +268,32 @@ def test_the_header_stylesheet_is_loaded(project_dir):
     assert f'href="/static/{stylesheet}"' in body
 
 
-def test_the_header_wraps_instead_of_overflowing_a_phone():
+def test_the_shared_header_stylesheet_is_loaded(project_dir):
+    """The row's layout is the SDK's, so the SDK's sheet has to be on the page."""
     # Arrange
-    css = _HEADER_CSS.read_text(encoding="utf-8")
+    stylesheet = _SHARED_HEADER_CSS
     # Act
-    rule = re.search(r"\.writer-app-header\s*\{([^}]*)\}", css).group(1)
+    body = _editor_html(project_dir)
     # Assert
-    assert "flex-wrap: wrap" in rule
+    assert f'href="/static/{stylesheet}"' in body
+
+
+def test_the_leaf_no_longer_redefines_the_shared_header_row():
+    """The row's flex layout has ONE definition (scitex-ui), not two.
+
+    Writer keeps only what the shared sheet does not cover: the identity
+    grouping and the picker control's phone sizing. A leaf rule that sets the
+    row's own flex layout again is exactly the duplicate this adoption removed.
+    """
+    # Arrange
+    row_properties = ("display", "align-items", "flex-wrap", "gap", "padding")
+    # Act
+    css = re.sub(r"/\*.*?\*/", "", _HEADER_CSS.read_text(encoding="utf-8"), flags=re.S)
+    leaf_row_rule = re.search(r"\.writer-app-header\s*\{([^}]*)\}", css)
+    # Assert
+    assert leaf_row_rule is None or not any(
+        prop in leaf_row_rule.group(1) for prop in row_properties
+    )
 
 
 def test_host_picker_controls_are_phone_sized():
