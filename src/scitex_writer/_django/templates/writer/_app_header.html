@@ -1,5 +1,13 @@
-{% comment %}
- Writer's leaf header — THE one app header, owned by the leaf.
+{% load static %}{% comment %}
+ Writer's leaf header — THE one app header, owned by the leaf, SHAPED by the
+   shared contract: the row is `.stx-app-header` (scitex-ui, css/app/app-header.css
+   — linked below, the same way scitex-ui's own `_project_picker.html` links its
+   stylesheet). Identity (title + version) on the left, the canonical
+   project-selector slot, then the actions slot. Writer no longer carries a
+   second definition of that row: the leaf owns the VALUES and the host
+   contract, the SDK owns the chrome, so a user sees the same header in every
+   app and the phone rules have one place to change.
+
    Included by editor.html (standalone) and available to a host that mounts this
    app, INSTEAD OF a bare `writer/_project_picker.html` include: one header, one
    title, one version, one picker, whichever side renders it.
@@ -9,14 +17,14 @@
                    the host's own version. This is a writer header that a host
                    sheds light on, not a host header a writer writes into.
      * picker    — `.stx-app-header__slot--project-selector`, between identity
-                   and actions, exactly as scitex-ui 0.22.0 specifies. The slot
-                   renders the leaf picker ONLY when the host registered the
+                   and actions, exactly as scitex-ui specifies. The slot renders
+                   the leaf picker ONLY when the host registered the
                    `scitex_project_picker` tag library (see
                    `views._project_picker_available`), because `{% load %}`ing a
                    library that is not installed is a hard TemplateSyntaxError:
                    standalone `scitex-writer gui` serves no projects.
-     * actions   — `.stx-app-header__slot--actions`, EMPTY on purpose. Writer's
-                   app actions (Compile / Save / Log) live in the editor's own
+     * actions   — `.stx-app-header__actions`, EMPTY on purpose. Writer's app
+                   actions (Compile / Save / Log) live in the editor's own
                    toolbar, which already knows their state; a second set here
                    would be a second source of truth for the same buttons.
 
@@ -24,14 +32,15 @@
    its own header and includes this one: editor.html then skips it and the page
    keeps exactly one header.
 {% endcomment %}
-<header class="writer-app-header" id="writer-app-header">
+<link rel="stylesheet" href="{% static 'scitex_ui/css/app/app-header.css' %}">
+<header class="stx-app-header writer-app-header" id="writer-app-header">
     <div class="writer-app-header__identity">
-        <span class="writer-app-header__title">{{ writer_label|default:"Writer" }}</span>
-        <span class="writer-app-header__version"
+        <span class="stx-app-header__title writer-app-header__title">{{ writer_label|default:"Writer" }}</span>
+        <span class="stx-app-header__version writer-app-header__version"
               title="scitex-writer package serving this page">v{{ writer_version }}</span>
     </div>
-    <div class="stx-app-header__slot--project-selector writer-app-header__slot writer-app-header__picker">
+    <div class="stx-app-header__slot--project-selector">
         {% if project_picker_available %}{% include "writer/_project_picker.html" %}{% endif %}
     </div>
-    <div class="stx-app-header__slot--actions writer-app-header__slot"></div>
+    <div class="stx-app-header__actions"></div>
 </header>
