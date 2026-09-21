@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-from logging import getLogger
 from pathlib import Path
 from typing import Callable, Optional
+
+from scitex_logging import getLogger
 
 logger = getLogger(__name__)
 

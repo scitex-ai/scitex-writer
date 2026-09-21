@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from logging import getLogger
 from pathlib import Path
 from typing import Callable, Optional
+
+from scitex_logging import getLogger
 
 from .._dataclasses import CompilationResult
 from ..workspace_layout import (

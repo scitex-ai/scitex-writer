@@ -9,6 +9,7 @@ Plain-Python helpers; called from the Click root in `_cli/__init__.py`.
 """
 
 import shutil
+import sys
 
 from .. import __version__
 
@@ -67,8 +68,6 @@ def _get_tool_module(name: str) -> str:
 
 def _style(text: str, fg: str = None, bold: bool = False) -> str:
     """Apply ANSI color styling."""
-    import sys
-
     if not sys.stdout.isatty():
         return text
     codes = {
@@ -174,8 +173,8 @@ def cmd_list_tools(
     if module_filter:
         module_filter = module_filter.lower()
         if module_filter not in modules:
-            print(f"ERROR: Unknown module '{module_filter}'")
-            print(f"Available modules: {', '.join(sorted(modules.keys()))}")
+            sys.stdout.write(f"ERROR: Unknown module '{module_filter}'\n")
+            sys.stdout.write(f"Available modules: {', '.join(sorted(modules.keys()))}\n")
             return 1
         modules = {module_filter: modules[module_filter]}
 
@@ -198,36 +197,36 @@ def cmd_list_tools(
         print(json.dumps(output, indent=2))
         return 0
 
-    print(_style("SciTeX Writer MCP: scitex-writer", "cyan", bold=True))
-    print(f"Tools: {total} ({len(modules)} modules)")
-    print("Returns: Result{success, data, error, error_code, context, hints_on_error}")
-    print()
+    sys.stdout.write(_style("SciTeX Writer MCP: scitex-writer", "cyan", bold=True) + "\n")
+    sys.stdout.write(f"Tools: {total} ({len(modules)} modules)\n")
+    sys.stdout.write("Returns: Result{success, data, error, error_code, context, hints_on_error}\n")
+    sys.stdout.write("\n")
 
     for module in sorted(modules.keys()):
         mod_tools = sorted(modules[module])
-        print(_style(f"{module}: {len(mod_tools)} tools", "green", bold=True))
+        sys.stdout.write(_style(f"{module}: {len(mod_tools)} tools", "green", bold=True) + "\n")
         for tool_name in mod_tools:
             tool_obj = tool_map.get(tool_name)
 
             if verbose == 0:
                 # Names only (default)
-                print(f"  {tool_name}")
+                sys.stdout.write(f"  {tool_name}\n")
             elif verbose == 1:
                 # -v: Name + one-line description
-                print(f"  {tool_name}")
+                sys.stdout.write(f"  {tool_name}\n")
                 if tool_obj and tool_obj.description:
                     desc = tool_obj.description.split("\n")[0].strip()
-                    print(f"    {_style(desc, 'yellow')}")
+                    sys.stdout.write(f"    {_style(desc, 'yellow')}\n")
             elif verbose == 2:
                 # -vv: Name + one-line description + parameter names
-                print(f"  {tool_name}")
+                sys.stdout.write(f"  {tool_name}\n")
                 if tool_obj and tool_obj.description:
                     desc = tool_obj.description.split("\n")[0].strip()
-                    print(f"    {_style(desc, 'yellow')}")
+                    sys.stdout.write(f"    {_style(desc, 'yellow')}\n")
                 if tool_obj:
                     param_line = _format_param_names(tool_obj)
                     if param_line:
-                        print(param_line)
+                        sys.stdout.write(param_line + "\n")
             else:
                 # -vvv: Full detail -- signature with types + full description
                 sig = (
@@ -235,21 +234,21 @@ def cmd_list_tools(
                     if tool_obj
                     else f"  {tool_name}"
                 )
-                print(sig)
+                sys.stdout.write(sig + "\n")
                 if tool_obj and tool_obj.description:
                     for line in tool_obj.description.strip().split("\n"):
-                        print(f"    {line}")
-                print()
-        print()
+                        sys.stdout.write(f"    {line}\n")
+                sys.stdout.write("\n")
+        sys.stdout.write("\n")
 
     return 0
 
 
 def cmd_doctor() -> int:
     """Check MCP server health and configuration."""
-    print(f"scitex-writer {__version__}\n")
-    print("Health Check")
-    print("=" * 40)
+    sys.stdout.write(f"scitex-writer {__version__}\n")
+    sys.stdout.write("Health Check\n")
+    sys.stdout.write("=" * 40 + "\n")
 
     checks = []
 
@@ -281,32 +280,32 @@ def cmd_doctor() -> int:
         status = "✓" if ok else "✗"
         if not ok:
             all_ok = False
-        print(f"  {status} {name}: {info}")
+        sys.stdout.write(f"  {status} {name}: {info}\n")
 
-    print()
+    sys.stdout.write("\n")
     if all_ok:
-        print("All checks passed!")
+        sys.stdout.write("All checks passed!\n")
     else:
-        print("Some checks failed. Run 'pip install scitex-writer' to fix.")
+        sys.stdout.write("Some checks failed. Run 'pip install scitex-writer' to fix.\n")
 
     return 0 if all_ok else 1
 
 
 def cmd_config() -> int:
     """Show Claude Desktop configuration snippet."""
-    print(f"scitex-writer {__version__}\n")
-    print("Add this to your Claude Desktop config file:\n")
-    print("  macOS: ~/Library/Application Support/Claude/claude_desktop_config.json")
-    print("  Linux: ~/.config/Claude/claude_desktop_config.json\n")
+    sys.stdout.write(f"scitex-writer {__version__}\n")
+    sys.stdout.write("Add this to your Claude Desktop config file:\n")
+    sys.stdout.write("  macOS: ~/Library/Application Support/Claude/claude_desktop_config.json\n")
+    sys.stdout.write("  Linux: ~/.config/Claude/claude_desktop_config.json\n")
 
     scitex_path = shutil.which("scitex-writer")
     if scitex_path:
-        print(f"Your installation path: {scitex_path}\n")
+        sys.stdout.write(f"Your installation path: {scitex_path}\n")
 
-    print("Option 1: CLI command (replace path with your installation)")
-    print(CLAUDE_DESKTOP_CONFIG_CLI)
-    print("\nOption 2: Python module (replace path with your installation)")
-    print(CLAUDE_DESKTOP_CONFIG_PYTHON)
+    sys.stdout.write("Option 1: CLI command (replace path with your installation)\n")
+    sys.stdout.write(CLAUDE_DESKTOP_CONFIG_CLI + "\n")
+    sys.stdout.write("\nOption 2: Python module (replace path with your installation)\n")
+    sys.stdout.write(CLAUDE_DESKTOP_CONFIG_PYTHON + "\n")
     return 0
 
 

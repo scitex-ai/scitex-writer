@@ -11,11 +11,12 @@ the response.
 from __future__ import annotations
 
 import json
-import logging
+
+from scitex_logging import getLogger
 
 from django.http import JsonResponse
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 def _parse_json(request) -> dict:

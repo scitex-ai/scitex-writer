@@ -14,6 +14,9 @@ sq = pytest.importorskip(
     reason="requires scitex-dev with _skills_quality_pytest helper",
 )
 
+# PS-206b: import-smoke-allowed — the assertion lives inside the generated
+# test body (make_skill_quality_tests returns a test function); this file
+# only wires it to the package root.
 test_skills_quality = sq.make_skill_quality_tests(
     package_root=Path(__file__).resolve().parents[1]
 )
