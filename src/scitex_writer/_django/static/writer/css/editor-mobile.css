@@ -1,0 +1,245 @@
+/* Writer's phone layout (<=768px): one pane at a time plus a bottom action bar.
+ *
+ * WHY A LAYOUT OF OUR OWN: below 768px the scitex-ui shell stacks every pane
+ * vertically (css/shell/mobile.css), which is right for a workspace and wrong
+ * for writer — the section list, the editor and the PDF become three
+ * full-height blocks in one column, so the editor is off screen until you
+ * scroll past the nav and the compile controls are never where your thumb is.
+ * `.writer-app` fills the module pane, so the swap happens inside it: no shell
+ * class is selected here, and the shell's own stacking rules are left alone for
+ * every other app.
+ *
+ * STATE: `body[data-writer-mobile-pane]` = files | editor | preview, written by
+ * the inline script in editor.html before first paint and by
+ * `frontend/src/mobile.ts` (which mirrors it on the switcher's aria-current).
+ * EVERY rule below is inside the media query, so a wide viewport renders
+ * exactly what it rendered before this file existed.
+ *
+ * NOT A SWIPE: the pane switch is three explicit tabs. A horizontal gesture
+ * over the editor would race Monaco's text selection, and scitex-ui extracts
+ * the shared primitive from real implementations (operator 2026-09-14) — this
+ * is one of the two implementations it extracts from.
+ */
+
+/* --- phone-only chrome: absent on a wide viewport ------------------------- */
+
+.writer-mobile-panes,
+.writer-mobile-actions,
+.writer-mobile-files {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  body[data-writer-mobile-pane] .writer-app {
+    /* Apple HIG / Material both land on 44px; scitex-ui's shared
+       --stx-touch-target-min token is not in a release yet, so this is the
+       local name it will replace. */
+    --writer-touch-target-min: 44px;
+    --writer-mobile-bar-height: 56px;
+    /* `height: 100%` of an auto-height flex parent resolves to the CONTENT
+       height, which on a phone left the editor 401px tall inside an 844px
+       viewport with dead space below it. The shell's module pane is a column
+       flex container, so growing into it is what actually fills the screen. */
+    flex: 1 1 auto;
+    min-height: 0;
+    /* The action bar is fixed, so the pane has to reserve its height or the
+       editor's last line hides behind it. */
+    padding-bottom: calc(
+      var(--writer-mobile-bar-height) + var(--site-dock-clearance, 0px) +
+        env(safe-area-inset-bottom, 0px)
+    );
+  }
+
+  /* --- the switcher ------------------------------------------------------ */
+
+  .writer-mobile-panes {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 4px;
+    padding: 4px 6px;
+    background: var(--toolbar-bg);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .writer-mobile-pane-btn {
+    flex: 1 1 0;
+    min-width: var(--writer-touch-target-min);
+    min-height: var(--writer-touch-target-min);
+    padding: 0 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .writer-mobile-pane-btn.is-active {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+  }
+
+  /* --- one pane at a time ------------------------------------------------- */
+
+  /* Hide all three, then restore the selected one. Written as two rules so a
+     new pane means one added selector, not a growing matrix, and so the
+     `display: flex` a pane needs is stated once. The panes stay in the DOM:
+     switching only changes which one is laid out, so Monaco and the PDF keep
+     their state instead of being torn down and rebuilt on every tap. */
+  body[data-writer-mobile-pane] .writer-mobile-files,
+  body[data-writer-mobile-pane] .writer-editor-pane,
+  body[data-writer-mobile-pane] .writer-preview-pane {
+    display: none;
+  }
+
+  body[data-writer-mobile-pane="files"] .writer-mobile-files,
+  body[data-writer-mobile-pane="editor"] .writer-editor-pane,
+  body[data-writer-mobile-pane="preview"] .writer-preview-pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* The desktop-only splitter and side panels are not part of a single-pane
+     layout: at 390px the insert rail alone would take a seventh of the width. */
+  body[data-writer-mobile-pane] .writer-split-resizer,
+  body[data-writer-mobile-pane] .insert-bar,
+  body[data-writer-mobile-pane] .details-pane {
+    display: none;
+  }
+
+  /* --- the Files pane ----------------------------------------------------- */
+
+  .writer-mobile-files {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg-secondary);
+  }
+
+  .writer-mobile-files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+  }
+
+  .writer-section-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: var(--writer-touch-target-min);
+    padding: 0 12px;
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .writer-section-item.is-active {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    font-weight: 600;
+  }
+
+  /* --- the toolbar, reduced to what the action bar does not own ----------- */
+
+  /* Compile / Log / Preview-mode live in the action bar now; their toolbar
+     twins would be the same controls in a second row of a 390px screen. The
+     section dropdown moves into the Files pane, which shows the same sections
+     from the same fetch. */
+  body[data-writer-mobile-pane] #section-tabs,
+  body[data-writer-mobile-pane] #btn-compile,
+  body[data-writer-mobile-pane] #btn-compile-mode,
+  body[data-writer-mobile-pane] #btn-toggle-log,
+  body[data-writer-mobile-pane] .current-file {
+    display: none;
+  }
+
+  body[data-writer-mobile-pane] .writer-toolbar {
+    padding: 6px 8px;
+  }
+
+  /* Every remaining control is a finger target, not a 25px mouse target. */
+  body[data-writer-mobile-pane] .writer-toolbar .btn,
+  body[data-writer-mobile-pane] .writer-toolbar select,
+  body[data-writer-mobile-pane] .preview-tabs .preview-tab,
+  body[data-writer-mobile-pane] .preview-actions .btn {
+    min-height: var(--writer-touch-target-min);
+    min-width: var(--writer-touch-target-min);
+  }
+
+  /* --- the PDF pane ------------------------------------------------------- */
+
+  /* Fit-width is the only zoom that never overflows a phone: the viewer scales
+     the page to its container, so there is no horizontal scroll to manage.
+     `mobile.ts` calls setFitWidth() on entering this pane; these rules keep the
+     container itself from being the thing that overflows. */
+  body[data-writer-mobile-pane="preview"] .writer-preview-pane,
+  body[data-writer-mobile-pane="preview"] .pdf-container,
+  body[data-writer-mobile-pane="preview"] .preview-content,
+  body[data-writer-mobile-pane="preview"] .preview-view.active {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  /* `.pdf-viewer-host` (editor.css) pads the viewer 16px. At 390 that is 8% of
+     the screen AND the viewer sizes the page from the container's PADDED width,
+     so fit-width produced a 382px canvas starting at x=16 — 8px past the right
+     edge, measured. Dropping the horizontal gutter on a phone is what makes the
+     page actually fit: re-measured 382px at x=0, zero overshoot. */
+  body[data-writer-mobile-pane="preview"] .pdf-viewer-host {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  body[data-writer-mobile-pane="preview"] .preview-header {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  /* --- the bottom action bar --------------------------------------------- */
+
+  .writer-mobile-actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    /* Above the hub's site dock when there is one, and above the iOS home bar
+       always: a fixed bar at bottom: 0 puts its buttons under both. */
+    bottom: calc(
+      var(--site-dock-clearance, 0px) + env(safe-area-inset-bottom, 0px)
+    );
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--toolbar-bg);
+    border-top: 1px solid var(--border-color);
+  }
+
+  .writer-mobile-action {
+    flex: 1 1 0;
+    justify-content: center;
+    gap: 6px;
+    min-height: var(--writer-touch-target-min);
+    font-size: 14px;
+  }
+
+  /* The editor's own font size is set by Monaco, not here; the shell chrome is
+     16px-on-a-phone territory and iOS zooms the page below that. */
+  body[data-writer-mobile-pane] .writer-app {
+    font-size: 15px;
+  }
+}

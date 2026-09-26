@@ -46,21 +46,25 @@ def _write_vendor_stamp(project_path: Path, pkg_version: str) -> None:
 def _restamp_version_tex(project_path: Path, pkg_version: str) -> None:
     """Re-stamp 00_shared/scitex_writer_version.tex to the vendored version.
 
-    The compile (_compile.py) rewrites this from the installed __version__ for
-    PDF metadata, but only AT compile time -- so after a re-vendor the visible
-    "Compiled by SciTeX Writer vX" colophon + PDF Creator would still show the
-    OLD version until the next compile. Re-stamp it here so it is correct
-    immediately (mirrors _compile.py's format). Best-effort.
+    The compile (_compile.py) rewrites this for PDF metadata, but only AT compile
+    time -- so after a re-vendor the visible "Compiled by SciTeX Writer vX"
+    colophon + PDF Creator would still show the OLD version until the next
+    compile. Re-stamp it here so it is correct immediately. Best-effort.
+
+    RENDERED BY :func:`version_stamp_tex`, the same function the compile path
+    uses. The version here answers a DIFFERENT question from the compile's --
+    "what was vendored into this workspace" rather than "what is running" -- so
+    the value legitimately differs after a tag/branch update, but the FORMAT must
+    not: this used to write both macros itself, which is how one PDF came to
+    carry two claims that could drift apart (2026-08-18 card).
     """
+    from .._version_truth import version_stamp_tex
+
     try:
         version_tex = project_path / "00_shared" / "scitex_writer_version.tex"
         if not version_tex.parent.exists():
             return
-        version_tex.write_text(
-            f"\\def\\ScitexWriterVersion{{{pkg_version}}}\n"
-            f"\\hypersetup{{pdfcreator={{Compiled by SciTeX Writer v{pkg_version}}}}}\n",
-            encoding="utf-8",
-        )
+        version_tex.write_text(version_stamp_tex(pkg_version), encoding="utf-8")
     except OSError:
         pass
 

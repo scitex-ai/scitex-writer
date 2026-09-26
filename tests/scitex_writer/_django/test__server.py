@@ -88,3 +88,133 @@ def test_django_setup_is_never_import_guarded():
     ]
     # Assert
     assert guarded_setup_calls == []
+
+
+# ---------------------------------------------------------------------------
+# ALLOWED_HOSTS: binding an address must permit it, and must not permit
+# anything else.
+#
+# Why: ALLOWED_HOSTS was a hardcoded loopback list, so `serve --host
+# <non-loopback>` started cleanly, printed a correct-looking URL, and then
+# answered 400 Bad Request to every caller. Nothing in the banner was wrong,
+# which is why it read as a firewall problem rather than a bug. Reported by
+# scitex-scholar 2026-08-23, who found the identical list in figrecipe,
+# storage and scholar -- a shared ancestor in the scitex-app SDK.
+#
+# The pairing matters more than either half: the fix must open the bound
+# address AND leave everything else shut. Writer ships no authentication, so
+# a wildcard would turn every reachable address into an unauthenticated
+# reader.
+# ---------------------------------------------------------------------------
+
+import os  # noqa: E402
+
+import pytest  # noqa: E402
+
+from scitex_writer._django._server import (  # noqa: E402
+    contribute_allowed_host,
+    warn_if_wildcard_bind,
+)
+
+_ENV = "SCITEX_WRITER_ALLOWED_HOSTS"
+
+
+@pytest.fixture
+def clean_allowed_hosts_env():
+    """Start from no operator entries and put the real environment back.
+
+    Plain save/restore on os.environ -- no monkeypatch -- so the test runs
+    against the same environment the server does.
+    """
+    saved = os.environ.pop(_ENV, None)
+    try:
+        yield
+    finally:
+        if saved is None:
+            os.environ.pop(_ENV, None)
+        else:
+            os.environ[_ENV] = saved
+
+
+class TestAllowedHosts:
+    def test_bound_host_becomes_allowed(self, clean_allowed_hosts_env):
+        # Arrange
+        host = "writer.example.test"
+        # Act
+        allowed = contribute_allowed_host(host)
+        # Assert
+        assert host in allowed
+
+    def test_bound_host_is_exported_for_settings_to_read(self, clean_allowed_hosts_env):
+        """settings.py reads the env var, so contributing to the list is not
+        enough -- it has to reach the environment before Django imports."""
+        # Arrange
+        host = "writer.example.test"
+        # Act
+        contribute_allowed_host(host)
+        # Assert
+        assert host in os.environ[_ENV].split(",")
+
+    def test_operator_entries_are_kept(self, clean_allowed_hosts_env):
+        """Appended, never assigned: a value the operator set must survive."""
+        # Arrange
+        os.environ[_ENV] = "proxy.example.test"
+        # Act
+        allowed = contribute_allowed_host("writer.example.test")
+        # Assert
+        assert allowed == ["proxy.example.test", "writer.example.test"]
+
+    def test_nothing_else_is_permitted(self, clean_allowed_hosts_env):
+        """The negative half. A fix that opened everything would pass every
+        test above and be far worse than the defect it replaced."""
+        # Arrange
+        host = "writer.example.test"
+        # Act
+        allowed = contribute_allowed_host(host)
+        # Assert
+        assert "*" not in allowed
+
+    def test_repeated_bind_does_not_duplicate(self, clean_allowed_hosts_env):
+        # Arrange
+        contribute_allowed_host("writer.example.test")
+        # Act
+        allowed = contribute_allowed_host("writer.example.test")
+        # Assert
+        assert allowed.count("writer.example.test") == 1
+
+    def test_wildcard_bind_with_no_named_host_warns(self, clean_allowed_hosts_env):
+        """0.0.0.0 names no host, so bind-implies-permission cannot resolve it."""
+        # Arrange
+        allowed = contribute_allowed_host("0.0.0.0")
+        # Act
+        warning = warn_if_wildcard_bind("0.0.0.0", allowed)
+        # Assert
+        assert warning is not None
+
+    def test_wildcard_warning_names_the_remedy(self, clean_allowed_hosts_env):
+        """An error that only states what broke is half-written."""
+        # Arrange
+        allowed = contribute_allowed_host("0.0.0.0")
+        # Act
+        warning = warn_if_wildcard_bind("0.0.0.0", allowed)
+        # Assert
+        assert _ENV in warning
+
+    def test_wildcard_bind_with_a_named_host_is_silent(self, clean_allowed_hosts_env):
+        """Positive control: the warning must be able to NOT fire, or it is
+        noise that trains people to ignore it."""
+        # Arrange
+        os.environ[_ENV] = "writer.example.test"
+        allowed = contribute_allowed_host("0.0.0.0")
+        # Act
+        warning = warn_if_wildcard_bind("0.0.0.0", allowed)
+        # Assert
+        assert warning is None
+
+    def test_loopback_bind_does_not_warn(self, clean_allowed_hosts_env):
+        # Arrange
+        allowed = contribute_allowed_host("127.0.0.1")
+        # Act
+        warning = warn_if_wildcard_bind("127.0.0.1", allowed)
+        # Assert
+        assert warning is None

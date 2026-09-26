@@ -6,6 +6,7 @@
 """Utility functions for SciTeX Writer MCP handlers."""
 
 import subprocess
+import time
 from pathlib import Path
 
 
@@ -31,13 +32,72 @@ def run_compile_script(
     track_changes: bool = False,
     engine: str | None = None,
 ) -> dict:
-    """Run compile.sh script with specified options."""
+    """Run compile.sh script with specified options.
+
+    Every call leaves records in the workspace event log
+    (:mod:`scitex_writer._compile._event_log`): an ``attempt`` first, then
+    exactly one of ``success`` / ``failure`` / ``refusal``. A missing
+    compile.sh is a REFUSAL (the engine was never started); everything after
+    the subprocess launches is a failure or a success.
+    """
+    from .._compile._artifacts import _doc_latex_log
+    from .._compile._verdict import compile_verdict
+    from .._compile._diagnostics import diagnose_compile, diagnose_exception
+    from .._compile._diagnostics._rules import MISSING_COMPILE_SCRIPT_HINT
+    from .._compile._event_log import (
+        EVENT_ATTEMPT,
+        EVENT_FAILURE,
+        EVENT_REFUSAL,
+        EVENT_SUCCESS,
+        new_attempt_id,
+        record_event,
+    )
+    from ..workspace_layout import refresh_vendored_scripts
+
+    # Self-heal the workspace's vendored scripts from the INSTALLED package
+    # before the engine runs. A workspace is a full template clone that would
+    # otherwise keep stale scripts forever (2026-09-14 hub repro: an EXISTING
+    # workspace — created before the fix — carried the OLD
+    # check_dependancy_commands.sh, so the conditional dep-check never reached
+    # the compile and it refused on xlsx2csv/csv2latex). run_compile_script is
+    # the single choke point every compile (MCP handler AND the _django editor
+    # path) flows through, so healing here covers fresh and existing workspaces
+    # alike. Idempotent + version-gated: a no-op when already in step; touches
+    # only <workspace>/scripts/..., never user content.
+    try:
+        refresh_vendored_scripts(project_dir)
+    except Exception:  # pragma: no cover - defensive: never block a compile
+        pass
+
     compile_script = project_dir / "compile.sh"
+    attempt_id = new_attempt_id()
+    record_event(
+        project_dir,
+        EVENT_ATTEMPT,
+        doc_type=doc_type,
+        entry_point="mcp",
+        attempt_id=attempt_id,
+        detail=f"compile.sh {doc_type}",
+        extra={"engine": engine, "draft": draft, "timeout_s": timeout},
+    )
 
     if not compile_script.exists():
+        error = f"compile.sh not found at {compile_script}"
+        record_event(
+            project_dir,
+            EVENT_REFUSAL,
+            reason="workspace-missing",
+            doc_type=doc_type,
+            entry_point="mcp",
+            attempt_id=attempt_id,
+            detail=error,
+        )
         return {
             "success": False,
-            "error": f"compile.sh not found at {compile_script}",
+            "error": error,
+            "diagnostics": diagnose_exception(
+                error, cause="missing-file", hint=MISSING_COMPILE_SCRIPT_HINT
+            ),
         }
 
     # Build command
@@ -67,6 +127,8 @@ def run_compile_script(
     if engine:
         env["SCITEX_WRITER_ENGINE"] = engine
 
+    # One second of slack: some filesystems store mtimes at 1 s resolution.
+    started_at = time.time() - 1.0
     try:
         result = subprocess.run(
             cmd,
@@ -84,48 +146,131 @@ def run_compile_script(
             "revision": project_dir / "03_revision" / "revision.pdf",
         }
         output_pdf = pdf_paths.get(doc_type)
+        stdout_tail = (
+            result.stdout[-2_000:] if len(result.stdout) > 2_000 else result.stdout
+        )
+        stderr_tail = (
+            result.stderr[-2_000:] if len(result.stderr) > 2_000 else result.stderr
+        )
 
-        if result.returncode == 0:
+        diagnostics = diagnose_compile(
+            project_dir,
+            doc_type,
+            exit_code=result.returncode,
+            compile_failed=result.returncode != 0,
+            stdout=result.stdout,
+            stderr=result.stderr,
+            started_at=started_at,
+        )
+
+        # THE VERDICT IS SHARED, NOT LOCAL (_compile/_verdict.py): the artifact
+        # decides and the exit code only says how loud to be. This path used to
+        # carry its own ladder, and it disagreed with the runner on exit 0
+        # WITHOUT a PDF — the runner recorded `exit-zero-no-pdf` while this path
+        # answered "compiled successfully" with `output_pdf: None`, i.e. the
+        # false-success shape the June 2026 page-count incident asked us to
+        # close. One rule, two callers, so the next divergence is not possible by
+        # construction rather than by agreement.
+        verdict = compile_verdict(
+            result.returncode, output_pdf, _doc_latex_log(project_dir, doc_type)
+        )
+
+        if verdict.success:
+            record_event(
+                project_dir,
+                EVENT_SUCCESS,
+                doc_type=doc_type,
+                entry_point="mcp",
+                attempt_id=attempt_id,
+                exit_code=result.returncode,
+                output_pdf=output_pdf,
+                pages=verdict.pages,
+                detail=verdict.warning,
+            )
             return {
                 "success": True,
-                "output_pdf": (
-                    str(output_pdf) if output_pdf and output_pdf.exists() else None
-                ),
+                "output_pdf": str(output_pdf),
                 "exit_code": result.returncode,
-                "stdout": (
-                    result.stdout[-2000:]
-                    if len(result.stdout) > 2000
-                    else result.stdout
+                "stdout": stdout_tail,
+                "stderr": stderr_tail,
+                "warnings": [verdict.warning] if verdict.warning else [],
+                "message": (
+                    f"{doc_type.title()} compiled WITH WARNINGS"
+                    if verdict.warning
+                    else f"{doc_type.title()} compiled successfully"
                 ),
-                "message": f"{doc_type.title()} compiled successfully",
-            }
-        else:
-            return {
-                "success": False,
-                "exit_code": result.returncode,
-                "stdout": (
-                    result.stdout[-2000:]
-                    if len(result.stdout) > 2000
-                    else result.stdout
-                ),
-                "stderr": (
-                    result.stderr[-2000:]
-                    if len(result.stderr) > 2000
-                    else result.stderr
-                ),
-                "error": f"Compilation failed with exit code {result.returncode}",
+                "diagnostics": diagnostics,
             }
 
-    except subprocess.TimeoutExpired:
+        error = f"Compilation failed with exit code {result.returncode}"
+        record_event(
+            project_dir,
+            EVENT_FAILURE,
+            reason=verdict.detail,
+            doc_type=doc_type,
+            entry_point="mcp",
+            attempt_id=attempt_id,
+            exit_code=result.returncode,
+            output_pdf=output_pdf,
+            stderr=result.stderr,
+            detail=error,
+        )
         return {
             "success": False,
-            "error": f"Compilation timed out after {timeout} seconds",
+            "exit_code": result.returncode,
+            "stdout": stdout_tail,
+            "stderr": stderr_tail,
+            "error": error,
+            "diagnostics": diagnostics,
+        }
+
+    except subprocess.TimeoutExpired as expired:
+        error = f"Compilation timed out after {timeout} seconds"
+        record_event(
+            project_dir,
+            EVENT_FAILURE,
+            reason="timeout",
+            doc_type=doc_type,
+            entry_point="mcp",
+            attempt_id=attempt_id,
+            detail=error,
+            duration=float(timeout),
+        )
+        return {
+            "success": False,
+            "error": error,
+            "diagnostics": diagnose_compile(
+                project_dir,
+                doc_type,
+                exit_code=None,
+                compile_failed=True,
+                stdout=_as_text(expired.stdout),
+                stderr=_as_text(expired.stderr),
+                started_at=started_at,
+                timed_out_after_seconds=timeout,
+            ),
         }
     except Exception as e:
+        record_event(
+            project_dir,
+            EVENT_FAILURE,
+            reason="exception",
+            doc_type=doc_type,
+            entry_point="mcp",
+            attempt_id=attempt_id,
+            detail=f"{type(e).__name__}: {e}",
+        )
         return {
             "success": False,
             "error": str(e),
+            "diagnostics": diagnose_exception(e),
         }
+
+
+def _as_text(output: bytes | str | None) -> str:
+    if isinstance(output, bytes):
+        return output.decode("utf-8", "replace")
+    return output or ""
 
 
 __all__ = ["resolve_project_path", "run_compile_script"]

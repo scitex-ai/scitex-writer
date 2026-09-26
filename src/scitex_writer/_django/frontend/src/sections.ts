@@ -9,16 +9,32 @@ import { listSections } from "./api";
 
 type SectionSelectHandler = (section: SectionEntry) => void;
 
+export interface SectionTabsOptions {
+  /**
+   * Second render target for the SAME sections — writer's mobile Files pane
+   * (`#writer-mobile-section-list`), where a vertical list of 44px rows beats a
+   * dropdown. It renders from this instance's one fetch and shares its active
+   * state, so the phone list cannot drift from the desktop dropdown.
+   */
+  listContainer?: HTMLElement;
+}
+
 export class SectionTabs {
   private container: HTMLElement;
   private onSelect: SectionSelectHandler;
   private select: HTMLSelectElement;
+  private listContainer: HTMLElement | null;
   private active: SectionEntry | null = null;
   private sections: SectionEntry[] = [];
 
-  constructor(container: HTMLElement, onSelect: SectionSelectHandler) {
+  constructor(
+    container: HTMLElement,
+    onSelect: SectionSelectHandler,
+    options: SectionTabsOptions = {},
+  ) {
     this.container = container;
     this.onSelect = onSelect;
+    this.listContainer = options.listContainer ?? null;
 
     this.select = document.createElement("select");
     this.select.className = "writer-select writer-section-select";
@@ -48,8 +64,37 @@ export class SectionTabs {
       option.textContent = `${index + 1}. ${humanize(section.name)}`;
       this.select.appendChild(option);
     });
+    this.renderList();
     if (this.active) {
       this.select.value = this.active.path;
+    }
+  }
+
+  /** The mobile Files pane: one 44px row per section, same order, same labels. */
+  private renderList(): void {
+    if (!this.listContainer) return;
+    this.listContainer.innerHTML = "";
+    this.sections.forEach((section, index) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "writer-section-item";
+      item.dataset.path = section.path;
+      item.textContent = `${index + 1}. ${humanize(section.name)}`;
+      item.addEventListener("click", () => this.chooseSection(section));
+      this.listContainer?.appendChild(item);
+    });
+    this.syncListActive();
+  }
+
+  private syncListActive(): void {
+    if (!this.listContainer) return;
+    for (const item of Array.from(
+      this.listContainer.querySelectorAll<HTMLElement>(".writer-section-item"),
+    )) {
+      const active = item.dataset.path === this.active?.path;
+      item.classList.toggle("is-active", active);
+      if (active) item.setAttribute("aria-current", "true");
+      else item.removeAttribute("aria-current");
     }
   }
 
@@ -79,11 +124,13 @@ export class SectionTabs {
   markActive(section: SectionEntry): void {
     this.active = section;
     this.select.value = section.path;
+    this.syncListActive();
   }
 
   private chooseSection(section: SectionEntry): void {
     this.active = section;
     this.select.value = section.path;
+    this.syncListActive();
     this.onSelect(section);
   }
 }

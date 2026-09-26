@@ -141,10 +141,37 @@ def ensure_workspace(project_dir, git_strategy="child", **kwargs):
     writer_path = Path(project_dir) / ".scitex" / "writer"
     if writer_path.exists() and any(writer_path.iterdir()):
         _maybe_scaffold_paper_symlink(Path(project_dir))
+        _refresh_workspace_scripts(writer_path)
         return writer_path
     Writer(str(writer_path), git_strategy=git_strategy, **kwargs)
     _maybe_scaffold_paper_symlink(Path(project_dir))
+    _refresh_workspace_scripts(writer_path)
     return writer_path
+
+
+def _refresh_workspace_scripts(writer_path):
+    """Overwrite the workspace's package-owned ``scripts/`` from the installed
+    package where they differ (idempotent).
+
+    A workspace is a template clone and would otherwise keep stale vendored
+    scripts forever; this makes the workspace's ``scripts/`` match the
+    installed ``scitex_writer`` version (see
+    :mod:`scitex_writer.workspace_layout`). Never touches user content
+    (``01_manuscript/``/``00_shared/``). A missing source (stripped install)
+    is a no-op, not an error.
+    """
+    from logging import getLogger
+
+    from pathlib import Path
+
+    from .workspace_layout import refresh_vendored_scripts
+
+    try:
+        refresh_vendored_scripts(Path(writer_path))
+    except Exception:  # pragma: no cover - defensive: never break a load
+        getLogger(__name__).exception(
+            "Failed to refresh vendored scripts for %s", writer_path
+        )
 
 
 def _resolve_paper_symlink_level(project_dir):

@@ -14,6 +14,7 @@ import { getFile, saveFile, projectInfo } from "./api";
 import type { SectionEntry } from "./api";
 import { SectionTabs } from "./sections";
 import { countWords, mountToolbar } from "./toolbar";
+import { MobileLayout, isMobileViewport } from "./mobile";
 import { PDFViewer } from "./pdf-viewer";
 import { type AnnotationUIHandle, mountAnnotationUI } from "./annotation-ui";
 import { CompileController } from "./compile";
@@ -72,10 +73,20 @@ async function bootstrap(): Promise<void> {
 
   // Toolbar wiring
   const tabsEl = root.querySelector<HTMLElement>("#section-tabs");
+  const mobileListEl = root.querySelector<HTMLElement>(
+    "#writer-mobile-section-list",
+  );
   const sections = tabsEl
-    ? new SectionTabs(tabsEl, (section) => {
-        void loadSection(section);
-      })
+    ? new SectionTabs(
+        tabsEl,
+        (section) => {
+          void loadSection(section);
+          // Tapping a file on a phone means "open it": the pane the writer
+          // wanted is the editor, not the list they picked from.
+          if (isMobileViewport()) mobile.setPane("editor");
+        },
+        { listContainer: mobileListEl ?? undefined },
+      )
     : null;
 
   // PDF viewer + annotation UI (ADR 0001). The viewer produces marks into its
@@ -125,6 +136,12 @@ async function bootstrap(): Promise<void> {
         lamp: root.querySelector<HTMLElement>("#compile-lamp"),
         logContent: root.querySelector<HTMLElement>("#log-content"),
         logPanel: root.querySelector<HTMLElement>("#log-panel"),
+        logTitle: root.querySelector<HTMLElement>("#log-title"),
+        diagnosticsContent: root.querySelector<HTMLElement>("#log-diagnostics"),
+        fullLogToggleBtn: root.querySelector<HTMLElement>("#btn-toggle-full-log"),
+        onJumpToLocation: (file, line) => {
+          void jumpToSourceLocation(file, line);
+        },
         toggleLogBtn: root.querySelector<HTMLElement>("#btn-toggle-log"),
         closeLogBtn: root.querySelector<HTMLElement>("#btn-close-log"),
         compileBtn: root.querySelector<HTMLElement>("#btn-compile"),
@@ -145,6 +162,28 @@ async function bootstrap(): Promise<void> {
     ?.addEventListener("click", () => {
       details?.openSection("shortcuts");
     });
+
+  // Phone layout (<=768px): Files / Editor / PDF, one at a time, plus the
+  // bottom action bar. Built after the viewer and the compile controller so a
+  // pane change can re-lay-out what they own.
+  const mobile = new MobileLayout(root, {
+    onSave: () => {
+      // Same path Ctrl+S takes: cancel the pending debounce, save now.
+      if (saveTimer) window.clearTimeout(saveTimer);
+      void flushSave();
+    },
+    onToggleLog: () => {
+      root.querySelector<HTMLElement>("#btn-toggle-log")?.click();
+    },
+    onPaneChange: (pane) => {
+      if (!isMobileViewport()) return;
+      if (pane === "editor") {
+        compactPhoneEditor();
+        editor.getEditor()?.layout();
+      }
+      if (pane === "preview") pdf?.setFitWidth();
+    },
+  });
 
   // Download PDF
   root
@@ -282,6 +321,7 @@ async function bootstrap(): Promise<void> {
   // Declare state BEFORE any loadSection trigger (TDZ guard).
   let currentPath: string | null = null;
   let saveTimer: number | null = null;
+  let isLoadingFile = false;
 
   // Claims tab (Living Paper #133): render claim cards with verification
   // badges + DAG; clicking "Find in source" searches the current file for
@@ -353,7 +393,12 @@ async function bootstrap(): Promise<void> {
     try {
       const file = await getFile(section.path);
       currentPath = section.path;
-      editor.setValue(file.content);
+      isLoadingFile = true;
+      try {
+        editor.setValue(file.content);
+      } finally {
+        isLoadingFile = false;
+      }
       updateWordCount();
       const currentFileEl = root?.querySelector<HTMLElement>("#current-file");
       if (currentFileEl) currentFileEl.textContent = file.name;
@@ -387,9 +432,30 @@ async function bootstrap(): Promise<void> {
     toolbar.setWordCount(countWords(editor.getValue()));
   }
 
+  /**
+   * Monaco's desktop chrome costs a 390px viewport real code width: the gutter,
+   * the glyph margin (~20px of breakpoint dots), the folding arrows and the
+   * minimap together leave roughly half the width for the manuscript. Applied
+   * whenever the phone layout is entered, with the numbers still readable
+   * (3 line-number chars covers a 3-digit LaTeX file).
+   */
+  function compactPhoneEditor(): void {
+    if (!isMobileViewport()) return;
+    editor.getEditor()?.updateOptions({
+      minimap: { enabled: false },
+      glyphMargin: false,
+      folding: false,
+      lineDecorationsWidth: 2,
+      lineNumbersMinChars: 3,
+      scrollBeyondLastLine: false,
+    });
+  }
+
   const mEditor = editor.getEditor();
   mEditor?.onDidChangeModelContent(() => {
     updateWordCount();
+    // Showing a file's own content is not an edit; saving it back rewrote the file on every open.
+    if (isLoadingFile) return;
     toolbar.setSavedStatus("saving");
     if (saveTimer) window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(flushSave, SAVE_DEBOUNCE_MS);

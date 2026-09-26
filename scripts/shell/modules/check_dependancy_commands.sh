@@ -26,7 +26,7 @@ log_info() {
 }
 echo_success() { echo -e "${GREEN}SUCC: $1${NC}"; }
 echo_warning() { echo -e "${YELLOW}WARN: $1${NC}"; }
-echo_error() { echo -e "${RED}ERRO: $1${NC}"; }
+echo_error() { echo -e "${RED}ERRO: $1${NC}" >&2; }
 echo_header() { echo_info "=== $1 ==="; }
 # ---------------------------------------
 
@@ -168,7 +168,20 @@ check_yq() {
 }
 
 check_xlsx2csv() {
-    if ! command -v xlsx2csv &>/dev/null && ! python3 -c "import xlsx2csv" &>/dev/null 2>&1; then
+    # Table conversion is only exercised when the manuscript actually contains
+    # xlsx/csv table sources (process_tables reads
+    # 01_manuscript/contents/tables/...). A default manuscript has none, so a
+    # fresh env missing xlsx2csv must not hard-fail every compile (2026-09-14
+    # repro: "Missing required tools: xlsx2csv, csv2latex" on a table-less doc).
+    # Only require the tool when a table source is present.
+    local _has_table_src=false
+    if [ -d 01_manuscript ]; then
+        # shellcheck disable=SC2012
+        if find 01_manuscript -type f \( -name '*.xlsx' -o -name '*.xls' -o -name '*.csv' \) -print -quit 2>/dev/null | grep -q .; then
+            _has_table_src=true
+        fi
+    fi
+    if [ "$_has_table_src" = true ] && ! command -v xlsx2csv &>/dev/null && ! python3 -c "import xlsx2csv" &>/dev/null 2>&1; then
         echo "- xlsx2csv"
         echo "    - pip install xlsx2csv"
         if [ "$PKG_MANAGER" = "apt" ]; then
@@ -180,7 +193,15 @@ check_xlsx2csv() {
 }
 
 check_csv2latex() {
-    if ! command -v csv2latex &>/dev/null && ! python3 -c "import csv2latex" &>/dev/null 2>&1; then
+    # See check_xlsx2csv: only required when the manuscript has table sources.
+    local _has_table_src=false
+    if [ -d 01_manuscript ]; then
+        # shellcheck disable=SC2012
+        if find 01_manuscript -type f \( -name '*.xlsx' -o -name '*.xls' -o -name '*.csv' \) -print -quit 2>/dev/null | grep -q .; then
+            _has_table_src=true
+        fi
+    fi
+    if [ "$_has_table_src" = true ] && ! command -v csv2latex &>/dev/null && ! python3 -c "import csv2latex" &>/dev/null 2>&1; then
         echo "- csv2latex"
         echo "    - pip install csv2latex"
         return 1
@@ -404,8 +425,12 @@ check_all_dependencies() {
 
     # Display results
     if [ "$has_missing_required" = true ]; then
+        # Send the full required-tools report to STDERR so it lands in the
+        # compile result's stderr_tail (run_compile_script captures stderr, not
+        # stdout, into result.error / the UI). A stdout-only message reads as
+        # "exit 1" with no cause (the 2026-09-14 repro saw stderr_tail: null).
         echo_error "    Missing required tools:"
-        echo -e "$required_output"
+        echo -e "$required_output" >&2
         return 1
     else
         # Show summary table using cached results (no additional checks!)

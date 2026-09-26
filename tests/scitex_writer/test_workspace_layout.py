@@ -20,21 +20,36 @@ path that does not exist — which is exactly how full compilation shipped dead
 
 from __future__ import annotations
 
+import hashlib
+import re
+import shutil
+import threading
 from pathlib import Path
 
 import pytest
+import tomllib
 
 from scitex_writer import ensure_workspace
 from scitex_writer.workspace_layout import (
+    _SCRIPTS_SENTINEL,
     COMPILE_SCRIPT_RELPATHS,
     SHELL_SCRIPTS_RELPATH,
     WORKSPACE_RELPATH,
+    NotAWriterWorkspaceError,
+    _write_under,
     compile_script,
     compile_script_relpath,
+    is_inside,
+    is_workspace,
+    package_scripts_dir,
+    refresh_vendored_scripts,
+    resolve_workspace,
+    vendored_script_sha256,
     workspace_dir,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+_PACKAGE_DIR = REPO_ROOT / "src" / "scitex_writer"
 
 DOC_TYPES = ("manuscript", "supplementary", "revision")
 
@@ -310,6 +325,646 @@ def test_runner_returns_none_for_an_unknown_doc_type(tmp_path: Path):
     resolved = _get_compile_script(tmp_path, "bogus")
     # Assert
     assert resolved is None
+
+
+# ---------------------------------------------------------------------------
+# resolve_workspace — the leaf-owned root->workspace contract (hub 2026-09-14)
+#
+# The compile handlers call resolve_workspace(resolve_project_path(dir)).
+# resolve_project_path only absolutises, so the ROOT-vs-WORKSPACE decision is
+# entirely in this pure function. These are the three hub-required regressions,
+# expressed without mocks (the function is pure: it reads the tree, returns a
+# path, or raises a named error).
+# ---------------------------------------------------------------------------
+
+
+def _seed_project(root: Path) -> Path:
+    """Create <root>/.scitex/writer with 00_shared/ (an initialised project)."""
+    ws = root / ".scitex" / "writer"
+    ws.mkdir(parents=True)
+    (ws / "00_shared").mkdir()
+    return ws
+
+
+def test_resolve_workspace_given_a_project_root_maps_to_workspace(tmp_path: Path):
+    # Arrange
+    ws = _seed_project(tmp_path)
+    # Act
+    resolved = resolve_workspace(tmp_path)
+    # Assert: the hub passes the ROOT; the leaf maps it to the workspace
+    assert resolved == ws
+
+
+def test_resolve_workspace_given_an_existing_workspace_returns_it(tmp_path: Path):
+    # Arrange
+    ws = _seed_project(tmp_path)
+    # Act
+    resolved = resolve_workspace(ws)
+    # Assert: a path that already IS a workspace is used as is (no double-nest)
+    assert resolved == ws
+
+
+def _named_error_for(path: Path) -> NotAWriterWorkspaceError:
+    """Return the NotAWriterWorkspaceError ``resolve_workspace`` raises for
+    ``path``.
+
+    Kept out of the test bodies so each test is a single assertion (STX-TQ007):
+    the ``pytest.raises`` equivalent lives here, not in the test.
+    """
+    try:
+        resolve_workspace(path)
+    except NotAWriterWorkspaceError as exc:
+        return exc
+    raise AssertionError(f"resolve_workspace({path!r}) did not raise")
+
+
+def test_resolve_workspace_given_a_non_writer_dir_raises_the_named_error(
+    tmp_path: Path,
+):
+    # Arrange
+    stray = tmp_path / "just-a-folder"
+    stray.mkdir()
+    # Act
+    error = _named_error_for(stray)
+    # Assert: the error NAMES the path given
+    assert str(stray) in str(error)
+
+
+def test_resolve_workspace_named_error_points_at_the_expected_workspace(
+    tmp_path: Path,
+):
+    # Arrange
+    stray = tmp_path / "just-a-folder"
+    stray.mkdir()
+    # Act
+    error = _named_error_for(stray)
+    # Assert: the error also names where the workspace would be (root/.scitex/writer)
+    assert ".scitex/writer" in str(error)
+
+
+def test_resolve_workspace_named_error_is_not_a_bare_file_not_found(tmp_path: Path):
+    """The whole defect was a bare FileNotFoundError on root/00_shared/... ."""
+    # Arrange
+    stray = tmp_path / "just-a-folder"
+    stray.mkdir()
+    # Act
+    error = _named_error_for(stray)
+    # Assert: it is the named contract error, not FileNotFoundError
+    assert not isinstance(error, FileNotFoundError)
+
+
+def test_is_workspace_distinguishes_workspace_from_root(tmp_path: Path):
+    # Arrange
+    ws = _seed_project(tmp_path)
+    # Act
+    root_is_ws = is_workspace(tmp_path)
+    ws_is_ws = is_workspace(ws)
+    # Assert: the root is not a workspace; the workspace is
+    assert ws_is_ws is True and root_is_ws is False
+
+
+# ---------------------------------------------------------------------------
+# Vendored-scripts refresh (2.43.x): a workspace's package-owned scripts/ must
+# match the installed package. A workspace is a full template clone and would
+# otherwise keep stale scripts forever (2026-09-14 hub live repro: workspace
+# check_dependancy_commands.sh = old hash while the installed package carried
+# the new conditional check). Deterministic: builds a fixture source scripts/
+# and points refresh_vendored_scripts at it — no live git clone.
+# ---------------------------------------------------------------------------
+
+_VS_MARKER = ".scitex_writer_scripts_version"
+_VS_CHECK = "shell/modules/check_dependancy_commands.sh"
+
+
+def _vs_source_sentinel(src: Path) -> str:
+    """The content-hash the source's key file hashes to (what the marker holds).
+
+    Mirrors ``workspace_layout._source_sentinel_hash``: since ``_VS_CHECK`` is
+    the key file, the sentinel is simply its sha256.
+    """
+    return hashlib.sha256((src / _VS_CHECK).read_bytes()).hexdigest()
+
+
+def _vs_make_source(root: Path, check_content: str) -> Path:
+    src = root / "src-scripts"
+    (src / "shell" / "modules").mkdir(parents=True)
+    (src / "shell" / "compile.sh").write_text("#!/bin/bash\nexit 0\n")
+    (src / _VS_CHECK).write_text(check_content)
+    return src
+
+
+def _vs_make_workspace(root: Path, check_content: str, marker: str | None) -> Path:
+    ws = root / "workspace"
+    (ws / "scripts" / "shell" / "modules").mkdir(parents=True)
+    (ws / "scripts" / "compile.sh").write_text("#!/bin/bash\nexit 0\n")
+    (ws / "scripts" / _VS_CHECK).write_text(check_content)
+    (ws / "01_manuscript").mkdir()  # user content — must never be touched
+    (ws / "01_manuscript" / "paper.tex").write_text("\\documentclass{article}\n")
+    if marker is not None:
+        (ws / "scripts" / _VS_MARKER).write_text(marker + "\n")
+    return ws
+
+
+_OLD_CHECK = "OLD TEMPLATE check_dependancy_commands.sh (c78358d5)\n"
+_NEW_CHECK = "NEW PACKAGE check_dependancy_commands.sh (796ca4da)\n"
+
+
+def test_refresh_vendored_scripts_fresh_workspace_gets_the_package_check_hash(
+    tmp_path: Path,
+):
+    # Arrange: source = the installed package scripts; workspace = a fresh
+    # clone that still carries the OLD check (the hub's probe shape).
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert: the workspace's check now hashes to the package's check.
+    assert vendored_script_sha256(ws, _VS_CHECK) == hashlib.sha256(
+        (src / _VS_CHECK).read_bytes()
+    ).hexdigest()
+
+
+def test_refresh_vendored_scripts_fresh_workspace_leaves_user_content_untouched(
+    tmp_path: Path,
+):
+    # Arrange
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    user_before = (ws / "01_manuscript" / "paper.tex").read_text()
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert: the user's manuscript content is byte-identical (never touched)
+    assert user_before == (ws / "01_manuscript" / "paper.tex").read_text()
+
+
+def test_refresh_vendored_scripts_fresh_workspace_reports_the_written_file(
+    tmp_path: Path,
+):
+    # Arrange
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    # Act
+    written = refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert
+    assert any(p.name == "check_dependancy_commands.sh" for p in written)
+
+
+def test_refresh_vendored_scripts_reheals_marker_on_source_change(tmp_path: Path):
+    # Arrange: workspace synced to an OLD source (marker = OLD source hash); the
+    # installed package's source is now different. The hash gate must fire even
+    # though __version__ never changed (the hub's stale-2.43.0 readout).
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    old_src = _vs_make_source(tmp_path / "old", _OLD_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=_vs_source_sentinel(old_src))
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert: the marker now records the CURRENT source's content hash
+    assert (ws / "scripts" / _VS_MARKER).read_text().strip() == _vs_source_sentinel(src)
+
+
+def test_refresh_vendored_scripts_reheals_check_hash_on_source_change(
+    tmp_path: Path,
+):
+    # Arrange
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    old_src = _vs_make_source(tmp_path / "old", _OLD_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=_vs_source_sentinel(old_src))
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert: the stale check was overwritten with the package's hash
+    assert vendored_script_sha256(ws, _VS_CHECK) == hashlib.sha256(
+        (src / _VS_CHECK).read_bytes()
+    ).hexdigest()
+
+
+def test_refresh_vendored_scripts_in_sync_workspace_is_a_noop(tmp_path: Path):
+    # Arrange: workspace already matches source AND marker == source sentinel.
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _NEW_CHECK, marker=_vs_source_sentinel(src))
+    # Act
+    written = refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert
+    assert written == []
+
+
+def test_refresh_vendored_scripts_existing_old_workspace_with_legacy_marker_self_heals(
+    tmp_path: Path,
+):
+    # Arrange: the hub's exact repro — an EXISTING workspace created before the
+    # fix, carrying the OLD check_dependancy_commands.sh and a legacy VERSION-
+    # STRING marker (e.g. "2.43.0") from the pre-hash gate. The version string
+    # is NOT the current source content hash, so the hash gate must fire and the
+    # stale script must be replaced even though __version__ reads 2.43.0.
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker="2.43.0")
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert: the workspace now carries the PACKAGE's check hash (self-healed)
+    assert vendored_script_sha256(ws, _VS_CHECK) == hashlib.sha256(
+        (src / _VS_CHECK).read_bytes()
+    ).hexdigest()
+
+
+def test_refresh_vendored_scripts_second_pass_is_a_noop(tmp_path: Path):
+    # Arrange
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    # Act: refresh twice; the second pass is the assertion target.
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    second = refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert
+    assert second == []
+
+
+def test_refresh_vendored_scripts_first_pass_heals(tmp_path: Path):
+    # Arrange
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    # Act
+    written = refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert: the first pass wrote at least one file
+    assert len(written) >= 1
+
+
+def test_refresh_vendored_scripts_on_workspace_without_scripts_is_noop(
+    tmp_path: Path,
+):
+    # Arrange: a bare dir with no scripts/ subdir yet.
+    ws = tmp_path / "bare"
+    ws.mkdir()
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    # Act
+    written = refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert
+    assert written == []
+
+
+# ---------------------------------------------------------------------------
+# the wheel must carry the vendored scripts, or refresh cannot work at all
+# ---------------------------------------------------------------------------
+
+#: The packaged location `package_scripts_dir()` looks for FIRST, and therefore
+#: the destination the wheel force-include has to produce.
+PACKAGED_SCRIPTS_DESTINATION = "scitex_writer/scripts"
+
+
+def test_package_scripts_dir_resolves_in_a_source_checkout():
+    # Arrange
+    scripts = package_scripts_dir()
+    # Act
+    marker = (
+        scripts / "shell" / "modules" / "check_dependancy_commands.sh"
+        if scripts
+        else None
+    )
+    # Assert
+    assert marker is not None and marker.is_file()
+
+
+def test_wheel_force_includes_the_vendored_scripts():
+    # Arrange: measured on the published 2.43.2 wheel — 0 files under
+    # scitex_writer/scripts/, so every wheel install silently kept stale
+    # vendored scripts while the editable dev container healed correctly.
+    pyproject = REPO_ROOT / "pyproject.toml"
+    # Act
+    with pyproject.open("rb") as handle:
+        config = tomllib.load(handle)
+    forced = config["tool"]["hatch"]["build"]["targets"]["wheel"]["force-include"]
+    # Assert
+    assert forced == {"scripts": PACKAGED_SCRIPTS_DESTINATION}
+
+
+def test_the_force_include_destination_is_where_resolution_looks():
+    # Arrange: two independent statements of one location — the packaging
+    # config above, and package_scripts_dir()'s OWN candidate list. If either
+    # moves, the wheel ships the scripts somewhere nothing reads.
+    packaged = PACKAGED_SCRIPTS_DESTINATION.split("/", 1)[1]
+    source = (_PACKAGE_DIR / "workspace_layout.py").read_text(encoding="utf-8")
+    # Act
+    candidates = re.search(r"candidates = \[(.*?)\]", source, re.S).group(1)
+    # Assert
+    assert f'pkg / "{packaged}"' in candidates
+
+
+def test_a_source_with_no_scripts_writes_nothing(tmp_path: Path):
+    # Arrange: the pre-fix wheel state, as far as the refresh can see it — a
+    # resolvable source that holds no scripts (a wheel without the force-include
+    # has no source at all, which `refresh_vendored_scripts` answers the same
+    # way: decline, never a partial copy). No mock: an empty real directory.
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    empty = tmp_path / "empty-scripts"
+    empty.mkdir()
+    # Act
+    written = refresh_vendored_scripts(ws, scripts_dir=empty)
+    # Assert
+    assert written == []
+
+
+def test_the_sdist_ships_the_vendored_scripts():
+    # Arrange: `python -m build` builds the WHEEL FROM THE SDIST, so the
+    # force-include above can only copy what the sdist still has. The published
+    # 2.43.3 wheel shipped 4 files under scitex_writer/scripts/ instead of 122
+    # for exactly this reason: `scripts/` was not in the sdist include list, and
+    # the unanchored "README.md" pattern only matched its READMEs.
+    pyproject = REPO_ROOT / "pyproject.toml"
+    # Act
+    with pyproject.open("rb") as handle:
+        config = tomllib.load(handle)
+    included = config["tool"]["hatch"]["build"]["targets"]["sdist"]["include"]
+    # Assert
+    assert "/scripts" in included
+
+
+def test_the_sdist_does_not_ship_the_test_scripts_tree():
+    # Arrange: `/scripts` is ANCHORED so the sdist does not drag tests/scripts/
+    # along — hatchling matches an unanchored name at any depth, which is how
+    # this repo once shipped a wheel without `WriterConfig`.
+    pyproject = REPO_ROOT / "pyproject.toml"
+    # Act
+    with pyproject.open("rb") as handle:
+        config = tomllib.load(handle)
+    included = config["tool"]["hatch"]["build"]["targets"]["sdist"]["include"]
+    # Assert
+    assert "scripts" not in included and not any(
+        entry.startswith("tests") for entry in included
+    )
+
+
+def test_the_release_build_gates_on_the_shipped_scripts():
+    # Arrange: the artifact-level gate, where a missing file fails the pipeline
+    # before publish rather than in the field.
+    script = REPO_ROOT / ".github" / "ci" / "build-in-sif.sh"
+    # Act
+    body = script.read_text(encoding="utf-8")
+    # Assert
+    assert "scitex_writer/scripts/shell/modules/check_dependancy_commands.sh" in body
+
+
+
+# ---------------------------------------------------------------------------
+# containment predicate
+# ---------------------------------------------------------------------------
+
+
+def test_is_inside_accepts_a_child(tmp_path: Path):
+    # Arrange
+    child = tmp_path / "ws" / "scripts" / "shell"
+    child.mkdir(parents=True)
+    # Act
+    result = is_inside(child, tmp_path / "ws")
+    # Assert
+    assert result is True
+
+
+def test_is_inside_accepts_the_path_itself(tmp_path: Path):
+    # Arrange
+    # Act
+    result = is_inside(tmp_path / "ws", tmp_path / "ws")
+    # Assert
+    assert result is True
+
+
+def test_is_inside_rejects_a_sibling(tmp_path: Path):
+    # Arrange
+    (tmp_path / "victim").mkdir()
+    # Act
+    result = is_inside(tmp_path / "victim", tmp_path / "ws")
+    # Assert
+    assert result is False
+
+
+def test_is_inside_resolves_a_link_before_deciding(tmp_path: Path):
+    # Arrange: a link that LOOKS like a child and points elsewhere — the shape a
+    # textual prefix check cannot see, and the reason this predicate resolves.
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (tmp_path / "ws").mkdir()
+    (tmp_path / "ws" / "escape").symlink_to(outside)
+    # Act
+    result = is_inside(tmp_path / "ws" / "escape", tmp_path / "ws")
+    # Assert
+    assert result is False
+
+
+# ---------------------------------------------------------------------------
+# the write boundary: descriptor-relative, no-follow, marker gated on success
+# ---------------------------------------------------------------------------
+
+
+def test_refresh_declines_a_symlinked_workspace(tmp_path: Path):
+    # Arrange: the escape that was measured end to end — the refresh must not
+    # follow a link out of the caller's authority, whichever caller reached it
+    # (create-project AND the compile path both call this).
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    victim = tmp_path / "victim"
+    (victim / "scripts" / "shell" / "modules").mkdir(parents=True)
+    (victim / "scripts" / "README.md").write_text("victim readme\n")
+    before = {p: p.read_bytes() for p in sorted(victim.rglob("*")) if p.is_file()}
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "linked").symlink_to(victim)
+    # Act
+    written = refresh_vendored_scripts(work / "linked", scripts_dir=src_scripts)
+    after = {p: p.read_bytes() for p in sorted(victim.rglob("*")) if p.is_file()}
+    # Assert
+    assert (written, after) == ([], before)
+
+
+def test_refresh_declines_a_symlinked_scripts_directory(tmp_path: Path):
+    # Arrange: `<ws>/scripts -> victim` — the leaf link, same escape.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    victim_scripts = tmp_path / "victim-scripts"
+    (victim_scripts / "shell" / "modules").mkdir(parents=True)
+    (victim_scripts / "README.md").write_text("victim readme\n")
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    (ws / "scripts").symlink_to(victim_scripts)
+    # Act
+    written = refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    # Assert
+    assert written == []
+
+
+def test_write_under_refuses_a_symlinked_component(tmp_path: Path):
+    # Arrange: the boundary itself, with no pathname check in front of it — the
+    # walk opens each component O_NOFOLLOW|O_DIRECTORY by dir_fd, so a link
+    # cannot be traversed even when nothing looked beforehand.
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    ws = tmp_path / "ws" / "scripts"
+    ws.mkdir(parents=True)
+    (ws / "shell").symlink_to(victim)
+    # Act
+    landed = _write_under(ws, ("shell", "modules", "x.sh"), b"payload\n")
+    # Assert
+    assert (landed, list(victim.rglob("*"))) == (False, [])
+
+
+def test_write_under_replaces_a_symlinked_file_without_following_it(tmp_path: Path):
+    # Arrange: a link where the FILE belongs. os.rename replaces the entry, so
+    # the link's TARGET must not be written.
+    victim_file = tmp_path / "victim.sh"
+    victim_file.write_bytes(b"victim bytes\n")
+    ws = tmp_path / "ws" / "scripts"
+    ws.mkdir(parents=True)
+    (ws / "compile.sh").symlink_to(victim_file)
+    # Act
+    _write_under(ws, ("compile.sh",), b"package bytes\n")
+    # Assert
+    assert victim_file.read_bytes() == b"victim bytes\n"
+
+
+def test_write_under_lands_the_payload(tmp_path: Path):
+    # Arrange
+    ws = tmp_path / "ws" / "scripts"
+    ws.mkdir(parents=True)
+    # Act
+    landed = _write_under(ws, ("shell", "modules", "x.sh"), b"payload\n")
+    # Assert
+    assert (landed, (ws / "shell" / "modules" / "x.sh").read_bytes()) == (True, b"payload\n")
+
+
+def test_refresh_does_not_write_the_marker_when_a_destination_is_skipped(tmp_path: Path):
+    # Arrange: an intermediate DIRECTORY replaced by a link makes one destination
+    # impossible to write safely. The marker means "everything is in step", so it
+    # must NOT be written — otherwise the fast path treats a partial tree as
+    # current forever.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = tmp_path / "ws"
+    (ws / "scripts").mkdir(parents=True)
+    (ws / "scripts" / "shell").symlink_to(tmp_path / "elsewhere")
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    # Assert
+    assert not (ws / "scripts" / _SCRIPTS_SENTINEL).exists()
+
+
+def test_an_incomplete_refresh_leaves_the_previous_marker_unchanged(tmp_path: Path):
+    # Arrange: the prior marker is the record of what WAS complete; a partial
+    # refresh must not overwrite it with the new sentinel.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = tmp_path / "ws"
+    (ws / "scripts").mkdir(parents=True)
+    (ws / "scripts" / "shell").symlink_to(tmp_path / "elsewhere")
+    marker = ws / "scripts" / _SCRIPTS_SENTINEL
+    marker.write_text("PREVIOUS SENTINEL\n")
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    # Assert
+    assert marker.read_text() == "PREVIOUS SENTINEL\n"
+
+
+def test_a_complete_refresh_writes_the_marker(tmp_path: Path):
+    # Arrange: the positive half — the marker must still be written when every
+    # destination completed, or the refresh would re-copy forever.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    # Assert
+    assert (ws / "scripts" / _SCRIPTS_SENTINEL).is_file()
+
+
+def test_refresh_is_race_safe_when_a_checked_parent_becomes_a_link(tmp_path: Path):
+    # Arrange: the reviewer's TOCTOU — the destination parent is swapped between
+    # the check and the write. With descriptor-relative opens an fd pins an
+    # inode, not a name, so NO interleaving can redirect the write; the assertion
+    # therefore holds under every schedule rather than under a lucky one.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    (victim / "keep.txt").write_bytes(b"victim bytes\n")
+    before = {p: p.read_bytes() for p in sorted(victim.rglob("*")) if p.is_file()}
+    ws = tmp_path / "ws"
+    (ws / "scripts").mkdir(parents=True)
+    parent = ws / "scripts" / "shell"
+    stop = threading.Event()
+
+    def swap() -> None:
+        while not stop.is_set():
+            try:
+                if parent.is_symlink():
+                    parent.unlink()
+                else:
+                    if parent.is_dir():
+                        shutil.rmtree(parent)
+                parent.symlink_to(victim)
+            except OSError:
+                pass
+            try:
+                if parent.is_symlink():
+                    parent.unlink()
+                parent.mkdir(exist_ok=True)
+            except OSError:
+                pass
+
+    swapper = threading.Thread(target=swap, daemon=True)
+    swapper.start()
+    try:
+        # Act: many passes, so the swap lands in the check-to-write window
+        for _ in range(40):
+            refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    finally:
+        stop.set()
+        swapper.join(timeout=5)
+    after = {p: p.read_bytes() for p in sorted(victim.rglob("*")) if p.is_file()}
+    # Assert
+    assert after == before
+
+
+
+# ---------------------------------------------------------------------------
+# the SOURCE side of the boundary: one read, and the hash describes it
+# ---------------------------------------------------------------------------
+
+
+def test_the_refresh_reads_a_source_entry_once_and_hashes_what_it_read():
+    # Arrange: the second TOCTOU class — the vendored SOURCE entry swapped
+    # between the decision and the copy. It existed because the loop opened the
+    # source TWICE per entry (`_sha256(src_file)` and then `read_bytes()`), so a
+    # swap in between made the bytes written differ from the bytes the decision
+    # was made on. This is a STRUCTURAL guard on purpose: the property "the
+    # written bytes are the hashed bytes" has no external observer in a single
+    # -threaded test, and a racy one would only sometimes catch it. What a test
+    # CAN pin is that the two-open pattern is gone.
+    source = (_PACKAGE_DIR / "workspace_layout.py").read_text(encoding="utf-8")
+    body = source[source.index("def refresh_vendored_scripts") :]
+    # Comment lines are STRIPPED before the search: the comment above the fix
+    # quotes the old pattern to explain it, and a guard that cannot tell code
+    # from prose about code reports a failure it did not find.
+    code = "\n".join(
+        line for line in body.splitlines() if not line.lstrip().startswith("#")
+    )
+    # Act
+    two_open_patterns = [token for token in ("_sha256(src_file)", "read_bytes()") if token in code]
+    # Assert
+    assert two_open_patterns == ["read_bytes()"]
+
+
+def test_the_refresh_hashes_the_payload_variable_before_deciding():
+    # Arrange: the same property from the other side — the hash handed to the
+    # in-sync comparison must be the hash OF the payload, in that order.
+    source = (_PACKAGE_DIR / "workspace_layout.py").read_text(encoding="utf-8")
+    body = source[source.index("def refresh_vendored_scripts") :]
+    # Act
+    read_at = body.index("payload = src_file.read_bytes()")
+    hash_at = body.index("src_hash = hashlib.sha256(payload).hexdigest()")
+    compare_at = body.index("_sha256(dst_file) == src_hash")
+    # Assert
+    assert read_at < hash_at < compare_at
+
+
+def test_a_swapped_source_variant_lands_whole_and_marks_in_sync(tmp_path: Path):
+    # Arrange: the behavioural half — a DIFFERENT variant presented as the source
+    # must arrive byte-whole and leave the workspace marked in sync, so the
+    # marker can never describe a workspace holding something else.
+    src_scripts = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _OLD_CHECK, marker=None)
+    (src_scripts / _VS_CHECK).write_text("REPLACEMENT VARIANT\n", encoding="utf-8")
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src_scripts)
+    # Assert
+    assert (ws / "scripts" / _VS_CHECK).read_text() == "REPLACEMENT VARIANT\n"
 
 
 # EOF

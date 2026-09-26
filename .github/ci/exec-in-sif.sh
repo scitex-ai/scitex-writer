@@ -1,82 +1,111 @@
 #!/usr/bin/env bash
-# Outer apptainer-exec wrapper for scitex-tex's self-hosted (Spartan) CI.
+# Outer apptainer-exec wrapper for scitex-writer's self-hosted CI.
 #
-# Runs ON THE RUNNER (outside the SIF). Resolves the apptainer shim + SIF image
-# from the repo Actions Variables, then `apptainer exec`s the SIF and hands off
-# to an INNER script (run inside the container). Keeps every workflow job's YAML
-# down to one line — `bash .github/ci/exec-in-sif.sh <inner-script> [args...]` —
-# and concentrates all the HPC/SIF plumbing (shim PATH, ~-expansion, scratch,
-# binds) in one version-controlled place.
+# Runs ON THE RUNNER (outside the SIF). Resolves apptainer + the SIF image, then
+# `apptainer exec`s the SIF and hands off to an INNER script (run inside the
+# container). Keeps every workflow job's YAML down to one line —
+# `bash .github/ci/exec-in-sif.sh <inner-script> [args...]` — and concentrates
+# all the SIF plumbing (apptainer resolution, ~-expansion, scratch, binds) in
+# one version-controlled place.
 #
-# Required env (set by the workflow from repo Actions Variables):
-#   SCITEX_CI_APPTAINER   path to the apptainer shim   (e.g. ~/.env-3.11/bin/apptainer)
-#   SCITEX_CI_SIF         path to the CI SIF image     (e.g. ~/.scitex/dev/containers/ci-cpu.sif)
+# HOST-AGNOSTIC. This script is NOT Spartan-only: it auto-adapts to whichever
+# self-hosted runner picks the job up, keyed off what actually exists on the box.
+#
+#   * Spartan HPC — the GPFS project dir /data/gpfs/projects/punim0264 EXISTS:
+#     apptainer comes from the ~/.env-3.11 shim named by SCITEX_CI_APPTAINER,
+#     apptainer scratch lives on the GPFS project, and punim0264 is bound into
+#     the container ($HOME/.scitex there is a symlink into it, so without the
+#     bind the symlink dangles inside the SIF).
+#
+#   * Local compute nodes (scitex-compute-01..04) — NO /data/gpfs at all:
+#     apptainer is the distro package on PATH (/usr/bin/apptainer), scratch is
+#     host-local under $HOME/.cache/scitex-ci, and the GPFS bind is OMITTED
+#     (apptainer refuses a bind whose source does not exist, and `mkdir -p` on a
+#     GPFS scratch path would hard-fail here under `set -e`).
+#
+# Each of those three decisions (interpreter, scratch, bind) is made
+# INDEPENDENTLY from a probe of this host, so a runner that matches neither
+# profile exactly still gets a coherent command line.
+#
+# Env (set by the workflow from repo Actions Variables):
+#   SCITEX_CI_APPTAINER   OPTIONAL path to an apptainer shim
+#                         (e.g. ~/.env-3.11/bin/apptainer). Honoured when it
+#                         points at an executable; otherwise apptainer is taken
+#                         from PATH.
+#   SCITEX_CI_SIF         REQUIRED path to the CI SIF image
+#                         (e.g. ~/.scitex/dev/containers/ci-cpu.sif)
 #
 # Usage:
 #   bash .github/ci/exec-in-sif.sh run-in-sif.sh 3.12
 #
-# Fail-loud (operator directive): a missing shim or SIF is a HARD error — never
-# a silent fallback to a bare-runner install.
+# Fail-loud (operator directive): if NEITHER the shim nor PATH yields an
+# apptainer, or the SIF is missing, that is a HARD error naming what was tried
+# — never a silent fallback to a bare-runner install.
 set -euo pipefail
 
 INNER="${1:?inner script name required (relative to .github/ci/)}"
 shift || true
 
-# The runner's job shell is --noprofile --norc (no Lmod), so the apptainer shim
-# must be put on PATH explicitly; it execs the real Apptainer binary directly.
-# ~-expand the Actions-Variable paths: a quoted "~/…" is NOT tilde-expanded by
-# the shell, so substitute a leading ~ with $HOME ourselves.
-APPTAINER="${SCITEX_CI_APPTAINER:?SCITEX_CI_APPTAINER not set (repo Actions Variable)}"
-SIF="${SCITEX_CI_SIF:?SCITEX_CI_SIF not set (repo Actions Variable)}"
-APPTAINER="${APPTAINER/#\~/$HOME}"
-SIF="${SIF/#\~/$HOME}"
+# Spartan's job shell is --noprofile --norc (no Lmod), so its apptainer shim dir
+# must be put on PATH explicitly; the shim execs the real Apptainer binary.
+# Harmless where that directory is absent — a non-existent PATH entry is simply
+# never matched — which is the case on the local compute nodes.
 export PATH="$HOME/.env-3.11/bin:$PATH"
 
-[ -x "$APPTAINER" ] || {
-    echo "::error::apptainer shim not executable at $APPTAINER"
+# ~-expand the Actions-Variable paths: a quoted "~/…" is NOT tilde-expanded by
+# the shell, so substitute a leading ~ with $HOME ourselves.
+APPTAINER_VAR="${SCITEX_CI_APPTAINER:-}"
+APPTAINER_VAR="${APPTAINER_VAR/#\~/$HOME}"
+SIF="${SCITEX_CI_SIF:?SCITEX_CI_SIF not set (repo Actions Variable)}"
+SIF="${SIF/#\~/$HOME}"
+
+# Apptainer resolution, in order:
+#   1. SCITEX_CI_APPTAINER when it names an executable  (Spartan's shim)
+#   2. `apptainer` on PATH                              (local compute nodes)
+# Only when NEITHER resolves is this an error — and the message names BOTH
+# attempts, because "which one did you even try" is the whole diagnosis.
+if [ -n "$APPTAINER_VAR" ] && [ -x "$APPTAINER_VAR" ]; then
+    APPTAINER="$APPTAINER_VAR"
+    APPTAINER_FROM="SCITEX_CI_APPTAINER"
+elif APPTAINER="$(command -v apptainer 2>/dev/null)"; then
+    APPTAINER_FROM="PATH"
+else
+    echo "::error::no apptainer on this runner. Tried (1) SCITEX_CI_APPTAINER=${SCITEX_CI_APPTAINER:-<unset>} (expanded to '${APPTAINER_VAR:-<empty>}') — not an executable; (2) 'apptainer' on PATH ($PATH) — not found. Install apptainer on this runner, or point SCITEX_CI_APPTAINER at a working shim. Running the job outside the SIF on a bare-runner install is NOT an acceptable fallback."
     exit 1
-}
+fi
+
 [ -f "$SIF" ] || {
     echo "::error::CI SIF missing at $SIF — rebuild it: scitex-container apptainer build ci-cpu"
     exit 1
 }
 
-# THIS SCRIPT IS SPARTAN-ONLY, and the next two guards are what say so out loud.
-#
-# The GPFS project root below is not a preference, it is a hard requirement: it
-# holds the apptainer scratch AND is bind-mounted so that $HOME/.scitex (a
-# symlink into it) resolves inside the container. On a host without it, this
-# script cannot work at all.
-#
-# WHY THE CHECK EXISTS (measured 2026-08-18, release v2.42.0). The repo variable
-# CI_RUNS_ON had been repointed from the Spartan pool to `scitex-org-cpu`. Those
-# runners are perfectly healthy and carry a valid label — they simply do not
-# have this filesystem. Every job died here with
-#
-#     mkdir: cannot create directory '/data': Permission denied
-#
-# because `mkdir -p` on an absent GPFS root walks up and tries to create /data
-# at the filesystem root. That message names a permission problem at a path
-# nobody configured, on a run whose actual fault was "wrong pool", and it cost
-# two failed releases to read. The shim guard above had already fired first for
-# the same underlying reason and sent me chasing a stale path instead.
-#
-# So: check the bind root BEFORE using it, and name the real cause. A wrong
-# runner pool must announce itself as a wrong runner pool.
-GPFS_ROOT="/data/gpfs/projects/punim0264"
-[ -d "$GPFS_ROOT" ] || {
-    echo "::error::$GPFS_ROOT is not present on this runner ($(hostname)), so the CI SIF cannot be exec'd here. This workflow is Spartan-only: it binds that GPFS root and puts apptainer scratch inside it. Set the repo Actions Variable CI_RUNS_ON to the Spartan pool ('[\"self-hosted\",\"Linux\",\"X64\",\"scitex-ci\"]') — a healthy runner from another pool will still fail here, because the fault is the filesystem, not the machine."
-    exit 1
-}
+# Apptainer scratch. On Spartan the GPFS project scratch (shared FS) keeps HOME
+# clean; everywhere else that path does not exist, and `mkdir -p` under it would
+# be a hard failure, so fall back to host-local scratch under $HOME.
+GPFS_PROJECT="/data/gpfs/projects/punim0264"
+if [ -d "$GPFS_PROJECT" ]; then
+    export APPTAINER_TMPDIR="$GPFS_PROJECT/ywatanabe/ci/apptainer-tmp"
+else
+    export APPTAINER_TMPDIR="$HOME/.cache/scitex-ci/apptainer-tmp"
+fi
+mkdir -p "$APPTAINER_TMPDIR"
 
-# apptainer scratch on the shared FS — keeps HOME clean.
-export APPTAINER_TMPDIR="$GPFS_ROOT/ywatanabe/ci/apptainer-tmp"
-mkdir -p "$APPTAINER_TMPDIR" || {
-    echo "::error::cannot create apptainer scratch at $APPTAINER_TMPDIR — $GPFS_ROOT exists but is not writable by $(whoami) on $(hostname)."
-    exit 1
-}
+# Build the argv as an ARRAY so the GPFS bind can be dropped cleanly rather than
+# passed as an empty string. --pwd "$PWD" keeps the checkout as cwd.
+APPTAINER_ARGV=(exec --pwd "$PWD")
+if [ -d "$GPFS_PROJECT" ]; then
+    APPTAINER_ARGV+=(--bind "$GPFS_PROJECT")
+    GPFS_STATE="present (scratch on GPFS, punim0264 bound)"
+else
+    GPFS_STATE="absent (scratch under \$HOME, no GPFS bind)"
+fi
 
-# --bind punim0264: $HOME/.scitex is a symlink into punim0264; bind it so the
-# symlink resolves inside the container. --pwd "$PWD" keeps the checkout as cwd.
-exec "$APPTAINER" exec --pwd "$PWD" --bind "$GPFS_ROOT" \
-    "$SIF" bash ".github/ci/$INNER" "$@"
+# Echo the resolved plan: when a run fails on an unfamiliar node, the FIRST
+# question is which of the two profiles it took.
+echo "exec-in-sif: apptainer=$APPTAINER (via $APPTAINER_FROM)"
+echo "exec-in-sif: sif=$SIF"
+echo "exec-in-sif: $GPFS_PROJECT $GPFS_STATE"
+echo "exec-in-sif: APPTAINER_TMPDIR=$APPTAINER_TMPDIR"
+echo "exec-in-sif: + $APPTAINER ${APPTAINER_ARGV[*]} $SIF bash .github/ci/$INNER $*"
+
+exec "$APPTAINER" "${APPTAINER_ARGV[@]}" "$SIF" bash ".github/ci/$INNER" "$@"

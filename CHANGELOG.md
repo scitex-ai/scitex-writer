@@ -8,6 +8,190 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+
+- The editor header now speaks the shared scitex-ui app-header contract: the row is `.stx-app-header`, the title/version/actions slot carry the canonical class names, and the SDK's `css/app/app-header.css` is loaded by the header partial. Writer's own stylesheet keeps only what the shared sheet does not cover (the identity grouping and the picker control's phone sizing), so the row has one definition instead of two.
+- The vendored scripts read their project root from `SCITEX_WRITER_PROJECT_ROOT` (fleet convention) instead of the unprefixed `PROJECT_ROOT`, and the scitex-dev §6a exemption in `pyproject.toml` is gone with it. The old name is still honoured for one migration cycle — a workspace that exports it keeps compiling — but never silently: reading it prints a warning naming the replacement. `manage_builds --help` now names the new variable too.
+
+## [2.43.6] - 2026-09-17
+
+### Fixed
+
+- Made compiled PDF provenance use the running source tree's version when an editable install's distribution metadata is stale.
+- Made compile and re-vendor paths render the same version-stamp template, preventing contradictory version claims in one PDF.
+
+## [2.43.5] - 2026-09-17
+
+### Added
+
+- **`scitex-writer create-project <dir>` — the first step had no verb.** A clean-venv first
+  run could not create a project at all: `create-project` / `init` / `new` / `create` /
+  `init-project` all answered "No such command", and `show-usage` told the reader to `git clone`
+  the personal repository by hand. The verb wraps the public API (`ensure_workspace`), prints the
+  WORKSPACE path (`<project>/.scitex/writer`, where `compile.sh` and the content live, while the
+  root is what the compile/editor entry points accept), and is idempotent — an existing workspace
+  is reported and left alone with no re-clone and no network. `--dry-run` previews and touches
+  nothing; a directory that already has files refuses without `--yes` and names the flag;
+  `--json` for machine callers. `show-usage`'s Setup section names the verb now
+  (blocker #1 of the standalone-readiness card, measured 2026-09-02).
+
+### Fixed
+
+- **Both compile paths now read ONE verdict.** The runner and `run_compile_script` each carried
+  a local exit-code judgement, and they had drifted apart: a clean exit that produced nothing was
+  `exit-zero-no-pdf` to the runner and `"success": True` with `output_pdf: None` to the path the
+  MCP tools and the `_django` editor use — the false-success shape the June 2026 page-count
+  incident asked us to close. The rule now lives once in `_compile/_verdict.py` (the artifact
+  decides; the exit code only says how loud to be), both paths call it and spell none of it
+  locally, and two guards assert that relationship rather than two implementations agreeing.
+  Deliberate behaviour change: exit 0 with no PDF (or a zero-page husk) is a failure on the
+  editor path too.
+
+## [2.43.4] - 2026-09-17
+
+### Fixed
+
+- **2.43.3's wheel shipped 4 files where the source tree has 122 under
+  `scitex_writer/scripts/` — the vendored-script self-heal was still ineffective on a wheel
+  install.** `python -m build` builds the wheel FROM THE SDIST, the sdist `include` list never
+  named `scripts/`, and the only members it kept were the READMEs (the pattern `"README.md"` is
+  unanchored, so hatchling matches it at any depth). The wheel's `force-include` then found a
+  source tree that had already been emptied, and no gate noticed because nothing about it breaks
+  an import. The sdist now ships the anchored `"/scripts"`, and the release pipeline's post-build
+  gate asserts the key file is a member of the built wheel before publish — so this fails the
+  pipeline instead of the field. Verified end to end: `uv build --sdist` → unpack →
+  `uv build --wheel` yields 662 files with 119 under `scitex_writer/scripts/` including
+  `shell/modules/check_dependancy_commands.sh`.
+
+## [2.43.3] - 2026-09-17
+
+### Added
+
+- **Writer works on a phone now (390x844), as one pane at a time.** Below 768px the shell
+  stacks every pane vertically, which left the editor off screen behind the section nav and the
+  compile controls unreachable; measured at 390 the app filled 318px of an 844px viewport
+  (`height: 100%` inside an auto-height flex parent resolves to CONTENT height). Writer now
+  declares its own phone layout inside `.writer-app`, state on `body[data-writer-mobile-pane]`,
+  every rule inside `@media (max-width: 768px)`: an explicit **Files / Editor / PDF** switcher
+  (taps, not swipes — a horizontal gesture over the editor races Monaco's selection), a bottom
+  action bar with **Save / Log / Compile** at 44px above the hub dock and the iOS home bar, the
+  Files pane showing the same sections as the desktop dropdown as 44px rows, fit-width PDF with
+  the viewer gutter dropped at phone width, and a compact Monaco (no minimap/glyph
+  margin/folding). Compile in the bar forwards to the one `CompileController`, so there is still
+  a single compile path; Save takes the Ctrl+S path. Measured in chromium at 390x844:
+  `scrollWidth == clientWidth == 390`, no page scroll, exactly one pane per state, no PDF canvas
+  past the viewport; desktop at 1440 is unchanged. `mobile_layout: true` in the manifest.
+
+- **A leaf header that states its own identity.** `writer/_app_header.html` is THE one writer
+  header: the manifest `label` as the title, the LEAF package version (from the app manifest,
+  read through `ScitexAppConfig.app_version` and pinned to `pyproject` by a test — never the
+  host's version and never a comment), and the canonical
+  `.stx-app-header__slot--project-selector` / `--actions` slots. A host that draws its own header
+  includes the partial and sets `app_header_rendered=True`, so the page never carries two; the
+  picker renders only when the host's `scitex_project_picker` tag library is installed, because
+  `{% load %}`ing a library that is not there is a hard `TemplateSyntaxError`. Also emits
+  `<meta name="scitex-app-version" content="writer@<version>">`.
+
+- **Every compile now explains itself (`diagnostics`).** A table-driven LaTeX log analyser
+  (`_compile/_diagnostics/`) reads the document `.log`, `.blg` and console output and returns
+  each error/warning with `file`, `line` (mapped from the flattened `manuscript.tex` back to the
+  `contents/*.tex` file the user edits), `message`, `context`, a `cause` from a closed set
+  (undefined-control-sequence, missing-package, unicode-char-not-set-up, missing-file,
+  bibtex-error, biber-error, citation-undefined, reference-undefined, runaway-argument,
+  emergency-stop, overfull-only-warning, timeout, engine-not-found, unknown) and one actionable
+  `hint`. Nothing matched still yields an `unknown` diagnostic with the last 30 meaningful log
+  lines. `run_compile_script` (MCP and the `_django` editor) adds `diagnostics` in the
+  `scitex_dev.status` shape (a Report with one Check per issue plus the exit StatusCode) to
+  every outcome; existing fields are unchanged. The editor log panel renders the list (EN/JA)
+  with file:line links that jump the editor, the hint, and a "Show full log" toggle; the status
+  `log` now carries the console output plus the LaTeX log. `scitex-dev` floor raised to 0.48.0.
+
+### Fixed
+
+- **The wheel now ships its vendored scripts.** The self-heal refresh reads the INSTALLED
+  package's `scripts/`, and the published 2.43.2 wheel carried none (measured: 0 files under
+  `scitex_writer/scripts/`), so on a wheel install — the hub's pin and every user's install —
+  `package_scripts_dir()` returned `None` and an existing workspace kept its stale vendored
+  scripts forever, while only the editable dev container healed. `pyproject` now force-includes
+  `scripts/` as `scitex_writer/scripts` (665 files in the wheel, 122 of them scripts), pinned by
+  tests that tie the packaging destination to the FIRST path `package_scripts_dir()` looks for.
+  `PROJECT_ROOT`, read by two of those now-shipped helpers and newly visible to audit §6a because
+  the distribution grew, is declared in `[tool.scitex_dev] env_allowlist` rather than renamed
+  here: it is an interface of scripts VENDORED into user workspaces, and renaming it needs its
+  own compatibility story.
+
+## [2.43.2] - 2026-09-14
+
+### Fixed
+
+- **Existing workspaces now self-heal their vendored scripts on the compile path.**
+  The 2.43.1 refresh was wired only into `ensure_workspace`, but the `_django` editor compile
+  path (`handle_compile -> _do_compile -> sw_compile.manuscript -> _compile_manuscript ->
+  run_compile_script`) never calls `ensure_workspace` for an ALREADY-EXISTING workspace. So a
+  workspace created before the fix kept its stale `check_dependancy_commands.sh` and refused on
+  `Missing required tools: xlsx2csv, csv2latex` (2026-09-14 hub editor-v2 repro on v2.43.1 /
+  f41666be). `run_compile_script` — the single choke point every compile flows through (MCP
+  handlers AND the `_django` editor path) — now refreshes the workspace's vendored scripts from
+  the installed package before the engine runs, so existing workspaces heal on the very compile
+  that would have failed. Defensive (never blocks a compile); touches only `<ws>/scripts/...`,
+  never `01_manuscript/`/`00_shared/`.
+
+- **The refresh gate is now a content hash, not `__version__`.** The hub's editable dev container
+  reports a stale `__version__` (2.43.0) even at current code, so a version marker could never
+  detect a script that changed without a version bump. The sentinel is the sha256 of the key file
+  (`check_dependancy_commands.sh`); a legacy version-string marker is treated as a mismatch
+  (fires once, heals, re-stamps to the hash) — backward compatible.
+
+### Added
+
+- Regression: an existing workspace carrying the OLD check + a legacy version-marker self-heals to
+  the package's `check_dependancy_commands.sh` hash through `run_compile_script`.
+
+
+## [2.43.1] - 2026-09-14
+
+### Fixed
+
+- **The Django (hub-mounted) path now resolves the workspace at the single load point.**
+  #389 fixed the `_mcp` compile entry, but the hub mounts the `_django` path whose project is
+  loaded once in `get_or_create_project` — so `state.project_dir` was the raw PROJECT ROOT and
+  every `_django` handler (`compile.sh`, `bib.py`, `scholar.py`, `core.py`) composed against the
+  root, producing the 2.43.0 live failure `compile.sh not found at <root>/compile.sh`.
+  Now `get_or_create_project` resolves the workspace before caching, so `state.project_dir` is
+  the WORKSPACE whether the hub passes the ROOT or the legacy path passes the workspace. A bare
+  directory raises the named `NotAWriterWorkspaceError` (mapped to a clean 400 in the view),
+  and `remove_project` is consistent with the workspace cache key.
+
+- **`compile.sh` no longer hard-fails on `xlsx2csv`/`csv2latex` for a table-less manuscript.**
+  Those tools are only required when the manuscript actually contains xlsx/csv table sources
+  (`01_manuscript/.../*.xlsx|xls|csv`). A default manuscript has none, so a fresh env missing
+  the two pip tools no longer refuses every compile with
+  `ERRO: Missing required tools: - xlsx2csv - csv2latex` (2026-09-14 hub live repro on
+  develop 34c6c9fc: pdflatex/latexmk present, xlsx2csv/csv2latex absent, doc table-less).
+  The same guard applies to `csv2latex`.
+
+- **`compile.sh` dependency-check failures now land on STDERR.**
+  The `ERRO: Missing required tools:` header and the per-tool install hints were going to stdout
+  before, so `run_compile_script` captured `stderr_tail: null` and the API surfaced only
+  `Compilation failed with exit code 1` — the cause was invisible in the UI. Both are now
+  routed to stderr so the UI can show them.
+
+### Added
+
+- Load-point unit tests (`test_services.py`) and end-to-end `api/compile` tests (`test_views.py`)
+  driving a ROOT `working_dir` (the hub's exact repro, no LaTeX, no mocks) plus the flat-workspace
+  no-regression case.
+
+
+## [2.43.0] - 2026-09-14
+
+### Added
+- **`workspace_layout.resolve_workspace(project_dir)` + `is_workspace(path)` + `NotAWriterWorkspaceError`** — the leaf-owned, tolerant PROJECT-ROOT→WORKSPACE resolver (scitex-hub leaf-v2 contract, 2026-09-14). A path that is a root maps to its `.scitex/writer`; a path that already is a workspace is used as-is; a non-writer directory raises a named error that names BOTH the path given and the workspace expected, instead of a bare `FileNotFoundError` downstream.
+
+### Fixed
+- **Compile from a project ROOT no longer fails.** The hub's leaf-v2 mount (`WorkingDirScopedView`) hands the writer the project root, but the compile handlers composed `root/00_shared/...` and `root/compile.sh` literally — so a root (which holds `.scitex/writer/`, not `00_shared/`) died with `FileNotFoundError` on the default/example project (PR #389, cards blocker #2). Each compile entry now maps the given path through `resolve_workspace(resolve_project_path(dir))`. The legacy hub path (which passes the workspace) is unaffected — no double-nest. `resolve_project_path` is unchanged: `clone_project`/`update_project` still take the raw root.
+
+
+### Changed
 - **CI adopts the canonical `ci.yml` caller, replacing the six hand-written per-workflow callers added earlier today.** Both shapes call the same org reusables; only one is the sanctioned shape. `main` already carried the canonical form — "the ONE per-repo shape", rendered by `scitex-dev ecosystem ci-template apply` per an operator decision of 2026-07-21 — while `develop` had my hand-rolled granular files. That divergence is what made the develop→main promotion PR unmergeable: three of the granular files were *deleted in main and modified in develop*, which no automatic merge can resolve.
 
   Generated by the tool rather than written by hand, because a generated file that someone hand-edits is exactly how per-repo drift returns. It deletes the five superseded granular workflows and preserves what is genuinely leaf-specific: `sdist-wheel-import` (which carries the container-recipe wheel gate) and `vendor-sphinx-html` (the leaf half of the docs split), both explicitly reported as kept.

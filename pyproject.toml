@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scitex-writer"
-version = "2.42.0"
+version = "2.43.7"
 description = "LaTeX manuscript compilation system for scientific documents with MCP server"
 readme = "README.md"
 license = "AGPL-3.0-only"
@@ -41,16 +41,30 @@ classifiers = [
 dependencies = [
     "click>=8.0",
     "fastmcp>=2.0.0",
-    # FLOOR IS 0.30.0, not 0.11.7: `_cli/commands/__init__.py` imports
-    # `attach_shell_completion` from the PUBLIC `scitex_dev.cli` (in its
-    # __all__, behind a lazy re-export) rather than the private
-    # `_cli._completion`. That public name does not exist on older releases,
-    # and the import is deliberately UNGUARDED — scitex-dev is a hard
-    # dependency, so a guard would swallow a real breakage rather than cover a
-    # missing optional. Below this floor the CLI fails to import at all, which
-    # is why the floor has to carry the promise instead of a try/except.
-    "scitex-dev>=0.30.0",
+    # FLOOR IS 0.48.0: compile diagnostics (_compile/_diagnostics/_report.py)
+    # publish a `scitex_dev.status` Check/Report, first shipped in 0.48.0.
+    # (0.30.0 was the earlier floor for the public `scitex_dev.cli`
+    # `attach_shell_completion` import.) The imports are deliberately
+    # UNGUARDED — scitex-dev is a hard dependency, so a guard would swallow a
+    # real breakage rather than cover a missing optional.
+    "scitex-dev>=0.48.0",
+    # The compile event log (_compile/_event_log.py) emits every attempt /
+    # refusal / failure / success through scitex_logging.getLogger so the
+    # records join whatever sink the host configured, in addition to the
+    # per-workspace JSONL. The import is deliberately unguarded: a compile
+    # whose outcome cannot be logged is the silent-failure shape this log
+    # was created to end (operator, Telegram 4901, 2026-09-05).
+    "scitex-logging>=0.2.0",
     "django>=4.2",
+    # bibtexparser is used by the compile scripts (merge_bibliographies.py,
+    # explore_bibtex.py) but was never declared, so CI resolved "latest".
+    # 2.0.0 (released 2026-09-08) is a non-compatible rewrite that dropped
+    # `bibtexparser.bibdatabase`; that import sits at module level in
+    # merge_bibliographies.py, so under pytest-xdist it raises SystemExit at
+    # collection time and takes the whole run down (KeyError gw0). The code
+    # targets the 1.x API, so cap below 2.0 until it is adapted. Declaring it
+    # also stops relying on a transitive install.
+    "bibtexparser>=1.4,<2.0",
     # scitex-ui ships `standalone_shell.html` + shell CSS that the editor
     # and viewer templates extend. Loading either page without scitex-ui
     # installed raises TemplateDoesNotExist.
@@ -189,6 +203,26 @@ Issues = "https://github.com/ywatanabe1989/scitex-writer/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/scitex_writer"]
+# The vendored-script refresh reads the INSTALLED package's scripts/
+# (`workspace_layout.package_scripts_dir`), so a wheel that does not carry them
+# cannot heal an existing workspace at all: `package_scripts_dir()` finds
+# neither `<pkg>/scripts` nor the repo root's `scripts/` in site-packages, and
+# the refresh silently no-ops. Measured on the published 2.43.2 wheel: 0 files
+# under `scitex_writer/scripts/`. Every wheel install — which is what the hub and
+# every user installs — therefore kept its stale vendored scripts; the editable
+# dev container masked it, because there the repo-root `scripts/` resolves.
+force-include = { "scripts" = "scitex_writer/scripts" }
+
+[tool.scitex_dev]
+# §6a (env-var namespacing): the exemption for a bare `PROJECT_ROOT` is GONE,
+# because the read is gone. `scripts/python/_project_root.py` now resolves
+# `SCITEX_WRITER_PROJECT_ROOT`, and the retired unprefixed spelling lives there
+# as a CONSTANT (honoured for one migration cycle, with a warning that names
+# the replacement) rather than as a literal at the two read sites. That was
+# the point of the previous entry's "tracked separately": the scripts are
+# vendored into user workspaces, so the rename needed a compatibility story
+# and a refresh path, and the `force-include` above is what makes the refresh
+# possible. Nothing here needs an exemption now.
 
 [tool.hatch.build.targets.sdist]
 # Ship only the Python package + project metadata in sdist. Top-level
@@ -197,6 +231,15 @@ packages = ["src/scitex_writer"]
 # that tarfile rejects, and aren't useful in a wheel anyway.
 include = [
     "src/scitex_writer",
+    # ANCHORED, and load-bearing: `python -m build` builds the WHEEL FROM THE
+    # SDIST, so whatever the sdist leaves out, the wheel cannot force-include.
+    # Without this, `scripts/` was only present to the depth of its READMEs
+    # (the unanchored "README.md" above matches at ANY depth) and the published
+    # 2.43.3 wheel carried 4 script files instead of 122 — the force-include
+    # found a source tree that had already been emptied. Measured on that
+    # artifact, 2026-09-17. The `tests/scripts/` tree is deliberately NOT
+    # shipped: `/scripts` is anchored to the repo root.
+    "/scripts",
     "README.md",
     "CHANGELOG.md",
     "LICENSE",

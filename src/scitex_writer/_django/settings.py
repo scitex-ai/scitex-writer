@@ -26,7 +26,29 @@ BASE_DIR = Path(__file__).resolve().parent
 # WRITER_DJANGO_SECRET into an error naming its replacement.
 SECRET_KEY = os.environ.get("SCITEX_WRITER_DJANGO_SECRET") or secrets.token_urlsafe(32)
 DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "0.0.0.0", "testserver"]
+# Loopback is always allowed; anything else must be STATED, either by binding to
+# it (see _server.run, which contributes its --host) or by naming it here.
+#
+# THIS USED TO BE A HARDCODED LIST, and the failure it caused is invisible from
+# the code: `serve --host <non-loopback>` started cleanly, printed a correct URL,
+# and then answered 400 Bad Request to every caller. Nothing in the banner was
+# wrong, so it read as a firewall problem. Reported by scitex-scholar 2026-08-23,
+# who found the identical list in figrecipe, storage and scholar — a shared
+# ancestor in the scitex-app SDK, not four independent mistakes.
+#
+# NO WILDCARD, DELIBERATELY. Scholar's fix additionally maps DEBUG -> ["*"], which
+# they ruled for scholar specifically. DJANGO_DEBUG defaults to "true" directly
+# above, and writer ships no authentication of its own, so a DEBUG wildcard here
+# would make the permissive branch the DEFAULT branch and every reachable address
+# an unauthenticated reader of the operator's manuscripts. scitex-app kept the
+# wildcard out of the SDK for the same reason. Changing that is an operator
+# decision, not a consistency fix.
+_ALLOWED_HOSTS_BASE = ["127.0.0.1", "localhost", "0.0.0.0", "testserver"]
+ALLOWED_HOSTS = list(_ALLOWED_HOSTS_BASE)
+for _h in os.environ.get("SCITEX_WRITER_ALLOWED_HOSTS", "").split(","):
+    _h = _h.strip()
+    if _h and _h not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_h)
 
 # "hub" | "standalone" — the browser tab alone must distinguish the two
 # (operator request; scitex-hub PR #357 reads the same setting and defaults

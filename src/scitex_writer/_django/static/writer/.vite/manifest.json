@@ -3,11 +3,21 @@
     "file": "assets/claims-list.js",
     "name": "claims-list",
     "dynamicImports": [
-      "node_modules/pdfjs-dist/build/pdf.mjs"
+      "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.mjs"
     ],
     "assets": [
       "assets/pdf.worker.min.mjs"
     ]
+  },
+  "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.mjs": {
+    "file": "assets/pdf.js",
+    "name": "pdf",
+    "src": "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.mjs",
+    "isDynamicEntry": true
+  },
+  "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.worker.min.mjs": {
+    "file": "assets/pdf.worker.min.mjs",
+    "src": "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.worker.min.mjs"
   },
   "node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.ttf": {
     "file": "assets/codicon.ttf",
@@ -581,16 +591,6 @@
   "node_modules/monaco-editor/min/vs/base/browser/ui/codicons/codicon/codicon.ttf": {
     "file": "assets/codicon.ttf",
     "src": "node_modules/monaco-editor/min/vs/base/browser/ui/codicons/codicon/codicon.ttf"
-  },
-  "node_modules/pdfjs-dist/build/pdf.mjs": {
-    "file": "assets/pdf.js",
-    "name": "pdf",
-    "src": "node_modules/pdfjs-dist/build/pdf.mjs",
-    "isDynamicEntry": true
-  },
-  "node_modules/pdfjs-dist/build/pdf.worker.min.mjs": {
-    "file": "assets/pdf.worker.min.mjs",
-    "src": "node_modules/pdfjs-dist/build/pdf.worker.min.mjs"
   },
   "src/index.ts": {
     "file": "assets/index.js",

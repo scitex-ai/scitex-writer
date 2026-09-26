@@ -4,7 +4,43 @@
 
 """Compilation handlers: manuscript, supplementary, revision."""
 
+from ...workspace_layout import resolve_workspace
 from ..utils import resolve_project_path, run_compile_script
+
+
+def _prepare(project_path, doc_type: str) -> None:
+    """Run the two fail-loud pre-compile steps, recording a REFUSAL if one raises.
+
+    Both steps raise before the engine starts, so a raise here is a refusal
+    (the manuscript was never judged), not a compile failure. The exception
+    is re-raised unchanged -- the record is added, the behaviour is not.
+    """
+    from ..._compile._event_log import EVENT_REFUSAL, record_event
+
+    try:
+        _auto_render_claims(project_path)
+    except Exception as exc:
+        record_event(
+            project_path,
+            EVENT_REFUSAL,
+            reason="claims-render-failed",
+            doc_type=doc_type,
+            entry_point="mcp",
+            detail=f"{type(exc).__name__}: {exc}",
+        )
+        raise
+    try:
+        _inject_version_stamp(project_path)
+    except Exception as exc:
+        record_event(
+            project_path,
+            EVENT_REFUSAL,
+            reason="version-stamp-failed",
+            doc_type=doc_type,
+            entry_point="mcp",
+            detail=f"{type(exc).__name__}: {exc}",
+        )
+        raise
 
 
 def _auto_render_claims(project_path) -> None:
@@ -40,15 +76,9 @@ def _inject_version_stamp(project_path) -> None:
     that did not build it, and swallowing a write failure would make a stamp
     that never happened indistinguishable from a clean compile.
     """
-    from scitex_writer import __version__
+    from ._version_truth import stamp_version, version_stamp_tex
 
-    from ._version_truth import (
-        installed_versions,
-        resolve_stamp_version,
-        version_stamp_tex,
-    )
-
-    version = resolve_stamp_version(installed_versions(), __version__)
+    version = stamp_version()
     version_tex = project_path / "00_shared" / "scitex_writer_version.tex"
     version_tex.write_text(version_stamp_tex(version))
 
@@ -65,10 +95,16 @@ def compile_manuscript(
     verbose: bool = False,
     engine: str | None = None,
 ) -> dict:
-    """Compile manuscript to PDF."""
-    project_path = resolve_project_path(project_dir)
-    _auto_render_claims(project_path)
-    _inject_version_stamp(project_path)
+    """Compile manuscript to PDF.
+
+    ``project_dir`` may be the project ROOT or the writer WORKSPACE; the leaf
+    owns root→workspace (scitex-hub leaf-v2 contract) and composes every
+    workspace-relative path (00_shared/, compile.sh, logs/) through
+    :func:`resolve_workspace` so a ROOT passed by the hub no longer fails with
+    a bare FileNotFoundError on ``root/00_shared/...``.
+    """
+    project_path = resolve_workspace(resolve_project_path(project_dir))
+    _prepare(project_path, "manuscript")
     return run_compile_script(
         project_path,
         "manuscript",
@@ -96,9 +132,8 @@ def compile_supplementary(
     engine: str | None = None,
 ) -> dict:
     """Compile supplementary materials to PDF."""
-    project_path = resolve_project_path(project_dir)
-    _auto_render_claims(project_path)
-    _inject_version_stamp(project_path)
+    project_path = resolve_workspace(resolve_project_path(project_dir))
+    _prepare(project_path, "supplementary")
     return run_compile_script(
         project_path,
         "supplementary",
@@ -124,9 +159,8 @@ def compile_revision(
     engine: str | None = None,
 ) -> dict:
     """Compile revision document to PDF."""
-    project_path = resolve_project_path(project_dir)
-    _auto_render_claims(project_path)
-    _inject_version_stamp(project_path)
+    project_path = resolve_workspace(resolve_project_path(project_dir))
+    _prepare(project_path, "revision")
     return run_compile_script(
         project_path,
         "revision",

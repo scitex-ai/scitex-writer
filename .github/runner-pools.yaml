@@ -1,0 +1,31 @@
+# Version-controlled runner-pool SSOT for scitex-writer's OWNED workflows.
+#
+# Why a file instead of a repo Actions variable
+# =============================================
+# The sdist-wheel-import and the release (pypi tag) workflows previously routed
+# through ``vars.CI_RUNS_ON``. That is a HIDDEN, repository-settings value: it is
+# not visible in a diff, cannot be reviewed, and my agent token cannot read-then-
+# write it (PUT /actions/variables/CI_RUNS_ON -> 404). When the variable held the
+# RETIRED ``scitex-ci`` pool (all runners offline) the jobs queued forever with NO
+# red signal — a check that never starts looks identical to one that has not run
+# yet — while ``scitex-org-cpu`` runners sat online and idle (the incident the
+# fleet docs record for spartan-cpu, reproduced here on scitex-ci).
+#
+# A set variable silently overrides any ``|| '<fallback>'`` in the YAML, so the
+# fallback could not fix it. The deterministic remedy is to stop reading the
+# hidden variable and name the pool HERE, in version control, where it is
+# reviewable, diff-visible, and pinned by tests + the runner-pool validator
+# (scripts/ci/validate_runner_pools.py). Re-pointing the pool is now a one-line
+# change in this file (and the validator's supported-pool constant), not a
+# hidden settings click.
+#
+# The label list is the org's supported pool: ``scitex-org-cpu`` (the
+# ``CI_RUNS_ON_DEFAULT`` in scitex_dev). It is an EXPLICIT literal (no ``vars.*``
+# seam) by design — that is the property the validator enforces for the
+# pinned workflows.
+runner_pool:
+  labels:
+    - self-hosted
+    - Linux
+    - X64
+    - scitex-org-cpu

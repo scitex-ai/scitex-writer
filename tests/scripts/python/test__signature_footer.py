@@ -316,8 +316,8 @@ def _make_project(tmp_path):
 def _flatten(base_tex, out_tex, *, signature_footer):
     import compile_tex_structure as cts
 
-    saved = os.environ.get("PROJECT_ROOT")
-    os.environ["PROJECT_ROOT"] = str(base_tex.parent.parent)
+    saved = os.environ.get("SCITEX_WRITER_PROJECT_ROOT")
+    os.environ["SCITEX_WRITER_PROJECT_ROOT"] = str(base_tex.parent.parent)
     try:
         cts.compile_tex_structure(
             base_tex=base_tex,
@@ -327,9 +327,9 @@ def _flatten(base_tex, out_tex, *, signature_footer):
         )
     finally:
         if saved is None:
-            os.environ.pop("PROJECT_ROOT", None)
+            os.environ.pop("SCITEX_WRITER_PROJECT_ROOT", None)
         else:
-            os.environ["PROJECT_ROOT"] = saved
+            os.environ["SCITEX_WRITER_PROJECT_ROOT"] = saved
 
 
 def test_flatten_injects_footer_when_on(tmp_path):

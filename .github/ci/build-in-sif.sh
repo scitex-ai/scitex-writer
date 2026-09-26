@@ -88,3 +88,29 @@ rm -rf "$CLEANVENV"
 "$CLEANVENV/bin/python" -c "import scitex_writer.writer; print('wheel import OK:', '$WHEEL')"
 # Name the exact submodule the outage dropped so a regression is unambiguous.
 "$CLEANVENV/bin/python" -c "from scitex_writer._dataclasses.config import WriterConfig; print('WriterConfig OK')"
+
+# Post-build CONTENT gate for the vendored scripts — same lesson as the import
+# gate above, one artefact further out. The refresh that heals an existing
+# workspace reads the INSTALLED package's scripts/ (`package_scripts_dir`), and
+# because `python -m build` builds the wheel FROM the sdist, a wheel can lose
+# them without any import breaking: the published 2.43.3 wheel shipped 4 files
+# under scitex_writer/scripts/ (the READMEs the sdist happened to match) while
+# the source tree had 122, and nothing failed until someone tried to heal a
+# workspace in the field. Assert the KEY FILE is in the artifact, by exact
+# member name, so the failure names the gap instead of hinting at it.
+KEY_SCRIPT="scitex_writer/scripts/shell/modules/check_dependancy_commands.sh"
+"$CLEANVENV/bin/python" - "$WHEEL" "$KEY_SCRIPT" <<'PY'
+import sys, zipfile
+
+wheel, key = sys.argv[1], sys.argv[2]
+names = zipfile.ZipFile(wheel).namelist()
+scripts = [n for n in names if n.startswith("scitex_writer/scripts/")]
+if key not in names:
+    print(
+        f"::error::wheel {wheel} does not ship the vendored scripts: "
+        f"{key} is absent ({len(scripts)} file(s) under scitex_writer/scripts/). "
+        "A wheel install cannot self-heal its workspace's scripts without them. "
+        "Check that the SDIST includes /scripts — the wheel is built from it."
+    )
+    raise SystemExit(1)
+print(f"vendored scripts OK: {len(scripts)} file(s), key file present")
