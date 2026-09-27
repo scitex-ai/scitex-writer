@@ -28,5 +28,8 @@
   "embedded_package": true,
   "dependencies": {
     "python": ["scitex-writer", "django"]
+  },
+  "mount_policy": {
+    "login_required": true
   }
 }
