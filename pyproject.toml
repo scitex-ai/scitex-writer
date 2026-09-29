@@ -177,6 +177,7 @@ dev = [
     # get a scholar whose verify_cites can actually return VERIFIED.
     "scitex-scholar>=1.5.2",
     "scitex-app>=0.4.0",  # editor tests need the workspace shell
+    "scitex-sdk>=0.2.1",  # SDK facade imports under test
     "openpyxl",           # writes the .xlsx fixture for the tables xlsx stage
 ]
 docs = [
