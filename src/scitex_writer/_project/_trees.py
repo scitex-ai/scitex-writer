@@ -11,9 +11,10 @@ revision, and scripts.
 
 from __future__ import annotations
 
-from logging import getLogger
 from pathlib import Path
 from typing import Optional, Tuple
+
+from scitex_logging import getLogger
 
 from .._dataclasses import ManuscriptTree, RevisionTree, SupplementaryTree
 from .._dataclasses.tree import ScriptsTree

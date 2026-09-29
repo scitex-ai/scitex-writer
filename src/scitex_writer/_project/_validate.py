@@ -10,8 +10,9 @@ Verifies that writer projects have expected directory structure.
 
 from __future__ import annotations
 
-from logging import getLogger
 from pathlib import Path
+
+from scitex_logging import getLogger
 
 logger = getLogger(__name__)
 

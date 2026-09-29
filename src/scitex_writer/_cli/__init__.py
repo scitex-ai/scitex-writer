@@ -66,7 +66,7 @@ def _is_bare_version_invocation(argv: list[str]) -> bool:
 if _is_bare_version_invocation(_sys.argv[1:]):
     from .. import __version__ as _pkg_version
 
-    print(f"scitex-writer, version {_pkg_version}")
+    _sys.stdout.write(f"scitex-writer, version {_pkg_version}\n")
     raise SystemExit(0)
 
 

@@ -13,6 +13,7 @@ into their own Django project.
 from __future__ import annotations
 
 import os
+import sys
 import threading
 import webbrowser
 from pathlib import Path
@@ -104,11 +105,11 @@ def run(
     _allowed = contribute_allowed_host(host)
     _warning = warn_if_wildcard_bind(host, _allowed)
     if _warning:
-        print(_warning)
+        sys.stdout.write(_warning + "\n")
 
-    print(f"SciTeX Writer GUI: http://{host}:{port}")
-    print(f"Project: {project_path}")
-    print("Press Ctrl+C to stop")
+    sys.stdout.write(f"SciTeX Writer GUI: http://{host}:{port}\n")
+    sys.stdout.write(f"Project: {project_path}\n")
+    sys.stdout.write("Press Ctrl+C to stop\n")
 
     try:
         from scitex_app.embed import run_standalone
@@ -116,10 +117,10 @@ def run(
         from ._workspace_shell import REMEDY, probe_missing_shell
 
         run_standalone = None
-        print(
+        sys.stdout.write(
             f"Note: {probe_missing_shell()}, so the workspace shell is "
             "unavailable; serving bare Django instead.\n"
-            f"      Get it with: {REMEDY}"
+            f"      Get it with: {REMEDY}\n"
         )
 
     import django
