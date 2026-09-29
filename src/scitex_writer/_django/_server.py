@@ -111,7 +111,9 @@ def run(
     print("Press Ctrl+C to stop")
 
     try:
-        from scitex_app.embed import run_standalone
+        from scitex_sdk import app as _sdk_app
+
+        run_standalone = _sdk_app.embed.run_standalone
     except ImportError:
         from ._workspace_shell import REMEDY, probe_missing_shell
 
