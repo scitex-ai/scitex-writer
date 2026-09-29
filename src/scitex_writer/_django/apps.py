@@ -6,8 +6,6 @@ from ._workspace_shell import REMEDY, probe_missing_shell
 
 try:
     from scitex_sdk import app as _sdk_app
-
-    ScitexAppConfig = _sdk_app.embed.ScitexAppConfig
 except ImportError:
     # Falling back to a plain Django AppConfig means the editor loses the
     # scitex-app workspace shell. That is a real downgrade, so SAY SO — a
@@ -21,6 +19,8 @@ except ImportError:
         RuntimeWarning,
         stacklevel=2,
     )
+else:
+    ScitexAppConfig = _sdk_app.embed.ScitexAppConfig
 
 
 class WriterEditorConfig(ScitexAppConfig):
