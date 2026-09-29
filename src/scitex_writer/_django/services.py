@@ -9,13 +9,14 @@ with a TTL so repeated HTTP requests for the same project reuse the same state.
 
 from __future__ import annotations
 
-import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-logger = logging.getLogger(__name__)
+from scitex_logging import getLogger
+
+logger = getLogger(__name__)
 
 _project_cache: Dict[str, Tuple["ProjectState", float]] = {}
 _CACHE_TTL_SECONDS = 3600

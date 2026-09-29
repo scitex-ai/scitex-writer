@@ -10,8 +10,9 @@ to the HANDLERS registry (with a few parameterized fallbacks for
 
 from __future__ import annotations
 
-import logging
 import os
+
+from scitex_logging import getLogger
 
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
@@ -31,7 +32,7 @@ from .handlers import (
 from .services import get_or_create_project
 from ..workspace_layout import NotAWriterWorkspaceError
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 def _app_config():
