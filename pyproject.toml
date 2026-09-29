@@ -202,6 +202,16 @@ docs = [
 [project.scripts]
 scitex-writer = "scitex_writer._cli:main"
 
+[project.entry-points."scitex.apps"]
+# Generic hub mount (thin-hub rule): `pip install` is the whole install.
+# The group name contains a dot, so it MUST stay QUOTED: the unquoted form
+# `[project.entry-points.scitex.apps]` parses as group "scitex" holding a
+# nested sub-table and declares nothing anyone reads (verified with tomllib;
+# mirrors scitex-agent-container 4d222b87).
+# The host mounts `scitex_writer._django.urls` at the manifest route
+# (apps/writer/) and lists the launcher tile from `_django/manifest.json`.
+writer = "scitex_writer._django.apps:WriterEditorConfig"
+
 [project.entry-points."scitex_dev.docs"]
 scitex-writer = "scitex_writer"
 
