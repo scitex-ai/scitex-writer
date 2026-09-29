@@ -112,7 +112,7 @@ def run(
     sys.stdout.write("Press Ctrl+C to stop\n")
 
     try:
-        from scitex_app.embed import run_standalone
+        from scitex_sdk import app as _sdk_app
     except ImportError:
         from ._workspace_shell import REMEDY, probe_missing_shell
 
@@ -122,6 +122,8 @@ def run(
             "unavailable; serving bare Django instead.\n"
             f"      Get it with: {REMEDY}\n"
         )
+    else:
+        run_standalone = _sdk_app.embed.run_standalone
 
     import django
 

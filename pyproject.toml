@@ -152,6 +152,9 @@ all = [
     # `scitex_app.embed` module. Below it the import falls through the
     # ImportError guard and the editor silently degrades to a shell-less server.
     "scitex-app>=0.4.0",
+    # Unified facade: new imports use scitex_sdk.app (identity re-exports
+    # over scitex_app). Floor 0.2.1 = first release with the embed names.
+    "scitex-sdk>=0.2.1",
     # >=1.5.0 was a HARD floor, not a preference: before 1.5.0 a metadata-nesting
     # bug in scitex-scholar meant `verify_cites` could never return VERIFIED for
     # ANY citation, so the `citation_trust` check could only ever emit warnings.
@@ -186,6 +189,7 @@ dev = [
     # get a scholar whose verify_cites can actually return VERIFIED.
     "scitex-scholar>=1.5.2",
     "scitex-app>=0.4.0",  # editor tests need the workspace shell
+    "scitex-sdk>=0.2.1",  # SDK facade imports under test
     "openpyxl",           # writes the .xlsx fixture for the tables xlsx stage
 ]
 docs = [
