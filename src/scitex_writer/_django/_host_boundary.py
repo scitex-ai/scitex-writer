@@ -25,6 +25,8 @@ def project_boundary(*, page=False, project_from_url=False):
     Host settings provide project identity, storage and permissions. HTTP
     working_dir values and process-global local defaults have no authority in
     plugin mode. CSRF also applies when included without host middleware.
+    Page navigation remembers explicit selection; resource requests resolve
+    their authorized project without replacing a newer navigation selection.
     """
 
     def decorate(view):
@@ -50,6 +52,7 @@ def project_boundary(*, page=False, project_from_url=False):
                 request.writer_project_access = host.project_access(
                     capability_request,
                     write=request.method not in {"GET", "HEAD", "OPTIONS", "TRACE"},
+                    remember=page,
                 )
             return view(request, *args, **kwargs)
 

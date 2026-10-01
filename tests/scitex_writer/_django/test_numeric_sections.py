@@ -422,7 +422,8 @@ def test_real_file_read_failures_remain_server_errors(mounted, bad_file):
 def test_url_project_switch_cannot_leak_stored_project_content(mounted):
     projects.selected = "17"
     assert get(mounted, 21).json()["content"] == "Synthetic beta."
-    assert projects.selected == "21"
+    # Resource scope follows its URL without replacing the navigation choice.
+    assert projects.selected == "17"
     assert get(mounted, 17).json()["content"] == "Synthetic abstract."
     assert projects.selected == "17"
 
