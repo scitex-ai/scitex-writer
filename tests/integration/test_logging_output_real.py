@@ -162,7 +162,26 @@ def test_real_launcher_announces_only_until_django_import_without_starting_serve
     tmp_path, level
 ):
     # Arrange
-    code = "from scitex_writer._django import _server as server\nclass StopBeforeDjango(RuntimeError): pass\ndef no_django(event,args):\n    if event=='import' and args[0]=='django':\n        raise StopBeforeDjango('owned logging boundary')\n    if event=='subprocess.Popen':\n        raise AssertionError('launcher must not spawn during this control')\nsys.addaudithook(no_django)\nassert 'django' not in sys.modules\ntry:\n    server.run('.',host='0.0.0.0',open_browser=False)\nexcept StopBeforeDjango:\n    pass\nelse:\n    raise AssertionError('did not stop before Django import')"
+    code = (
+        "from scitex_writer._django import _server as server\n"
+        "class StopBeforeDjango(RuntimeError): pass\n"
+        "def no_django(event,args):\n"
+        "    if event=='import' and args[0]=='django':\n"
+        "        raise StopBeforeDjango('owned logging boundary')\n"
+        "    if event=='import' and args[0]=='scitex_sdk':\n"
+        "        raise ModuleNotFoundError('owned missing SDK control', name='scitex_sdk')\n"
+        "    if event=='subprocess.Popen':\n"
+        "        raise AssertionError('launcher must not spawn during this control')\n"
+        "sys.addaudithook(no_django)\n"
+        "assert 'django' not in sys.modules\n"
+        "assert 'scitex_sdk' not in sys.modules\n"
+        "try:\n"
+        "    server.run('.',host='0.0.0.0',open_browser=False)\n"
+        "except StopBeforeDjango:\n"
+        "    pass\n"
+        "else:\n"
+        "    raise AssertionError('did not stop before Django import')"
+    )
     # Act
     result = _run(tmp_path, code, level)
     # Assert
