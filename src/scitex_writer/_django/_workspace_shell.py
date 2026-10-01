@@ -24,6 +24,7 @@ from typing import Optional
 
 # First scitex-app release exposing the public ``scitex_app.embed`` module.
 MIN_SCITEX_APP = "0.4.0"
+MIN_SCITEX_SDK = "0.3.0"
 
 REMEDY = "uv pip install 'scitex-writer[all]'"
 
@@ -42,6 +43,12 @@ def describe_missing_shell(spec_found: bool, installed_version: Optional[str]) -
 def probe_missing_shell() -> str:
     """Read the two facts off the live interpreter, then describe them."""
     try:
+        sdk_found = importlib.util.find_spec("scitex_sdk") is not None
+    except (ImportError, ValueError):
+        sdk_found = False
+    if not sdk_found:
+        return "scitex-sdk is not installed"
+    try:
         spec_found = importlib.util.find_spec("scitex_app") is not None
     except (ImportError, ValueError):
         # A half-installed package can raise rather than return None.
@@ -54,4 +61,10 @@ def probe_missing_shell() -> str:
         except importlib.metadata.PackageNotFoundError:
             installed_version = None
 
-    return describe_missing_shell(spec_found, installed_version)
+    if not spec_found:
+        return describe_missing_shell(spec_found, installed_version)
+    return (
+        f"scitex-sdk is installed but its workspace shell is unavailable; "
+        f"check scitex-sdk>={MIN_SCITEX_SDK} and its app/UI dependencies "
+        f"(scitex-app {installed_version or 'version unknown'})"
+    )

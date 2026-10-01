@@ -71,6 +71,7 @@ except ImportError:
     pass
 
 MIDDLEWARE = [
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]

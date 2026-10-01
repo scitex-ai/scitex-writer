@@ -32,7 +32,16 @@ import time
 from pathlib import Path
 
 import pytest
-from django.test import RequestFactory
+from django.test import RequestFactory as _RequestFactory
+
+class RequestFactory(_RequestFactory):
+    """Handler unit requests; real CSRF denial/success use Client separately."""
+
+    def request(self, **request):
+        result = super().request(**request)
+        result._dont_enforce_csrf_checks = True
+        return result
+
 
 from scitex_writer._compile._event_log import read_events
 from scitex_writer._django import services
