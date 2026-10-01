@@ -1,5 +1,6 @@
 """Leaf-owned authorization and session CSRF for standalone and plugin routes."""
 
+from copy import copy
 from functools import wraps
 from urllib.parse import urlencode
 
@@ -18,7 +19,7 @@ def standalone() -> bool:
     return mode == "standalone"
 
 
-def project_boundary(*, page=False):
+def project_boundary(*, page=False, project_from_url=False):
     """Authorize every request before loading cached state or invoking handlers.
 
     Host settings provide project identity, storage and permissions. HTTP
@@ -32,8 +33,23 @@ def project_boundary(*, page=False):
             if not standalone():
                 # Project resolution may remember an explicit selection. Keep
                 # that side effect behind CSRF validation for unsafe requests.
+                capability_request = request
+                if project_from_url:
+                    # Numeric legacy URLs are an explicit selector, never an
+                    # authorization grant or a fallback to the stored project.
+                    project_id = str(kwargs["project_id"])
+                    if any(
+                        value != project_id for value in request.GET.getlist("project")
+                    ):
+                        raise host.AccessError(
+                            "Project selector conflicts with URL", 400
+                        )
+                    capability_request = copy(request)
+                    capability_request.GET = request.GET.copy()
+                    capability_request.GET["project"] = project_id
                 request.writer_project_access = host.project_access(
-                    request, write=request.method not in {"GET", "HEAD", "OPTIONS", "TRACE"}
+                    capability_request,
+                    write=request.method not in {"GET", "HEAD", "OPTIONS", "TRACE"},
                 )
             return view(request, *args, **kwargs)
 
@@ -53,11 +69,15 @@ def project_boundary(*, page=False):
                     target = resolve_url(login_url)
                     separator = "&" if "?" in target else "?"
                     return HttpResponseRedirect(
-                        target + separator + urlencode({"next": request.get_full_path()})
+                        target
+                        + separator
+                        + urlencode({"next": request.get_full_path()})
                     )
                 return JsonResponse({"error": str(exc)}, status=exc.status)
             except host.CapabilityUnavailable:
-                return JsonResponse({"error": "Project capability is unavailable"}, status=503)
+                return JsonResponse(
+                    {"error": "Project capability is unavailable"}, status=503
+                )
 
         return guarded
 

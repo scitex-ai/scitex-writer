@@ -42,7 +42,7 @@ query input. Keep existing Hub wrappers/routes during review.
 This boundary covers authenticated private project mounts. An anonymous public
 live-paper viewer needs a separate host-authorized, read-only project capability;
 the current SDK session project contract does not provide it. Do not activate
-this candidate on the existing public viewer. Legacy section/Git/collaboration
+this candidate on the existing public viewer. Legacy section management/Git/collaboration
 APIs, initialization, host job queues, project-scoped provenance/store access,
 external assets/library authorization and the host-specific picker still require
 parity work before legacy routes can be removed. These changes do not sandbox
@@ -52,3 +52,56 @@ Use `scitex_sdk.ui.mount` (or its direct UI aliases) for UI mount metadata;
 `scitex_sdk.app.embed.mount_prefix` has a different contract. The SDK has no
 `ui.scope` or `ui.context_processors` surface yet. Settings retain the existing
 public scitex-ui context processor paths; do not replace them with private APIs.
+
+## Numeric section and readiness compatibility
+
+The leaf now handles the existing HTTP paths
+`api/project/<id>/section/<section>/` (GET/POST) and
+`api/project/<id>/manuscript-status/` (GET), including their existing URL names
+`api_section` and `api_manuscript_status` under the leaf's `writer` namespace.
+The host's legacy `writer_app` reverse namespace is not yet supplied. Existing
+legacy routes must remain until that namespace and all operation parity gates
+are closed; adding these leaf routes does not activate a Hub cutover.
+
+In plugin mode, the numeric URL ID is passed as an explicit selector to the
+SDK through a shallow request adapter. Authentication, the original session,
+project provider and storage permissions remain the host's. A conflicting
+`?project=` is refused before resolution; the path does not authorize a project
+or fall back to the stored choice. CSRF runs before unsafe selection. Every
+save rechecks literal-True storage write permission. Caller working directories
+and body project IDs do not redirect mounted requests.
+
+Standalone keeps the existing explicit local `working_dir`/environment
+selection; the URL number has no local database mapping. This remains a trusted
+single-user local interface, not multi-user storage authorization.
+
+Section reads observe the existing workspace without attaching Writer,
+scaffolding templates, linking Scholar, executing a job or compiling TeX. The
+three document directories required by Writer's attach contract establish
+`workspace_ready`. An absent/incomplete workspace returns renderable empty
+content with `workspace_ready: false`; writes return 409. A missing section in
+a ready workspace returns empty content and `missing: true`, while a written
+empty file returns `missing: false`. Actual filesystem/text read failures stay
+errors. All section paths remain within the authorized workspace.
+
+Readiness depends on the storage capability supplying an authorized root. The
+current Hub provider returns no root when the project directory is absent, and
+the SDK then refuses the request with 404 before these views run. Empty unready
+content is proven for an existing root or an explicit authorized expected-root
+capability; full parity for a registered project with no directory remains open.
+The leaf does not guess a path, bypass this refusal or create the directory.
+
+Manuscript status retains `success`, `exists` and `has_pdf`, observing the
+existing `.preview`, document-PDF and `preview_output` locations. It does not
+create or compile a PDF. Invalid names and outbound PDF links are never reported
+as available. The manuscript-directory presence flag matches the existing Hub
+status contract; it is distinct from complete section workspace readiness.
+
+POST persists the section file and its content response. It does not yet
+reproduce the legacy service's automatic Git commit/history side effect.
+Virtual `compiled_tex`/`compiled_pdf` sections explicitly return 501. Section
+create/delete/move/exclude, initialization, batch save, Git, host jobs,
+collaboration and public viewer capabilities remain separate migration gates.
+The unchanged legacy TypeScript client hardcodes the default mount, so its
+custom-prefix routing is not claimed. Templates and compiled frontend assets
+are unchanged by this bounded compatibility patch.
