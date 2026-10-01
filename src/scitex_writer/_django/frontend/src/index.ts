@@ -10,7 +10,7 @@ import {
   waitForMonaco,
 } from "@scitex/sdk/ui/monaco-editor";
 
-import { getFile, saveFile, projectInfo } from "./api";
+import { getFile, saveFile, projectInfo, resourceUrl } from "./api";
 import type { SectionEntry } from "./api";
 import { SectionTabs } from "./sections";
 import { countWords, mountToolbar } from "./toolbar";
@@ -193,11 +193,9 @@ async function bootstrap(): Promise<void> {
         root.querySelector<HTMLSelectElement>("#doc-type-select")?.value ||
         "manuscript";
       const a = document.createElement("a");
-      a.href =
-        `/api/pdf?doc_type=${encodeURIComponent(docType)}` +
-        `&working_dir=${encodeURIComponent(
-          (root as HTMLElement).dataset.projectDir || "",
-        )}&download=1&t=${Date.now()}`;
+      a.href = resourceUrl(
+        `api/pdf?doc_type=${encodeURIComponent(docType)}&download=1&t=${Date.now()}`,
+      );
       a.download = `${docType}.pdf`;
       document.body.appendChild(a);
       a.click();

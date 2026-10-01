@@ -162,6 +162,7 @@ def test_explicit_editor_and_viewer_navigation_still_remembers(mounted, page):
     )
     assert response.status_code == 200
     assert projects.selected == "17" and projects.remembered == ["17"]
+    assert b'data-project-id="17"' in response.content
 
 
 def test_unselected_resource_reads_newer_beta_without_reselecting(mounted):

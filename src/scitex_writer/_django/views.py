@@ -237,6 +237,9 @@ def editor_page(request, *, view_path="", api_base=None):
         {
             "app_name": "writer",
             "project_dir": project_dir,
+            "project_id": getattr(
+                getattr(request, "writer_project_access", None), "id", ""
+            ),
             "dark_mode": project.dark_mode if project else False,
             # The leaf header: our title + OUR version, and the picker slot only
             # when the host registered its tag library.
@@ -345,6 +348,9 @@ def viewer_page(request, *, view_path="viewer/", api_base=None):
         {
             "app_name": "writer",
             "project_dir": project_dir,
+            "project_id": getattr(
+                getattr(request, "writer_project_access", None), "id", ""
+            ),
             **_shell_context("SciTeX Writer — Viewer"),
             **_page_mount(request, view_path, api_base),
         },
