@@ -33,7 +33,7 @@ _HEADER_CSS = _DJANGO_DIR / "static" / "writer" / "css" / "app-header.css"
 _HEADER_OPEN = (
     '<header class="stx-app-header writer-app-header" id="writer-app-header">'
 )
-_SHARED_HEADER_CSS = "scitex_ui/css/app/app-header.css"
+_SHARED_HEADER_CSS = "scitex_sdk/ui/css/app/app-header.css"
 
 
 @pytest.fixture

@@ -714,12 +714,12 @@ SHELL_INTERNALS = (
 def test_writer_declares_every_pane_scitex_ui_offers():
     """Leaving one out would silently leave that pane visible."""
     # Arrange
-    from scitex_ui.branding import PANE_NAMES
+    from scitex_sdk.ui import branding
 
     # Act
     declared = set(_SHELL_PANES)
     # Assert
-    assert declared == set(PANE_NAMES)
+    assert declared == set(branding.PANE_NAMES)
 
 
 @pytest.mark.parametrize("pane", sorted(_SHELL_PANES))
@@ -736,10 +736,10 @@ def test_every_declared_pane_is_unused(pane: str):
 def test_the_declaration_is_accepted_by_scitex_ui():
     """shell_context raises on an unknown pane name or state — so call it."""
     # Arrange
-    from scitex_ui.branding import shell_context
+    from scitex_sdk.ui import branding
 
     # Act
-    context = shell_context("Writer", panes=_SHELL_PANES)
+    context = branding.shell_context("Writer", panes=_SHELL_PANES)
     # Assert
     assert context["panes"] == _SHELL_PANES
 

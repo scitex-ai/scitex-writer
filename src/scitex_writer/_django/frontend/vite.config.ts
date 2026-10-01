@@ -4,22 +4,14 @@ import { defineConfig } from "vite";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
-// `@scitex/ui/*` resolves through the package's own `exports` map via the npm
-// `file:` link (node_modules/@scitex/ui → the sibling scitex-ui checkout), the
-// same way tsc resolves it. The build therefore no longer depends on the
-// installed `scitex_ui` Python package.
-//
-// A previous alias pointed `@scitex/ui` at the scitex-ui repo root and
-// raw-appended subpaths. That broke once scitex-ui moved to exports subpaths at
-// varying depths (e.g. `./monaco-editor` → `ts/app/monaco-editor/index.ts`):
-// the alias produced `<root>/monaco-editor`, which does not exist. tsc resolves
-// via exports, the alias did not — so the mismatch only surfaced at build time,
-// never at typecheck.
+// @scitex/sdk component imports use its package exports in both tsc and Vite.
+// The npm file dependency can target a checkout or get_frontend_package_dir()
+// from an installed wheel; it must be regenerated for the active environment.
 export default defineConfig({
   base: "/static/writer/",
   resolve: {
     alias: {
-      // Pin scitex-ui's `monaco-editor` peer import to writer's own copy.
+      // Pin SDK UI's `monaco-editor` peer import to writer's own copy.
       "monaco-editor": resolve(__dirname, "node_modules/monaco-editor"),
     },
     preserveSymlinks: true,
@@ -28,6 +20,9 @@ export default defineConfig({
     outDir: "../static/writer",
     emptyOutDir: false,
     sourcemap: true,
+    // Templates already load one shared stylesheet at this stable URL.
+    // Splitting vendor JavaScript must not strand its extracted styles.
+    cssCodeSplit: false,
     manifest: true,
     rollupOptions: {
       input: {
@@ -35,9 +30,20 @@ export default defineConfig({
         viewer: "src/viewer.ts",
       },
       output: {
+        // Monaco's complete sources exceed the repository's per-file guard
+        // in one map. Keep its foundational utilities separate from editor
+        // modules while retaining every source and the existing entry URLs.
+        onlyExplicitManualChunks: true,
+        manualChunks(id) {
+          if (id.includes("/monaco-editor/esm/vs/base/"))
+            return "monaco-base";
+        },
         entryFileNames: "assets/[name].js",
         chunkFileNames: "assets/[name].js",
-        assetFileNames: "assets/[name][extname]",
+        assetFileNames: (asset) =>
+          asset.name === "style.css"
+            ? "assets/index.css"
+            : "assets/[name][extname]",
       },
     },
   },

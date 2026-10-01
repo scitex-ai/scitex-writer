@@ -1,11 +1,11 @@
 # Writer standalone and plugin host boundary
 
-The GUI requires the SDK 0.3.0 host/UI contract. The SDK used for this change
-is an unpublished local candidate; do not assume a released install can satisfy
-the new floor yet. Its tested peers are App 0.26.2 and UI 0.23.1. The SDK is a
-base dependency so plugin discovery retains SDK metadata without an extra;
-AppConfig import errors no longer substitute a plain Django base. Manifest
-versions are derived from installed package metadata, not hard-coded JSON.
+The GUI requires the consolidated SDK 0.3.0 contract. The SDK physically owns
+`scitex_sdk.app` and `scitex_sdk.ui`, their Django registrations and the resources
+under `scitex_sdk/app/` and `scitex_sdk/ui/`. Writer requires the SDK directly and
+has no App/UI distribution dependency. This candidate remains held until the
+actual consolidated core wheel passes its installed-consumer checks. Manifest
+versions come from installed metadata, not hard-coded JSON.
 
 Standalone settings explicitly declare `SCITEX_APP_MODE = "standalone"`.
 Local `working_dir` selection and `SCITEX_WRITER_WORKING_DIR` remain available.
@@ -50,8 +50,7 @@ TeX compilation or certify scientific content.
 
 Use `scitex_sdk.ui.mount` (or its direct UI aliases) for UI mount metadata;
 `scitex_sdk.app.embed.mount_prefix` has a different contract. The SDK has no
-`ui.scope` or `ui.context_processors` surface yet. Settings retain the existing
-public scitex-ui context processor paths; do not replace them with private APIs.
+`ui.scope` or `ui.context_processors` surface yet. Settings use the canonical SDK UI context processor paths.
 
 ## Numeric section and readiness compatibility
 
@@ -105,3 +104,11 @@ collaboration and public viewer capabilities remain separate migration gates.
 The unchanged legacy TypeScript client hardcodes the default mount, so its
 custom-prefix routing is not claimed. Templates and compiled frontend assets
 are unchanged by this bounded compatibility patch.
+
+
+The standalone UI registration is `scitex_sdk.ui`; Writer keeps its own
+`writer_editor` Django label and `writer` URL namespace. Shared template slots
+and DOM identifiers retain their existing names. Numeric URL selectors require
+matching host-authorized project IDs. Current Hub lists `owner/slug` keys and
+does not map an integer PK to that key; SDK 404 refusal remains an open generic
+identity contract, separate from the already documented absent-root refusal.

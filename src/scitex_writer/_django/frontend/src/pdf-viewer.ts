@@ -20,7 +20,7 @@ import {
   type PdfTool,
   type PdfViewerApi,
   type PenInput,
-} from "@scitex/ui/pdf-viewer";
+} from "@scitex/sdk/ui/pdf-viewer";
 
 import { API_BASE, postAnnotation, PROJECT_DIR } from "./api";
 import {
