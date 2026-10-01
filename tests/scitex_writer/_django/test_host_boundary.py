@@ -131,16 +131,38 @@ def test_missing_capability_does_not_use_local_defaults(mounted, missing):
     assert not services._project_cache
 
 
-def test_read_only_project_denies_write_before_loading_state(mounted):
+@pytest.mark.parametrize("writable", [False, None, 0, 1, "true", "false"])
+def test_write_permission_requires_literal_true_before_loading_state(mounted, writable):
     client, storage, candidate, _ = mounted
     csrf = token(client)
     services._project_cache.clear()
-    storage.writable = False
+    storage.writable = writable
     response = client.post("/plugin/writer/api/file", {"path": "new.tex", "content": "X"},
                            content_type="application/json", HTTP_AUDIT_SESSION="synthetic", HTTP_X_CSRFTOKEN=csrf)
     assert response.status_code == 403
     assert not (candidate / "new.tex").exists()
     assert not services._project_cache
+
+
+@pytest.mark.parametrize("mode", ["invalid", "Standalone", None, {}, []])
+def test_invalid_mode_denies_anonymous_and_authenticated_requests(mounted, mode):
+    client, _, candidate, _ = mounted
+    csrf = token(client)
+    services._project_cache.clear()
+    projects.selected = None
+    with override_settings(SCITEX_APP_MODE=mode):
+        for identity in ["", "synthetic"]:
+            for route in ["", "api/project-info"]:
+                response = client.get("/plugin/writer/" + route, HTTP_AUDIT_SESSION=identity)
+                assert response.status_code == 503
+            response = client.post("/plugin/writer/api/file?project=owned",
+                                   {"path": "new.tex", "content": "X"},
+                                   content_type="application/json", HTTP_AUDIT_SESSION=identity,
+                                   HTTP_X_CSRFTOKEN=csrf)
+            assert response.status_code == 503
+    assert projects.selected is None
+    assert not services._project_cache
+    assert not (candidate / "new.tex").exists()
 
 
 def test_session_csrf_denial_and_authorized_save_ignore_body_working_dir(mounted):

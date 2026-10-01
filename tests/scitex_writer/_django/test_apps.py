@@ -71,13 +71,13 @@ def test_the_all_extra_provides_every_feature_module():
     assert missing == []
 
 
-def test_the_all_extra_floors_scitex_app_at_the_embed_release():
+def test_the_all_extra_floors_scitex_app_at_the_sdk_tested_contract():
     # Arrange
     all_extra = _optional_dependencies()[_THE_ONLY_FEATURE_EXTRA]
     # Act
     pins = [req for req in all_extra if req.startswith("scitex-app")]
     # Assert
-    assert pins == ["scitex-app>=0.4.0"]
+    assert pins == ["scitex-app>=0.26.2"]
 
 
 def test_nothing_still_tells_a_user_to_install_a_retired_extra():

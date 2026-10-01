@@ -12,7 +12,10 @@ from scitex_sdk import host
 
 def standalone() -> bool:
     # A host that forgets to declare its mode must never expose local paths.
-    return getattr(settings, "SCITEX_APP_MODE", "hub") == "standalone"
+    mode = getattr(settings, "SCITEX_APP_MODE", "hub")
+    if mode not in ("hub", "standalone"):
+        raise host.CapabilityUnavailable("Host mode is invalid")
+    return mode == "standalone"
 
 
 def project_boundary(*, page=False):
