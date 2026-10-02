@@ -21,7 +21,9 @@
  * `@media (max-width: 768px)`, and this module only writes state.
  */
 
-export type MobilePane = "files" | "editor" | "preview";
+import { controlsTranslate } from "./controls-i18n";
+
+export type MobilePane = "files" | "editor" | "preview" | "details";
 
 /**
  * ONE breakpoint, mirrored by `@media (max-width: 768px)` in
@@ -32,7 +34,7 @@ export type MobilePane = "files" | "editor" | "preview";
  */
 export const MOBILE_BREAKPOINT = "(max-width: 768px)";
 
-const PANES: readonly MobilePane[] = ["files", "editor", "preview"];
+const PANES: readonly MobilePane[] = ["files", "editor", "preview", "details"];
 
 /** The editor is what a writer opens the app for. */
 const DEFAULT_PANE: MobilePane = "editor";
@@ -75,6 +77,7 @@ export class MobileLayout {
       const pane = button.dataset.mobilePane as MobilePane;
       if (!PANES.includes(pane)) continue;
       this.tabs.set(pane, button);
+      if (pane === "details") button.textContent = controlsTranslate("details");
       button.addEventListener("click", () => this.setPane(pane));
     }
 

@@ -46,3 +46,26 @@ def test_complete_source_maps_fit_the_native_ten_megabyte_file_guard():
         assert all(isinstance(content, str) for content in mapping["sourcesContent"])
         source_names.update(mapping["sources"])
     assert any("monaco-editor/esm/vs/editor/common/config/editorOptions.js" in name for name in source_names)
+
+
+def test_editor_static_module_graph_has_no_evaluation_cycle():
+    # Arrange
+    manifest = json.loads((STATIC / ".vite/manifest.json").read_text())
+    cycles = []
+    visited = set()
+
+    def visit(key, parents):
+        if key in parents:
+            cycles.append(parents[parents.index(key):] + [key])
+            return
+        if key in visited:
+            return
+        for dependency in manifest[key].get("imports", []):
+            visit(dependency, parents + [key])
+        visited.add(key)
+
+    # Act
+    for entry in ("src/index.ts", "src/viewer.ts"):
+        visit(entry, [])
+    # Assert
+    assert cycles == []

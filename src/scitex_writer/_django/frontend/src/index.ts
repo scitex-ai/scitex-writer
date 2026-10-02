@@ -20,6 +20,7 @@ import { type AnnotationUIHandle, mountAnnotationUI } from "./annotation-ui";
 import { CompileController } from "./compile";
 import { InsertPanel } from "./insert-panel";
 import { DetailsPanel } from "./details-panel";
+import { controlsTranslate } from "./controls-i18n";
 import { registerCiteProviders } from "./cite-completion";
 import { ClaimsTab } from "./claims-tab";
 import {
@@ -36,6 +37,11 @@ async function bootstrap(): Promise<void> {
   if (!root) {
     console.warn("[writer] .writer-app container not found — aborting init");
     return;
+  }
+  const documentType = root.querySelector<HTMLSelectElement>("#doc-type-select");
+  if (documentType) {
+    documentType.title = controlsTranslate("documentType");
+    documentType.setAttribute("aria-label", controlsTranslate("documentType"));
   }
 
   // Monaco needs LaTeX registered before we create any editor
@@ -146,6 +152,7 @@ async function bootstrap(): Promise<void> {
         closeLogBtn: root.querySelector<HTMLElement>("#btn-close-log"),
         compileBtn: root.querySelector<HTMLElement>("#btn-compile"),
         modeToggleBtn: root.querySelector<HTMLElement>("#btn-compile-mode"),
+        modeButtons: Array.from(root.querySelectorAll<HTMLButtonElement>("[data-compile-mode]")),
         pdf,
         getDocType: () =>
           root.querySelector<HTMLSelectElement>("#doc-type-select")?.value ||

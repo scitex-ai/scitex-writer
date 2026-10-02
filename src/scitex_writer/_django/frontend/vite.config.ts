@@ -35,6 +35,9 @@ export default defineConfig({
         // modules while retaining every source and the existing entry URLs.
         onlyExplicitManualChunks: true,
         manualChunks(id) {
+          // Both editor and base utilities import NLS. Keep it out of the
+          // entry chunk so base -> entry cannot create an evaluation cycle.
+          if (id.endsWith("/monaco-editor/esm/vs/nls.js")) return "nls";
           if (id.includes("/monaco-editor/esm/vs/base/"))
             return "monaco-base";
         },

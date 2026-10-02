@@ -71,6 +71,7 @@
                     data-mobile-pane="editor"
                     aria-current="true">Editor</button>
             <button type="button" class="writer-mobile-pane-btn" data-mobile-pane="preview">PDF</button>
+            <button type="button" class="writer-mobile-pane-btn" data-mobile-pane="details">Details</button>
         </nav>
         <header class="writer-toolbar">
             <div class="writer-toolbar-left">
@@ -109,9 +110,10 @@
             </div>
             <div class="writer-toolbar-right">
                 <span id="compile-lamp" class="writer-lamp lamp-idle" title="Idle"></span>
-                <button id="btn-compile-mode"
-                        class="btn btn-secondary"
-                        title="Compile mode: Preview (draft) or Full">Preview</button>
+                <div class="writer-compile-modes" role="radiogroup" aria-label="Compile mode">
+                    <button type="button" role="radio" aria-checked="true" data-compile-mode="preview">Draft</button>
+                    <button type="button" role="radio" aria-checked="false" tabindex="-1" data-compile-mode="full">Full</button>
+                </div>
                 <button id="btn-compile"
                         class="btn btn-primary"
                         title="Compile (Ctrl+Shift+B)">

@@ -80,7 +80,7 @@ def test_editor_page_loads_the_mobile_stylesheet(project_dir):
 
 def test_editor_page_renders_the_pane_switcher(project_dir):
     # Arrange
-    panes = {"files", "editor", "preview"}
+    panes = {"files", "editor", "preview", "details"}
     # Act
     body = _editor_html(project_dir)
     # Assert
@@ -145,7 +145,8 @@ def test_phone_layout_starts_from_every_pane_hidden():
     assert re.search(
         r"body\[data-writer-mobile-pane\]\s+\.writer-mobile-files,\s*"
         r"body\[data-writer-mobile-pane\]\s+\.writer-editor-pane,\s*"
-        r"body\[data-writer-mobile-pane\]\s+\.writer-preview-pane\s*\{\s*"
+        r"body\[data-writer-mobile-pane\]\s+\.writer-preview-pane,\s*"
+        r"body\[data-writer-mobile-pane\]\s+\.details-pane\s*\{\s*"
         r"display:\s*none",
         hidden,
     )
@@ -157,6 +158,7 @@ def test_each_pane_value_restores_exactly_its_own_pane():
         "files": ".writer-mobile-files",
         "editor": ".writer-editor-pane",
         "preview": ".writer-preview-pane",
+        "details": ".details-pane",
     }
     css = _MOBILE_CSS.read_text(encoding="utf-8")
     # Act
