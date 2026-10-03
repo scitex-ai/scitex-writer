@@ -67,7 +67,7 @@ def test_import_guard_announces_the_degraded_fallback():
         ast.dump(statement) for handler in handlers for statement in handler.body
     )
     # Assert
-    assert "stdout" in handler_source
+    assert "_warn_missing_shell" in handler_source
 
 
 def test_django_setup_is_never_import_guarded():

@@ -194,7 +194,7 @@ def cmd_list_tools(
                 "count": len(tool_list),
                 "tools": tool_list,
             }
-        print(json.dumps(output, indent=2))
+        sys.stdout.write(json.dumps(output, indent=2) + "\n")
         return 0
 
     sys.stdout.write(_style("SciTeX Writer MCP: scitex-writer", "cyan", bold=True) + "\n")

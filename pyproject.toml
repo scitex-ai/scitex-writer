@@ -56,7 +56,7 @@ dependencies = [
     # per-workspace JSONL. The import is deliberately unguarded: a compile
     # whose outcome cannot be logged is the silent-failure shape this log
     # was created to end (operator, Telegram 4901, 2026-09-05).
-    "scitex-logging>=0.2.0",
+    "scitex-logging>=0.2.1",
     "django>=4.2",
     # bibtexparser is used by the compile scripts (merge_bibliographies.py,
     # explore_bibtex.py) but was never declared, so CI resolved "latest".

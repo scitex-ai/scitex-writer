@@ -205,7 +205,7 @@ def cmd_api(
     if as_json:
         import json
 
-        print(json.dumps(df, indent=2))
+        sys.stdout.write(json.dumps(df, indent=2) + "\n")
         return 0
 
     sys.stdout.write(_style(f"API tree of {dotted_path} ({len(df)} items):", fg="cyan") + "\n")
