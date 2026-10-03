@@ -40,7 +40,7 @@ classifiers = [
 ]
 dependencies = [
     # Plugin discovery imports SDK metadata even in a base install.
-    "scitex-sdk>=0.3.0",
+    "scitex-sdk>=0.3.1",
     "click>=8.0",
     "fastmcp>=2.0.0",
     # FLOOR IS 0.48.0: compile diagnostics (_compile/_diagnostics/_report.py)

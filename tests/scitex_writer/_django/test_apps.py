@@ -80,7 +80,7 @@ def test_workspace_shell_has_one_required_sdk_distribution_requires_sdk_dependen
     data = tomllib.loads(_PYPROJECT.read_text())['project']
     requirements = data['dependencies'] + [requirement for extra in data['optional-dependencies'].values() for requirement in extra]
     # Assert
-    assert 'scitex-sdk>=0.3.0' in data['dependencies']
+    assert 'scitex-sdk>=0.3.1' in data['dependencies']
 
 
 def test_workspace_shell_has_one_required_sdk_distribution_excludes_retired_distributions():

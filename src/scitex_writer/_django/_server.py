@@ -142,8 +142,6 @@ def run(
 
     from django.core.management import call_command
 
-    call_command("migrate", "--run-syncdb", verbosity=0)
-
     if run_standalone is not None:
         run_standalone(
             app_module="scitex_writer._django",
@@ -160,4 +158,4 @@ def run(
         threading.Timer(1.0, webbrowser.open, args=[f"http://{host}:{port}"]).start()
 
     noreload = [] if hot_reload else ["--noreload"]
-    call_command("runserver", f"{host}:{port}", *noreload)
+    call_command("runserver", f"{host}:{port}", "--insecure", *noreload)
