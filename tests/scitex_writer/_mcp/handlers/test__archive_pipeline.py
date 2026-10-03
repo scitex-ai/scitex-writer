@@ -33,6 +33,19 @@ _CONFIG = (
 _STAMP = datetime(2026, 7, 12, 9, 30, 0)
 
 
+@pytest.fixture(autouse=True)
+def _isolated_git_environment(monkeypatch, tmp_path):
+    """Keep hook-local Git context out of this module's temporary projects."""
+    local_env_vars = subprocess.run(
+        ["git", "-C", str(tmp_path.resolve()), "rev-parse", "--local-env-vars"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    for name in local_env_vars:
+        monkeypatch.delenv(name, raising=False)
+
+
 def _git_cmd(repo, *args):
     subprocess.run(
         ["git", "-C", str(repo), *args], check=True, capture_output=True, text=True
