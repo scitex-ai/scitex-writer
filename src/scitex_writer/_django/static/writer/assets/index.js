@@ -380,11 +380,11 @@ The flag will not be saved for the future.
         <div id="writer-details-${s.id}" class="details-section-body" ${this.open.has(s.id)?"":"hidden"}>
           ${this.open.has(s.id)?s.render():""}
         </div>
-      </div>`,i=s=>s.id==="compile-preview"||s.id==="compile-full",n=e.map(s=>s.id==="compile-preview"?`
+      </div>`,i=s=>s.id==="hints"||s.id==="compile-preview"||s.id==="compile-full",n=e.map(s=>s.id==="compile-preview"?`
         <fieldset class="details-compilation">
           <legend>${xi("compilation")}</legend>
           <div class="details-compilation-children">${e.filter(i).map(t).join("")}</div>
-        </fieldset>`:s.id==="compile-full"?"":t(s)).join("");this.container.innerHTML=`
+        </fieldset>`:i(s)?"":t(s)).join("");this.container.innerHTML=`
       <div class="details-header">
         <i class="fas fa-sliders"></i> ${xi("details")}
       </div>

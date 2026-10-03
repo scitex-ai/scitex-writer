@@ -290,14 +290,14 @@ export class DetailsPanel {
           ${this.open.has(s.id) ? s.render() : ""}
         </div>
       </div>`;
-    const isCompile = (s: SectionDef) => s.id === "compile-preview" || s.id === "compile-full";
+    const isCompile = (s: SectionDef) => s.id === "hints" || s.id === "compile-preview" || s.id === "compile-full";
     const content = sections.map((section) => {
       if (section.id === "compile-preview") return `
         <fieldset class="details-compilation">
           <legend>${t("compilation")}</legend>
           <div class="details-compilation-children">${sections.filter(isCompile).map(renderSection).join("")}</div>
         </fieldset>`;
-      return section.id === "compile-full" ? "" : renderSection(section);
+      return isCompile(section) ? "" : renderSection(section);
     }).join("");
     this.container.innerHTML = `
       <div class="details-header">
