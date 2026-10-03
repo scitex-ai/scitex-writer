@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import sys
 
 import pytest
 
@@ -64,6 +65,99 @@ def test_full_log_includes_the_latex_log_named_by_diagnostics(project):
     text = _full_log_text(project, result)
     # Assert
     assert "! Undefined control sequence." in text
+
+
+class _CompileBoundaryReached(BaseException):
+    """Stop the real call before the compile-script body runs."""
+
+
+@pytest.fixture
+def compile_workspace(project):
+    for name in ("00_shared", "01_manuscript", "02_supplementary", "03_revision"):
+        (project.project_dir / name).mkdir()
+    (project.project_dir / "00_shared/synthetic-interface-input.txt").write_text(
+        "Synthetic input.\n"
+    )
+    return project
+
+
+def _capture_editor_compile(project, doc_type, draft, dark_mode):
+    from scitex_writer._mcp.utils import run_compile_script
+
+    calls = []
+    previous = sys.gettrace()
+
+    def observe(frame, event, arg):
+        if event == "call" and frame.f_code is run_compile_script.__code__:
+            calls.append(dict(frame.f_locals))
+            raise _CompileBoundaryReached
+        return observe
+
+    project._compiling = True
+    sys.settrace(observe)
+    try:
+        _do_compile(project, doc_type, draft, dark_mode)
+    except _CompileBoundaryReached:
+        pass
+    finally:
+        sys.settrace(previous)
+    return calls
+
+
+@pytest.mark.parametrize("doc_type", ["supplementary", "revision"])
+@pytest.mark.parametrize("draft", [False, True])
+@pytest.mark.parametrize("dark_mode", [False, True])
+def test_editor_document_compile_forwards_selected_theme(
+    compile_workspace, doc_type, draft, dark_mode
+):
+    # Arrange
+    project = compile_workspace
+    # Act
+    calls = _capture_editor_compile(project, doc_type, draft, dark_mode)
+    # Assert
+    assert calls[0]["dark_mode"] is dark_mode
+
+
+@pytest.mark.parametrize("doc_type", ["supplementary", "revision"])
+@pytest.mark.parametrize("draft", [False, True])
+@pytest.mark.parametrize("dark_mode", [False, True])
+def test_editor_document_compile_forwards_selected_draft(
+    compile_workspace, doc_type, draft, dark_mode
+):
+    # Arrange
+    project = compile_workspace
+    # Act
+    calls = _capture_editor_compile(project, doc_type, draft, dark_mode)
+    # Assert
+    assert calls[0]["draft"] is draft
+
+
+@pytest.mark.parametrize("doc_type", ["supplementary", "revision"])
+@pytest.mark.parametrize("draft", [False, True])
+@pytest.mark.parametrize("dark_mode", [False, True])
+def test_editor_document_compile_forwards_selected_document(
+    compile_workspace, doc_type, draft, dark_mode
+):
+    # Arrange
+    project = compile_workspace
+    # Act
+    calls = _capture_editor_compile(project, doc_type, draft, dark_mode)
+    # Assert
+    assert calls[0]["doc_type"] == doc_type
+
+
+@pytest.mark.parametrize("doc_type", ["supplementary", "revision"])
+@pytest.mark.parametrize("draft", [False, True])
+@pytest.mark.parametrize("dark_mode", [False, True])
+def test_editor_document_compile_keeps_engine_quiet(
+    compile_workspace, doc_type, draft, dark_mode
+):
+    # Arrange
+    project = compile_workspace
+    # Act
+    calls = _capture_editor_compile(project, doc_type, draft, dark_mode)
+    # Assert
+    assert calls[0]["quiet"] is True
 
 
 # EOF
