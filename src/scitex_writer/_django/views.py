@@ -226,35 +226,52 @@ def _page_mount(request, view_path, api_base=None):
     }
 
 
+def _v2_api_base(request, view_path):
+    """Resolve the v2 API family from the trusted leaf route suffix."""
+    from scitex_sdk.ui import mount
+
+    return mount.mount_prefix(request, view_path=view_path) + "/v2/"
+
+
+def _editor_context(request, project):
+    """Editor fields shared by full pages and the hosted content fragment."""
+    return {
+        "app_name": "writer",
+        "project_dir": str(project.project_dir) if project else "",
+        "project_id": getattr(
+            getattr(request, "writer_project_access", None), "id", ""
+        ),
+        "dark_mode": project.dark_mode if project else False,
+        **_leaf_identity(),
+        "project_picker_available": _project_picker_available(),
+        "app_header_rendered": False,
+    }
+
+
 @project_boundary(page=True)
 @ensure_csrf_cookie
 def editor_page(request, *, view_path="", api_base=None):
     """Serve the editor shell page."""
     project = _get_project(request)
-    project_dir = str(project.project_dir) if project else ""
     html = render_to_string(
         "writer/editor.html",
         {
-            "app_name": "writer",
-            "project_dir": project_dir,
-            "project_id": getattr(
-                getattr(request, "writer_project_access", None), "id", ""
-            ),
-            "dark_mode": project.dark_mode if project else False,
-            # The leaf header: our title + OUR version, and the picker slot only
-            # when the host registered its tag library.
-            **_leaf_identity(),
-            "project_picker_available": _project_picker_available(),
-            # A host embedding this page renders its own header and includes
-            # writer/_app_header.html; that host sets this True so the page
-            # keeps exactly one header. Standalone renders the leaf one.
-            "app_header_rendered": False,
+            **_editor_context(request, project),
             **_shell_context("SciTeX Writer"),
             **_page_mount(request, view_path, api_base),
         },
         request=request,
     )
     return HttpResponse(html)
+
+
+def editor_v2_page(request):
+    """Render the host-compatible editor through the leaf's guarded page."""
+    return editor_page(
+        request,
+        view_path="editor-v2/",
+        api_base=_v2_api_base(request, "editor-v2/"),
+    )
 
 
 @project_boundary()
@@ -357,3 +374,12 @@ def viewer_page(request, *, view_path="viewer/", api_base=None):
         request=request,
     )
     return HttpResponse(html)
+
+
+def viewer_v2_page(request):
+    """Render the host-compatible viewer through the leaf's guarded page."""
+    return viewer_page(
+        request,
+        view_path="viewer-v2/",
+        api_base=_v2_api_base(request, "viewer-v2/"),
+    )
