@@ -83,13 +83,21 @@ def test_installed_version_matches_pyproject():
     assert installed == declared
 
 
-def test_manifest_delegates_version_to_installed_package():
-    # Arrange
-    placeholder = "0.0.0"
-    # Act
-    manifest = json.loads(_MANIFEST.read_text(encoding="utf-8"))
+def test_manifest_delegates_version_to_installed_package_omits_manifest_version():
+    # Arrange: pytest fixtures and local setup.
+    placeholder = '0.0.0'
+    # Act: exercise the real scenario.
+    manifest = json.loads(_MANIFEST.read_text(encoding='utf-8'))
     # Assert
-    assert "version" not in manifest
+    assert 'version' not in manifest
+
+
+def test_manifest_delegates_version_to_installed_package_resolves_installed_version():
+    # Arrange: pytest fixtures and local setup.
+    placeholder = '0.0.0'
+    # Act: exercise the real scenario.
+    manifest = json.loads(_MANIFEST.read_text(encoding='utf-8'))
+    # Assert
     assert _installed_version() != placeholder
 
 

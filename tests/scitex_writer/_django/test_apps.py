@@ -74,18 +74,22 @@ def test_the_all_extra_provides_every_feature_module():
     assert missing == []
 
 
-def test_workspace_shell_has_one_required_sdk_distribution():
-    data = tomllib.loads(_PYPROJECT.read_text())["project"]
-    requirements = data["dependencies"] + [
-        requirement
-        for extra in data["optional-dependencies"].values()
-        for requirement in extra
-    ]
-    assert "scitex-sdk>=0.3.0" in data["dependencies"]
-    assert not any(
-        requirement.startswith(("scitex-app", "scitex-ui"))
-        for requirement in requirements
-    )
+def test_workspace_shell_has_one_required_sdk_distribution_requires_sdk_dependency():
+    # Arrange: pytest fixtures and local setup.
+    # Act: exercise the real scenario.
+    data = tomllib.loads(_PYPROJECT.read_text())['project']
+    requirements = data['dependencies'] + [requirement for extra in data['optional-dependencies'].values() for requirement in extra]
+    # Assert
+    assert 'scitex-sdk>=0.3.0' in data['dependencies']
+
+
+def test_workspace_shell_has_one_required_sdk_distribution_excludes_retired_distributions():
+    # Arrange: pytest fixtures and local setup.
+    # Act: exercise the real scenario.
+    data = tomllib.loads(_PYPROJECT.read_text())['project']
+    requirements = data['dependencies'] + [requirement for extra in data['optional-dependencies'].values() for requirement in extra]
+    # Assert
+    assert not any((requirement.startswith(('scitex-app', 'scitex-ui')) for requirement in requirements))
 
 
 def test_nothing_still_tells_a_user_to_install_a_retired_extra():
