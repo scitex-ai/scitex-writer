@@ -39,7 +39,7 @@ class ProjectState:
         self._lock = threading.Lock()
 
 
-def get_or_create_project(project_dir: str) -> ProjectState:
+def get_or_create_project(project_dir: str, *, link_scholar_library: bool = True) -> ProjectState:
     """Return a cached ProjectState for `project_dir`, creating one if missing.
 
     Raises FileNotFoundError if the directory does not exist.
@@ -75,7 +75,8 @@ def get_or_create_project(project_dir: str) -> ProjectState:
     _project_cache[key] = (state, time.time())
     logger.info("[Writer] Created project state for %s", workspace)
 
-    ensure_scholar_library_link(workspace)
+    if link_scholar_library:
+        ensure_scholar_library_link(workspace)
     return state
 
 

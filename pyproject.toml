@@ -39,6 +39,8 @@ classifiers = [
     "Topic :: Text Processing :: Markup :: LaTeX",
 ]
 dependencies = [
+    # Plugin discovery imports SDK metadata even in a base install.
+    "scitex-sdk>=0.3.0",
     "click>=8.0",
     "fastmcp>=2.0.0",
     # FLOOR IS 0.48.0: compile diagnostics (_compile/_diagnostics/_report.py)
@@ -65,39 +67,7 @@ dependencies = [
     # targets the 1.x API, so cap below 2.0 until it is adapted. Declaring it
     # also stops relying on a transitive install.
     "bibtexparser>=1.4,<2.0",
-    # scitex-ui ships `standalone_shell.html` + shell CSS that the editor
-    # and viewer templates extend. Loading either page without scitex-ui
-    # installed raises TemplateDoesNotExist.
-    #
-    # FLOOR IS 0.5.1, not 0.1.0: settings.py registers the context processor
-    # `scitex_ui.context_processors.element_inspector`, and that module does
-    # not exist before 0.5.x. With the old >=0.1.0 floor, pip happily
-    # installed 0.4.5 and the editor 500'd at RENDER time with
-    # ModuleNotFoundError — a runtime failure that should have been an
-    # install-time resolution failure. Raise this floor whenever settings.py
-    # starts consuming a newer scitex-ui symbol.
-    # Floor raised to 0.7.1 alongside the favicon_href wiring in
-    # _django/views.py. The shell's favicon behaviour changed three times, and
-    # this floor is what makes writer's templates correct under all of them:
-    #   <= 0.6.0  no favicon markup in the shell AT ALL (verified against the
-    #             installed 0.6.0 tree: zero matches for `icon` in its
-    #             templates). favicon_href is not consulted; nothing is emitted.
-    #      0.6.4  conditional -- `{% if favicon_href %}` -- so passing it works,
-    #             and omitting it emits nothing.
-    #   >= 0.7.0  UNCONDITIONAL, falling back to the shared SciTeX mark when no
-    #             favicon_href is given. This is what produced writer's
-    #             duplicate icon links before this change.
-    # Writer now always passes favicon_href, so 0.6.4 would also behave. The
-    # floor is 0.7.1 rather than 0.6.4 because on <= 0.6.0 the bare rel="icon"
-    # would silently vanish (we deleted it from extra_css), and because 0.7.1
-    # drops two render-blocking head requests that 0.7.0 introduced -- so 0.7.0
-    # is never the version we want to resolve onto.
-    # Floor raised again to 0.8.0: views.py declares pane usage via
-    # `shell_context(panes=...)`, and `panes` arrived in 0.8.0. This ordering
-    # is the one genuinely dangerous case -- on an older shell the argument is
-    # accepted and IGNORED, so with the old pane-hiding CSS already deleted,
-    # writer would render with three empty panes and no error anywhere.
-    "scitex-ui>=0.8.0",
+    # SDK owns the shared Django shell and assets under scitex_sdk.ui.
     # Pillow powers the thumbnail service for figure/table previews in the
     # editor's insert panel. Core — removing it breaks `api/thumbnail` and
     # the fig/table grid renders empty rectangles.
@@ -144,17 +114,7 @@ all = [
     "scitex-writer[docs]",
     # Desktop window for `gui open --desktop`.
     "pywebview>=4.0.0",
-    # The workspace shell the editor server runs inside
-    # (`scitex_app.embed.run_standalone`) and the Django AppConfig base
-    # (`scitex_app.embed.ScitexAppConfig`).
-    #
-    # FLOOR IS 0.4.0, not lower: that is the first release exposing the public
-    # `scitex_app.embed` module. Below it the import falls through the
-    # ImportError guard and the editor silently degrades to a shell-less server.
-    "scitex-app>=0.4.0",
-    # Unified facade: new imports use scitex_sdk.app (identity re-exports
-    # over scitex_app). Floor 0.2.1 = first release with the embed names.
-    "scitex-sdk>=0.2.1",
+    # The shared workspace shell is supplied by the base SDK dependency.
     # >=1.5.0 was a HARD floor, not a preference: before 1.5.0 a metadata-nesting
     # bug in scitex-scholar meant `verify_cites` could never return VERIFIED for
     # ANY citation, so the `citation_trust` check could only ever emit warnings.
@@ -188,8 +148,6 @@ dev = [
     # Same >=1.5.2 floor as `[all]`: a fresh `pip install -e .[dev]` in CI must
     # get a scholar whose verify_cites can actually return VERIFIED.
     "scitex-scholar>=1.5.2",
-    "scitex-app>=0.4.0",  # editor tests need the workspace shell
-    "scitex-sdk>=0.2.1",  # SDK facade imports under test
     "openpyxl",           # writes the .xlsx fixture for the tables xlsx stage
 ]
 docs = [
@@ -229,6 +187,8 @@ Issues = "https://github.com/ywatanabe1989/scitex-writer/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/scitex_writer"]
+# Build tools are resolved from npm; only frontend sources and built assets ship.
+exclude = ["/src/scitex_writer/_django/frontend/node_modules"]
 # The vendored-script refresh reads the INSTALLED package's scripts/
 # (`workspace_layout.package_scripts_dir`), so a wheel that does not carry them
 # cannot heal an existing workspace at all: `package_scripts_dir()` finds
@@ -279,6 +239,7 @@ include = [
 # These are all top-level scratch dirs; anchoring keeps them out of the
 # sdist without reaching into the package tree.
 exclude = [
+    "/src/scitex_writer/_django/frontend/node_modules",
     "/00_shared",
     "/01_manuscript",
     "/02_supplementary",

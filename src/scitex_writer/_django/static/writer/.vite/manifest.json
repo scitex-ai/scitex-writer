@@ -3,21 +3,25 @@
     "file": "assets/claims-list.js",
     "name": "claims-list",
     "dynamicImports": [
-      "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.mjs"
+      "node_modules/pdfjs-dist/build/pdf.mjs"
     ],
     "assets": [
       "assets/pdf.worker.min.mjs"
     ]
   },
-  "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.mjs": {
-    "file": "assets/pdf.js",
-    "name": "pdf",
-    "src": "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.mjs",
-    "isDynamicEntry": true
+  "_monaco-base.js": {
+    "file": "assets/monaco-base.js",
+    "name": "monaco-base",
+    "imports": [
+      "_nls.js"
+    ],
+    "assets": [
+      "assets/codicon.ttf"
+    ]
   },
-  "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.worker.min.mjs": {
-    "file": "assets/pdf.worker.min.mjs",
-    "src": "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.worker.min.mjs"
+  "_nls.js": {
+    "file": "assets/nls.js",
+    "name": "nls"
   },
   "node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.ttf": {
     "file": "assets/codicon.ttf",
@@ -138,6 +142,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -166,6 +172,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -182,6 +190,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -205,6 +215,8 @@
     "imports": [
       "node_modules/monaco-editor/esm/vs/basic-languages/typescript/typescript.js",
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -239,6 +251,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -267,6 +281,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -367,6 +383,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -389,6 +407,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -513,6 +533,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -535,6 +557,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -545,6 +569,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -555,6 +581,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -565,6 +593,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -575,6 +605,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -585,6 +617,8 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ]
   },
@@ -592,12 +626,24 @@
     "file": "assets/codicon.ttf",
     "src": "node_modules/monaco-editor/min/vs/base/browser/ui/codicons/codicon/codicon.ttf"
   },
+  "node_modules/pdfjs-dist/build/pdf.mjs": {
+    "file": "assets/pdf.js",
+    "name": "pdf",
+    "src": "node_modules/pdfjs-dist/build/pdf.mjs",
+    "isDynamicEntry": true
+  },
+  "node_modules/pdfjs-dist/build/pdf.worker.min.mjs": {
+    "file": "assets/pdf.worker.min.mjs",
+    "src": "node_modules/pdfjs-dist/build/pdf.worker.min.mjs"
+  },
   "src/index.ts": {
     "file": "assets/index.js",
     "name": "index",
     "src": "src/index.ts",
     "isEntry": true,
     "imports": [
+      "_monaco-base.js",
+      "_nls.js",
       "_claims-list.js"
     ],
     "dynamicImports": [
@@ -694,9 +740,6 @@
       "node_modules/monaco-editor/esm/vs/language/json/jsonMode.js",
       "node_modules/monaco-editor/esm/vs/language/typescript/tsMode.js"
     ],
-    "css": [
-      "assets/index.css"
-    ],
     "assets": [
       "assets/codicon.ttf"
     ]
@@ -709,5 +752,9 @@
     "imports": [
       "_claims-list.js"
     ]
+  },
+  "style.css": {
+    "file": "assets/index.css",
+    "src": "style.css"
   }
 }

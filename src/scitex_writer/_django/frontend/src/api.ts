@@ -9,13 +9,40 @@ export const API_BASE: string =
 export const PROJECT_DIR: string =
   (root?.dataset.projectDir as string | undefined) || "";
 
-function withWd(url: string): string {
+// Capture the authorized page identity once. Another tab's navigation must
+// not redirect this page's in-flight resources to its newly selected project.
+export const PROJECT_ID: string = root?.dataset.projectId || "";
+
+export function resourceUrl(endpoint: string): string {
+  const url = API_BASE + endpoint;
   const sep = url.includes("?") ? "&" : "?";
-  return `${url}${sep}working_dir=${encodeURIComponent(PROJECT_DIR)}`;
+  if (root?.dataset.appMode === "standalone") {
+    return `${url}${sep}working_dir=${encodeURIComponent(PROJECT_DIR)}`;
+  }
+  // These compatibility routes already declare their resource project in
+  // the path. Keep their selector/conflict checks at the leaf boundary.
+  const pathname = endpoint.split("?")[0];
+  if (/^api\/project\/\d+\/(?:section\/|manuscript-status\/?$)/.test(pathname)) {
+    return url;
+  }
+  if (!PROJECT_ID) throw new Error("Writer page project identity missing; reload the editor");
+  const query = new URLSearchParams(url.split("?")[1] || "");
+  const explicit = query.getAll("project");
+  if (explicit.some(id => id !== PROJECT_ID)) {
+    throw new Error("Resource selector conflicts with Writer page project");
+  }
+  return explicit.length ? url : `${url}${sep}project=${encodeURIComponent(PROJECT_ID)}`;
+}
+
+export function csrfHeaders(): Record<string, string> {
+  // The DOM token also works with CSRF_COOKIE_HTTPONLY / CSRF_USE_SESSIONS.
+  const token = document.querySelector<HTMLMetaElement>('meta[name="writer-csrf-token"]')?.content;
+  if (!token || token === "NOTPROVIDED") throw new Error("Writer CSRF token missing; reload the editor");
+  return { "X-CSRFToken": token };
 }
 
 export async function apiGet<T>(endpoint: string): Promise<T> {
-  const url = withWd(API_BASE + endpoint);
+  const url = resourceUrl(endpoint);
   const response = await fetch(url);
   if (!response.ok)
     throw new Error(`${response.status} ${response.statusText}`);
@@ -23,10 +50,11 @@ export async function apiGet<T>(endpoint: string): Promise<T> {
 }
 
 export async function apiPost<T>(endpoint: string, body: unknown): Promise<T> {
-  const url = withWd(API_BASE + endpoint);
+  const url = resourceUrl(endpoint);
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json", ...csrfHeaders() },
     body: JSON.stringify(body),
   });
   if (!response.ok)
@@ -35,8 +63,8 @@ export async function apiPost<T>(endpoint: string, body: unknown): Promise<T> {
 }
 
 export async function apiDelete<T>(endpoint: string): Promise<T> {
-  const url = withWd(API_BASE + endpoint);
-  const response = await fetch(url, { method: "DELETE" });
+  const url = resourceUrl(endpoint);
+  const response = await fetch(url, { method: "DELETE", credentials: "same-origin", headers: csrfHeaders() });
   if (!response.ok)
     throw new Error(`${response.status} ${response.statusText}`);
   return (await response.json()) as T;

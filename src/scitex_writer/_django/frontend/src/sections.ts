@@ -6,6 +6,7 @@
 
 import type { SectionEntry } from "./api";
 import { listSections } from "./api";
+import { controlsTranslate } from "./controls-i18n";
 
 type SectionSelectHandler = (section: SectionEntry) => void;
 
@@ -38,7 +39,8 @@ export class SectionTabs {
 
     this.select = document.createElement("select");
     this.select.className = "writer-select writer-section-select";
-    this.select.title = "Section";
+    this.select.title = controlsTranslate("section");
+    this.select.setAttribute("aria-label", controlsTranslate("section"));
     this.select.addEventListener("change", () => this.handleChange());
     this.container.innerHTML = "";
     this.container.appendChild(this.select);

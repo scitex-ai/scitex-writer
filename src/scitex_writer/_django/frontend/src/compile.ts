@@ -11,6 +11,7 @@ import {
 } from "./compile-diagnostics";
 import { diagnosticsTranslate as t } from "./compile-diagnostics-i18n";
 import type { PDFViewer } from "./pdf-viewer";
+import { controlsTranslate } from "./controls-i18n";
 
 export type CompileMode = "preview" | "full";
 export type LampStatus = "idle" | "compiling" | "ok" | "error";
@@ -39,6 +40,8 @@ interface CompileOptions {
   closeLogBtn: HTMLElement | null;
   compileBtn: HTMLElement | null;
   modeToggleBtn: HTMLElement | null;
+  /** Explicit choices share the same controller as the legacy toggle. */
+  modeButtons?: HTMLButtonElement[];
   pdf: PDFViewer;
   getDocType: () => string;
   /** Optional observer — Details panel subscribes to live lamp state. */
@@ -71,6 +74,20 @@ export class CompileController {
       this.setLogOpen(false),
     );
     this.opts.modeToggleBtn?.addEventListener("click", () => this.toggleMode());
+    for (const button of this.opts.modeButtons ?? []) {
+      button.addEventListener("click", () => {
+        const mode = button.dataset.compileMode;
+        if (mode === "preview" || mode === "full") this.selectMode(mode);
+      });
+      button.addEventListener("keydown", (event) => {
+        if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+        if (this.status === "compiling") return;
+        event.preventDefault();
+        const mode = event.key === "Home" ? "preview" : event.key === "End" ? "full" : this.mode === "preview" ? "full" : "preview";
+        this.selectMode(mode);
+        this.opts.modeButtons?.find((choice) => choice.dataset.compileMode === mode)?.focus();
+      });
+    }
     this.opts.fullLogToggleBtn?.addEventListener("click", () =>
       this.setFullLogVisible(this.fullLogHidden()),
     );
@@ -172,6 +189,7 @@ export class CompileController {
 
   private updateLamp(status: LampStatus): void {
     this.status = status;
+    this.updateModeButton();
     const lamp = this.opts.lamp;
     if (lamp) {
       lamp.className = `writer-lamp lamp-${status}`;
@@ -231,14 +249,29 @@ export class CompileController {
   }
 
   private toggleMode(): void {
-    this.mode = this.mode === "preview" ? "full" : "preview";
+    this.selectMode(this.mode === "preview" ? "full" : "preview");
+  }
+
+  private selectMode(mode: CompileMode): void {
+    // Keep the mode attributed to the in-flight compile until it completes.
+    if (this.status === "compiling") return;
+    this.mode = mode;
     this.updateModeButton();
   }
 
   private updateModeButton(): void {
     const btn = this.opts.modeToggleBtn;
-    if (!btn) return;
-    btn.textContent = this.mode === "preview" ? "Preview" : "Full";
-    btn.classList.toggle("active-full", this.mode === "full");
+    if (btn) {
+      btn.textContent = controlsTranslate(this.mode === "preview" ? "draft" : "full");
+      btn.classList.toggle("active-full", this.mode === "full");
+    }
+    for (const button of this.opts.modeButtons ?? []) {
+      const active = button.dataset.compileMode === this.mode;
+      button.textContent = controlsTranslate(button.dataset.compileMode === "preview" ? "draft" : "full");
+      button.setAttribute("aria-checked", String(active));
+      button.tabIndex = active ? 0 : -1;
+      button.disabled = this.status === "compiling";
+      button.closest("[role='radiogroup']")?.setAttribute("aria-label", controlsTranslate("compileMode"));
+    }
   }
 }

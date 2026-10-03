@@ -1,6 +1,8 @@
-{% extends "scitex_ui/standalone_shell.html" %}
+{% extends "scitex_sdk/ui/standalone_shell.html" %}
 {% load static %}
 {% block extra_css %}
+    <meta name="stx-app-scope" content="{{ app_scope }}">
+    <meta name="writer-csrf-token" content="{{ csrf_token }}">
     {% comment %}
     The bare SVG icon link is NOT here: the scitex-ui shell emits it from
     `favicon_href`, which views.py sets to writer/favicon.svg. Declaring it
@@ -30,7 +32,9 @@
 {% block worktree_data_attrs %}data-working-dir="{{ project_dir|default:'' }}"{% endblock %}
 {% block app_content %}
     <div class="writer-app writer-app--viewer"
+         data-app-mode="{{ writer_app_mode }}"
          data-api-base="{{ api_base|default:'/' }}"
+         data-project-id="{{ project_id|default:'' }}"
          data-project-dir="{{ project_dir|default:'' }}"
          data-mode="viewer">
         <header class="writer-toolbar">

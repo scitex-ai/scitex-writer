@@ -1,6 +1,8 @@
-{% extends "scitex_ui/standalone_shell.html" %}
+{% extends "scitex_sdk/ui/standalone_shell.html" %}
 {% load static %}
 {% block extra_css %}
+    <meta name="stx-app-scope" content="{{ app_scope }}">
+    <meta name="writer-csrf-token" content="{{ csrf_token }}">
     {% comment %}
     The bare SVG icon link is NOT here: the scitex-ui shell emits it from
     `favicon_href`, which views.py sets to writer/favicon.svg. Declaring it
@@ -42,7 +44,9 @@
 {% block worktree_data_attrs %}data-working-dir="{{ project_dir|default:'' }}"{% endblock %}
 {% block app_content %}
     <div class="writer-app"
+         data-app-mode="{{ writer_app_mode }}"
          data-api-base="{{ api_base|default:'/' }}"
+         data-project-id="{{ project_id|default:'' }}"
          data-project-dir="{{ project_dir|default:'' }}">
         {% if not app_header_rendered %}
             {% comment %}
@@ -67,6 +71,7 @@
                     data-mobile-pane="editor"
                     aria-current="true">Editor</button>
             <button type="button" class="writer-mobile-pane-btn" data-mobile-pane="preview">PDF</button>
+            <button type="button" class="writer-mobile-pane-btn" data-mobile-pane="details">Details</button>
         </nav>
         <header class="writer-toolbar">
             <div class="writer-toolbar-left">
@@ -105,9 +110,10 @@
             </div>
             <div class="writer-toolbar-right">
                 <span id="compile-lamp" class="writer-lamp lamp-idle" title="Idle"></span>
-                <button id="btn-compile-mode"
-                        class="btn btn-secondary"
-                        title="Compile mode: Preview (draft) or Full">Preview</button>
+                <div class="writer-compile-modes" role="radiogroup" aria-label="Compile mode">
+                    <button type="button" role="radio" aria-checked="true" data-compile-mode="preview">Draft</button>
+                    <button type="button" role="radio" aria-checked="false" tabindex="-1" data-compile-mode="full">Full</button>
+                </div>
                 <button id="btn-compile"
                         class="btn btn-primary"
                         title="Compile (Ctrl+Shift+B)">

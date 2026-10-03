@@ -41,9 +41,9 @@ def test_every_context_processor_is_importable(dotted_path):
     assert hasattr(module, attr)
 
 
-def test_scitex_ui_context_processors_module_exists():
+def test_sdk_ui_context_processors_module_exists():
     # Arrange
-    name = "scitex_ui.context_processors"
+    name = "scitex_sdk.ui.context_processors"
     # Act
     spec = importlib.util.find_spec(name)
     # Assert

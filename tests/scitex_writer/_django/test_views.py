@@ -32,7 +32,16 @@ import time
 from pathlib import Path
 
 import pytest
-from django.test import RequestFactory
+from django.test import RequestFactory as _RequestFactory
+
+class RequestFactory(_RequestFactory):
+    """Handler unit requests; real CSRF denial/success use Client separately."""
+
+    def request(self, **request):
+        result = super().request(**request)
+        result._dont_enforce_csrf_checks = True
+        return result
+
 
 from scitex_writer._compile._event_log import read_events
 from scitex_writer._django import services
@@ -705,12 +714,12 @@ SHELL_INTERNALS = (
 def test_writer_declares_every_pane_scitex_ui_offers():
     """Leaving one out would silently leave that pane visible."""
     # Arrange
-    from scitex_ui.branding import PANE_NAMES
+    from scitex_sdk.ui import branding
 
     # Act
     declared = set(_SHELL_PANES)
     # Assert
-    assert declared == set(PANE_NAMES)
+    assert declared == set(branding.PANE_NAMES)
 
 
 @pytest.mark.parametrize("pane", sorted(_SHELL_PANES))
@@ -727,10 +736,10 @@ def test_every_declared_pane_is_unused(pane: str):
 def test_the_declaration_is_accepted_by_scitex_ui():
     """shell_context raises on an unknown pane name or state — so call it."""
     # Arrange
-    from scitex_ui.branding import shell_context
+    from scitex_sdk.ui import branding
 
     # Act
-    context = shell_context("Writer", panes=_SHELL_PANES)
+    context = branding.shell_context("Writer", panes=_SHELL_PANES)
     # Assert
     assert context["panes"] == _SHELL_PANES
 

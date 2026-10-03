@@ -134,6 +134,66 @@ def test_the_entry_point_target_is_a_django_app_config():
     assert issubclass(config_cls, django.apps.AppConfig)
 
 
+def test_base_install_provides_sdk_and_runtime_valid_plugin_metadata_requires_sdk_dependency():
+    # Arrange: pytest fixtures and local setup.
+    from scitex_sdk import app
+    # Act: exercise the real scenario.
+    project = tomllib.loads(_PYPROJECT.read_text())['project']
+    # Assert
+    assert 'scitex-sdk>=0.3.0' in project['dependencies']
+
+
+def test_base_install_provides_sdk_and_runtime_valid_plugin_metadata_uses_sdk_app_config():
+    # Arrange: pytest fixtures and local setup.
+    from scitex_sdk import app
+    # Act: exercise the real scenario.
+    project = tomllib.loads(_PYPROJECT.read_text())['project']
+    module_path, _, attr = EXPECTED_TARGET.partition(':')
+    config_cls = getattr(importlib.import_module(module_path), attr)
+    # Assert
+    assert issubclass(config_cls, app.embed.ScitexAppConfig)
+
+
+def test_base_install_provides_sdk_and_runtime_valid_plugin_metadata_omits_manifest_version():
+    # Arrange: pytest fixtures and local setup.
+    from scitex_sdk import app
+    # Act: exercise the real scenario.
+    project = tomllib.loads(_PYPROJECT.read_text())['project']
+    module_path, _, attr = EXPECTED_TARGET.partition(':')
+    config_cls = getattr(importlib.import_module(module_path), attr)
+    issubclass(config_cls, app.embed.ScitexAppConfig)
+    config = config_cls(config_cls.name, importlib.import_module(config_cls.name))
+    # Assert
+    assert 'version' not in config.manifest
+
+
+def test_base_install_provides_sdk_and_runtime_valid_plugin_metadata_validates_manifest():
+    # Arrange: pytest fixtures and local setup.
+    from scitex_sdk import app
+    # Act: exercise the real scenario.
+    project = tomllib.loads(_PYPROJECT.read_text())['project']
+    module_path, _, attr = EXPECTED_TARGET.partition(':')
+    config_cls = getattr(importlib.import_module(module_path), attr)
+    issubclass(config_cls, app.embed.ScitexAppConfig)
+    config = config_cls(config_cls.name, importlib.import_module(config_cls.name))
+    # Assert
+    assert config.validate_manifest() == []
+
+
+def test_base_install_provides_sdk_and_runtime_valid_plugin_metadata_matches_distribution_version():
+    # Arrange: pytest fixtures and local setup.
+    from scitex_sdk import app
+    # Act: exercise the real scenario.
+    project = tomllib.loads(_PYPROJECT.read_text())['project']
+    module_path, _, attr = EXPECTED_TARGET.partition(':')
+    config_cls = getattr(importlib.import_module(module_path), attr)
+    issubclass(config_cls, app.embed.ScitexAppConfig)
+    config = config_cls(config_cls.name, importlib.import_module(config_cls.name))
+    config.validate_manifest()
+    # Assert
+    assert config.app_version == project['version']
+
+
 def test_the_urlconf_the_host_includes_exists():
     # Arrange
     module_path, _, attr = EXPECTED_TARGET.partition(":")

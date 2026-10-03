@@ -16,7 +16,10 @@ from scitex_logging import getLogger
 
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import ensure_csrf_cookie
+from scitex_sdk import host
+
+from ._host_boundary import project_boundary, standalone
 
 from .handlers import (
     HANDLERS,
@@ -81,9 +84,22 @@ def _get_project(request):
     SCITEX_WRITER_<X>); ._legacy_env raises at startup rather than letting a
     stranded one be ignored here.
     """
-    working_dir = request.GET.get("working_dir") or os.environ.get(
-        "SCITEX_WRITER_WORKING_DIR", ""
-    )
+    if not standalone():
+        from ..workspace_layout import resolve_workspace
+
+        access = request.writer_project_access
+        try:
+            workspace = resolve_workspace(access.root).resolve()
+            relative = workspace.relative_to(access.root).as_posix()
+        except (FileNotFoundError, NotAWriterWorkspaceError):
+            raise host.AccessError("Writer workspace is not available", 404) from None
+        except ValueError:
+            raise host.AccessError("Writer workspace must be inside this project", 403) from None
+        # A workspace symlink may escape even though the project root is owned.
+        access.path(relative)
+        return get_or_create_project(str(workspace), link_scholar_library=False)
+
+    working_dir = request.GET.get("working_dir") or os.environ.get("SCITEX_WRITER_WORKING_DIR", "")
     if not working_dir:
         return None
     try:
@@ -179,18 +195,40 @@ def _shell_context(base_title: str) -> dict:
     dict
         Shell context ready to merge into a template context.
     """
-    from scitex_ui.branding import shell_context
+    from scitex_sdk.ui import branding
 
-    context = shell_context(
+    context = branding.shell_context(
         "Writer",
         favicon_href=_favicon_href(),
         panes=_SHELL_PANES,
     )
     context["app_label"] = _app_label(base_title)
+    context["app_scope"] = "project"
+    context["writer_app_mode"] = "standalone" if standalone() else "hub"
     return context
 
 
-def editor_page(request):
+def _page_mount(request, view_path, api_base=None):
+    """Own the standard leaf mount; allow trusted host URLconf aliases.
+
+    Existing host aliases supply API context through their processor. Keep
+    that compatibility until they pass these explicit view arguments or
+    mount our standard urlconf. Never take either value from query input.
+    """
+    from scitex_sdk.ui import mount
+
+    match = getattr(request, "resolver_match", None)
+    if match and match.url_name not in {"editor", "viewer"} and api_base is None:
+        return {}
+    return {
+        **mount.mount_context(request, view_path=view_path),
+        "api_base": api_base or mount.mount_prefix(request, view_path=view_path) + "/",
+    }
+
+
+@project_boundary(page=True)
+@ensure_csrf_cookie
+def editor_page(request, *, view_path="", api_base=None):
     """Serve the editor shell page."""
     project = _get_project(request)
     project_dir = str(project.project_dir) if project else ""
@@ -199,6 +237,9 @@ def editor_page(request):
         {
             "app_name": "writer",
             "project_dir": project_dir,
+            "project_id": getattr(
+                getattr(request, "writer_project_access", None), "id", ""
+            ),
             "dark_mode": project.dark_mode if project else False,
             # The leaf header: our title + OUR version, and the picker slot only
             # when the host registered its tag library.
@@ -209,13 +250,14 @@ def editor_page(request):
             # keeps exactly one header. Standalone renders the leaf one.
             "app_header_rendered": False,
             **_shell_context("SciTeX Writer"),
+            **_page_mount(request, view_path, api_base),
         },
         request=request,
     )
     return HttpResponse(html)
 
 
-@csrf_exempt
+@project_boundary()
 def api_dispatch(request, endpoint):
     """Dispatch API calls to handler functions.
 
@@ -261,6 +303,8 @@ def api_dispatch(request, endpoint):
         rest = endpoint[len("api/claims/") :].strip("/")
         parts = rest.split("/") if rest else []
         if len(parts) == 1:
+            if request.method not in {"GET", "DELETE"}:
+                return JsonResponse({"error": "GET or DELETE required"}, status=405)
             claim_id = parts[0]
             try:
                 if request.method == "DELETE":
@@ -270,6 +314,8 @@ def api_dispatch(request, endpoint):
                 logger.exception("[Writer] claim %s", claim_id)
                 return JsonResponse({"error": str(exc)}, status=500)
         if len(parts) == 2 and parts[1] == "chain":
+            if request.method != "GET":
+                return JsonResponse({"error": "GET required"}, status=405)
             try:
                 return handle_claim_chain(request, project, parts[0])
             except Exception as exc:
@@ -278,6 +324,8 @@ def api_dispatch(request, endpoint):
 
     # Parameterized: api/citation/<cite_key>
     if endpoint.startswith("api/citation/"):
+        if request.method != "GET":
+            return JsonResponse({"error": "GET required"}, status=405)
         cite_key = endpoint[len("api/citation/") :].strip("/")
         if cite_key:
             try:
@@ -289,7 +337,9 @@ def api_dispatch(request, endpoint):
     return JsonResponse({"error": f"Unknown endpoint: {endpoint}"}, status=404)
 
 
-def viewer_page(request):
+@project_boundary(page=True)
+@ensure_csrf_cookie
+def viewer_page(request, *, view_path="viewer/", api_base=None):
     """Serve the read-only viewer (PDF + claim overlays + DAG)."""
     project = _get_project(request)
     project_dir = str(project.project_dir) if project else ""
@@ -298,7 +348,11 @@ def viewer_page(request):
         {
             "app_name": "writer",
             "project_dir": project_dir,
+            "project_id": getattr(
+                getattr(request, "writer_project_access", None), "id", ""
+            ),
             **_shell_context("SciTeX Writer — Viewer"),
+            **_page_mount(request, view_path, api_base),
         },
         request=request,
     )

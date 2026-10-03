@@ -62,15 +62,16 @@ INSTALLED_APPS = [
     "scitex_writer._django.apps.WriterEditorConfig",
 ]
 
-# Optional: scitex-ui supplies the workspace shell (template + CSS/JS assets)
+# Optional registration: SDK UI supplies the workspace template and assets.
 try:
-    import scitex_ui  # noqa: F401
+    from scitex_sdk import ui  # noqa: F401
 
-    INSTALLED_APPS.append("scitex_ui")
+    INSTALLED_APPS.append("scitex_sdk.ui")
 except ImportError:
     pass
 
 MIDDLEWARE = [
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]
@@ -92,7 +93,7 @@ TEMPLATES = [
                 # for the local `scitex-writer gui` server). Without this the
                 # partial emits only its placeholder comment and Alt+I/Ctrl+I
                 # are no-ops.
-                "scitex_ui.context_processors.element_inspector",
+                "scitex_sdk.ui.context_processors.element_inspector",
             ],
         },
     },
