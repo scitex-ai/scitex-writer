@@ -58,46 +58,38 @@ jobs:
         run: python .github/ci/release-identity.py resolve --tag "$RELEASE_TAG"
 
   test:
+    # Fixed guarded shared defining callee (Infrastructure-owned):
+    # writer-release-sif.yml@442f4e5dcd938c0297e36a5f07461d809f9416ff
+    # (central PR #60 merged). Typed inputs per supported-caller-input-map-v1.
+    # DAG + AUTHORIZATION PRESERVED: no test executes without release-identity
+    # preflight + admission, same as the leaf job this replaces.
     needs: [admission, preflight]
     if: needs.admission.outputs.native_authorized == 'true'
-    runs-on: ${{ fromJSON('{"group":"Organization","labels":["self-hosted","Linux","X64","scitex-org-cpu"]}') }}
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.11', '3.12', '3.13']
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.preflight.outputs.commit }}
-          fetch-depth: 0
-      - name: Run the complete test suite in the qualified SIF
-        run: bash .github/ci/exec-in-sif.sh run-in-sif.sh ${{ matrix.python-version }}
+    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@442f4e5dcd938c0297e36a5f07461d809f9416ff
+    with:
+      operation: test
+      source_commit: ${{ needs.preflight.outputs.commit }}
+      release_tag: ${{ needs.preflight.outputs.tag }}
 
   build:
+    # Same fixed defining callee, operation build. Keeps the original position
+    # after preflight+test and the admission gate. Artifact chain verified in
+    # the defining body: operation build uploads writer-dist-<source_commit>,
+    # the exact name the leaf publisher downloads (source_commit IS the
+    # preflight commit); checkout is inputs.source_commit, closing the
+    # github.sha divergence.
     needs: [admission, preflight, test]
     if: needs.admission.outputs.native_authorized == 'true'
-    runs-on: ${{ fromJSON('{"group":"Organization","labels":["self-hosted","Linux","X64","scitex-org-cpu"]}') }}
-    timeout-minutes: 30
-    env:
-      RELEASE_COMMIT: ${{ needs.preflight.outputs.commit }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.preflight.outputs.commit }}
-          fetch-depth: 0
-      - name: Build and verify one wheel and one sdist
-        run: bash .github/ci/exec-in-sif.sh build-in-sif.sh 3.12
-      - uses: actions/upload-artifact@v4
-        with:
-          name: writer-dist-${{ needs.preflight.outputs.commit }}
-          path: dist/
-          if-no-files-found: error
+    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@442f4e5dcd938c0297e36a5f07461d809f9416ff
+    with:
+      operation: build
+      source_commit: ${{ needs.preflight.outputs.commit }}
+      release_tag: ${{ needs.preflight.outputs.tag }}
 
   publish:
     needs: [admission, preflight, build]
     if: needs.admission.outputs.native_authorized == 'true'
-    runs-on: ${{ fromJSON('{"group":"Organization","labels":["self-hosted","Linux","X64","scitex-org-cpu"]}') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
       name: pypi
@@ -112,6 +104,12 @@ jobs:
         with:
           ref: ${{ needs.preflight.outputs.commit }}
           fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v7
+      - name: Select the hosted interpreter for the owned publisher
+        run: echo "PUBLISH_PYTHON=$(command -v python)" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@v4
         with:
           name: writer-dist-${{ needs.preflight.outputs.commit }}
@@ -119,7 +117,7 @@ jobs:
       - name: Verify bytes and tag before the existing OIDC publisher
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: bash .github/ci/exec-in-sif.sh publish-in-sif.sh 3.12
+        run: bash .github/ci/publish-in-sif.sh 3.12
 
   release:
     needs: [preflight, build, publish]

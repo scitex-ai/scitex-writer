@@ -2,7 +2,7 @@
 # Same manual OIDC trusted publisher, after source/tag/artifact qualification.
 set -euo pipefail
 V="${1:-3.12}"
-PY="/opt/venv-$V/bin/python"
+PY="${PUBLISH_PYTHON:-/opt/venv-$V/bin/python}"
 test -x "$PY"
 : "${RELEASE_TAG:?}" "${RELEASE_COMMIT:?}" "${GITHUB_RUN_ID:?}" "${GITHUB_RUN_ATTEMPT:?}"
 export LC_ALL=C.UTF-8 LANG=C.UTF-8
