@@ -140,7 +140,7 @@ def test_base_install_provides_sdk_and_runtime_valid_plugin_metadata_requires_sd
     # Act: exercise the real scenario.
     project = tomllib.loads(_PYPROJECT.read_text())['project']
     # Assert
-    assert 'scitex-sdk>=0.3.0' in project['dependencies']
+    assert 'scitex-sdk>=0.3.1' in project['dependencies']
 
 
 def test_base_install_provides_sdk_and_runtime_valid_plugin_metadata_uses_sdk_app_config():
