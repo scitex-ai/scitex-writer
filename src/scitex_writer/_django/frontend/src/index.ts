@@ -10,7 +10,7 @@ import {
   waitForMonaco,
 } from "@scitex/sdk/ui/monaco-editor";
 
-import { getFile, saveFile, projectInfo, resourceUrl } from "./api";
+import { PROJECT_DIR, getFile, saveFile, projectInfo, resourceUrl } from "./api";
 import type { SectionEntry } from "./api";
 import { SectionTabs } from "./sections";
 import { countWords, mountToolbar } from "./toolbar";
@@ -380,19 +380,31 @@ async function bootstrap(): Promise<void> {
     void details?.refreshHints();
   });
 
-  // Initial load: discover doc types then load the first section of the first type
-  let info: Awaited<ReturnType<typeof projectInfo>>;
-  try {
-    info = await projectInfo();
-  } catch (err) {
-    console.error("[writer] projectInfo failed", err);
-    return;
-  }
+  // Initial load: discover doc types then load the first section of the first type.
+  // The shell declares data-project-dir="" when no project resolved (editor_page
+  // renders project_dir only for a resolved project; api.ts PROJECT_DIR reads
+  // the same dataset, default ""). With no declared project, initialize the
+  // empty editor state WITHOUT asking project-info: the API genuinely 400s
+  // there, and that outcome is expected, not an error. Only the automatic
+  // project-dependent loads are gated; every handler below keeps running.
+  // A declared project keeps the exact previous behavior, including the
+  // console error on genuine failure.
+  if (!PROJECT_DIR) {
+    editor.setValue("");
+  } else {
+    let info: Awaited<ReturnType<typeof projectInfo>>;
+    try {
+      info = await projectInfo();
+    } catch (err) {
+      console.error("[writer] projectInfo failed", err);
+      return;
+    }
   const initialDocType = info.doc_types[0] || "manuscript";
   const docSelect = root.querySelector<HTMLSelectElement>("#doc-type-select");
   if (docSelect) docSelect.value = initialDocType;
   await sections?.load(initialDocType);
   await pdf?.load(initialDocType);
+  }
 
   async function loadSection(section: SectionEntry): Promise<void> {
     try {
