@@ -1,0 +1,2 @@
+let f=typeof document<"u"&&document.location&&document.location.hash.indexOf("pseudo=true")>=0;function l(o,n){let e;return n.length===0?e=o:e=o.replace(/\{(\d+)\}/g,(u,r)=>{const a=r[0],t=n[a];let i=u;return typeof t=="string"?i=t:(typeof t=="number"||typeof t=="boolean"||t===void 0||t===null)&&(i=String(t)),i}),f&&(e="［"+e.replace(/[aouei]/g,"$&$&")+"］"),e}function c(o,n,...e){return l(n,e)}function d(o,n,...e){const u=l(n,e);return{value:u,original:u}}function s(o){}export{d as a,s as g,c as l};
+//# sourceMappingURL=nls.js.map

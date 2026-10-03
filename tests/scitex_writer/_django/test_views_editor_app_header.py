@@ -6,8 +6,8 @@
 
 The hub's header showed its own `v0.20.0-alpha` for a writer build, and a source
 comment claimed 2.20.0; neither is a claim writer can make about itself. The leaf
-now states which package and version is serving the page, in the SDK's own
-manifest field, and offers the canonical project-selector slot — rendering the
+now states which installed package version is serving the page through the SDK
+contract, and offers the canonical project-selector slot — rendering the
 picker only when the host's tag library is actually installed, because
 `{% load %}`ing a library that is not there is a hard TemplateSyntaxError.
 """
@@ -15,6 +15,7 @@ picker only when the host's tag library is actually installed, because
 import json
 import re
 import tempfile
+from importlib.metadata import version
 from pathlib import Path
 
 import pytest
@@ -32,7 +33,7 @@ _HEADER_CSS = _DJANGO_DIR / "static" / "writer" / "css" / "app-header.css"
 _HEADER_OPEN = (
     '<header class="stx-app-header writer-app-header" id="writer-app-header">'
 )
-_SHARED_HEADER_CSS = "scitex_ui/css/app/app-header.css"
+_SHARED_HEADER_CSS = "scitex_sdk/ui/css/app/app-header.css"
 
 
 @pytest.fixture
@@ -58,8 +59,9 @@ def _header_block(body: str) -> str:
     return body[start:end]
 
 
-def _manifest_version() -> str:
-    return json.loads(_MANIFEST.read_text(encoding="utf-8"))["version"]
+def _installed_version() -> str:
+    manifest = json.loads(_MANIFEST.read_text(encoding="utf-8"))
+    return version(manifest["pip_package"])
 
 
 def _pyproject_version() -> str:
@@ -72,27 +74,36 @@ def _pyproject_version() -> str:
 # --- the version is one number, from one place --------------------------------
 
 
-def test_manifest_version_matches_pyproject():
+def test_installed_version_matches_pyproject():
     # Arrange
     declared = _pyproject_version()
     # Act
-    manifest = _manifest_version()
+    installed = _installed_version()
     # Assert
-    assert manifest == declared
+    assert installed == declared
 
 
-def test_manifest_version_is_not_the_sdk_placeholder():
-    # Arrange
-    placeholder = "0.0.0"
-    # Act
-    manifest = _manifest_version()
+def test_manifest_delegates_version_to_installed_package_omits_manifest_version():
+    # Arrange: pytest fixtures and local setup.
+    placeholder = '0.0.0'
+    # Act: exercise the real scenario.
+    manifest = json.loads(_MANIFEST.read_text(encoding='utf-8'))
     # Assert
-    assert manifest != placeholder
+    assert 'version' not in manifest
 
 
-def test_the_header_shows_the_manifest_version(project_dir):
+def test_manifest_delegates_version_to_installed_package_resolves_installed_version():
+    # Arrange: pytest fixtures and local setup.
+    placeholder = '0.0.0'
+    # Act: exercise the real scenario.
+    manifest = json.loads(_MANIFEST.read_text(encoding='utf-8'))
+    # Assert
+    assert _installed_version() != placeholder
+
+
+def test_the_header_shows_the_installed_version(project_dir):
     # Arrange
-    expected = _manifest_version()
+    expected = _installed_version()
     # Act
     block = _header_block(_editor_html(project_dir))
     # Assert
@@ -110,7 +121,7 @@ def test_the_header_shows_the_leaf_package_not_a_host_or_a_comment(project_dir):
 
 def test_the_page_publishes_generic_version_metadata(project_dir):
     # Arrange
-    expected = f'<meta name="scitex-app-version" content="writer@{_manifest_version()}">'
+    expected = f'<meta name="scitex-app-version" content="writer@{_installed_version()}">'
     # Act
     body = _editor_html(project_dir)
     # Assert
@@ -119,12 +130,12 @@ def test_the_page_publishes_generic_version_metadata(project_dir):
 
 def test_the_views_app_config_is_the_sdk_one():
     # Arrange
-    from scitex_app.embed import ScitexAppConfig
+    from scitex_sdk import app
 
     # Act
     config = views._app_config()
     # Assert
-    assert isinstance(config, ScitexAppConfig)
+    assert isinstance(config, app.embed.ScitexAppConfig)
 
 
 # --- exactly one header -------------------------------------------------------
@@ -144,7 +155,7 @@ def test_a_host_that_renders_its_own_header_gets_no_second_one(project_dir):
     context = {
         "app_name": "writer",
         "project_dir": str(project_dir),
-        "writer_version": _manifest_version(),
+        "writer_version": _installed_version(),
         "writer_label": "Writer",
         "project_picker_available": False,
         "app_header_rendered": True,

@@ -10,11 +10,12 @@ Provides object-oriented interface to scitex-writer functionality.
 
 from __future__ import annotations
 
-import logging
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Callable, Optional
+
+from scitex_logging import getLogger
 
 from ._compile import (
     CompilationResult,
@@ -28,7 +29,7 @@ from ._dataclasses.tree import ScriptsTree, SharedTree
 from ._project._create import clone_writer_project
 from ._utils._watch import watch_manuscript
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 def _find_git_root(project_dir: Path) -> Optional[Path]:

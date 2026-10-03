@@ -24,6 +24,8 @@ operator/config choice). NOTE: a manuscript using `bashful` must compile with
 
 from __future__ import annotations
 
+import sys
+
 # (package, purpose). SSoT LaTeX apt set -- mirror of scripts/containers/texlive.def.
 _PACKAGES: list[tuple[str, str]] = [
     ("texlive-latex-base", "core LaTeX"),
@@ -73,7 +75,7 @@ def provide():
 def _main() -> int:
     # One apt package name per line (consumed by an image %post that runs its
     # own apt). The `scitex-writer dev system-deps list` verb wraps this.
-    print("\n".join(APT_PACKAGES))
+    sys.stdout.write("\n".join(APT_PACKAGES) + "\n")
     return 0
 
 

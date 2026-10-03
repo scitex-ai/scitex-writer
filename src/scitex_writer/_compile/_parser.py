@@ -10,9 +10,10 @@ Parses LaTeX compilation output and log files for errors and warnings.
 
 from __future__ import annotations
 
-from logging import getLogger
 from pathlib import Path
 from typing import List, Optional, Tuple
+
+from scitex_logging import getLogger
 
 from .._utils._parse_latex_logs import parse_compilation_output
 

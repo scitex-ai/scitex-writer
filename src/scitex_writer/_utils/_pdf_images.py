@@ -8,12 +8,13 @@ PDF to image rendering utilities.
 
 from __future__ import annotations
 
-import logging
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-logger = logging.getLogger(__name__)
+from scitex_logging import getLogger
+
+logger = getLogger(__name__)
 
 
 def pdf_to_images(

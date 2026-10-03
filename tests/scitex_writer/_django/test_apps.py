@@ -34,7 +34,7 @@ _PYPROJECT = _ROOT / "pyproject.toml"
 
 # The modules whose absence degrades a feature, and the ONE extra our error
 # messages are allowed to name as the cure.
-_FEATURE_MODULES = ["scitex-app", "scitex-scholar", "pywebview"]
+_FEATURE_MODULES = ["scitex-sdk", "scitex-scholar", "pywebview"]
 _THE_ONLY_FEATURE_EXTRA = "all"
 _RETIRED_EXTRAS = ["editor", "desktop", "scholar"]
 
@@ -64,20 +64,32 @@ def test_no_declared_extra_is_empty():
 
 def test_the_all_extra_provides_every_feature_module():
     # Arrange
-    all_extra = " ".join(_optional_dependencies()[_THE_ONLY_FEATURE_EXTRA])
+    all_extra = " ".join(
+        tomllib.loads(_PYPROJECT.read_text())["project"]["dependencies"]
+        + _optional_dependencies()[_THE_ONLY_FEATURE_EXTRA]
+    )
     # Act
     missing = [mod for mod in _FEATURE_MODULES if mod not in all_extra]
     # Assert
     assert missing == []
 
 
-def test_the_all_extra_floors_scitex_app_at_the_embed_release():
-    # Arrange
-    all_extra = _optional_dependencies()[_THE_ONLY_FEATURE_EXTRA]
-    # Act
-    pins = [req for req in all_extra if req.startswith("scitex-app")]
+def test_workspace_shell_has_one_required_sdk_distribution_requires_sdk_dependency():
+    # Arrange: pytest fixtures and local setup.
+    # Act: exercise the real scenario.
+    data = tomllib.loads(_PYPROJECT.read_text())['project']
+    requirements = data['dependencies'] + [requirement for extra in data['optional-dependencies'].values() for requirement in extra]
     # Assert
-    assert pins == ["scitex-app>=0.4.0"]
+    assert 'scitex-sdk>=0.3.1' in data['dependencies']
+
+
+def test_workspace_shell_has_one_required_sdk_distribution_excludes_retired_distributions():
+    # Arrange: pytest fixtures and local setup.
+    # Act: exercise the real scenario.
+    data = tomllib.loads(_PYPROJECT.read_text())['project']
+    requirements = data['dependencies'] + [requirement for extra in data['optional-dependencies'].values() for requirement in extra]
+    # Assert
+    assert not any((requirement.startswith(('scitex-app', 'scitex-ui')) for requirement in requirements))
 
 
 def test_nothing_still_tells_a_user_to_install_a_retired_extra():

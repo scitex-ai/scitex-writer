@@ -368,12 +368,28 @@ class TestMcpPathRecords:
         assert "boom" in _last(tmp_path)["stderr_tail"]
 
     def test_exit_zero_is_a_success(self, tmp_path):
-        # Arrange
-        _compile_sh(tmp_path, "exit 0")
+        # Arrange: a fake engine that behaves like a real one — it finalizes
+        # a one-page PDF artifact before exiting 0 (#401: the exit code
+        # alone is not evidence; the artifact decides).
+        _compile_sh(
+            tmp_path,
+            "mkdir -p 01_manuscript && "
+            "printf '%%PDF-1.5\\n/Type /Page\\n%%EOF\\n' > 01_manuscript/manuscript.pdf && "
+            "exit 0",
+        )
         # Act
         run_compile_script(tmp_path, "manuscript")
         # Assert
         assert _kinds(tmp_path) == [EVENT_ATTEMPT, EVENT_SUCCESS]
+
+    def test_exit_zero_without_a_pdf_is_a_failure(self, tmp_path):
+        # Arrange: a clean exit that produced nothing — the false-success
+        # shape the shared verdict (#401) exists to close.
+        _compile_sh(tmp_path, "exit 0")
+        # Act
+        run_compile_script(tmp_path, "manuscript")
+        # Assert
+        assert _last(tmp_path)["reason"] == "exit-zero-no-pdf"
 
     def test_timeout_is_a_failure_named_timeout(self, tmp_path):
         # Arrange

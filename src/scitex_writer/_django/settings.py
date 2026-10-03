@@ -5,10 +5,9 @@
 Used only by the standalone launcher; cloud deployments ignore this
 module and mount `scitex_writer._django.urls` under their own prefix.
 
-Mirrors the `figrecipe._django.settings` pattern: bare-minimum installed
-apps, optional `scitex_ui` for the shared workspace shell, and the fleet's
-PostgreSQL as the database so any future models (chat sessions, comments,
-versions) work out of the box.
+Uses the SDK's database-free standalone model: local Writer has no Django
+models and does not require a fleet database or migrations. Hosts configure
+their own database when mounting the app; these settings are local only.
 """
 
 from __future__ import annotations
@@ -17,7 +16,6 @@ import os
 import secrets
 import tempfile
 from pathlib import Path
-from urllib.parse import urlsplit
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -62,16 +60,22 @@ INSTALLED_APPS = [
     "scitex_writer._django.apps.WriterEditorConfig",
 ]
 
-# Optional: scitex-ui supplies the workspace shell (template + CSS/JS assets)
+# Optional registration: SDK UI supplies the workspace template and assets.
 try:
-    import scitex_ui  # noqa: F401
-
-    INSTALLED_APPS.append("scitex_ui")
+    from scitex_sdk import ui  # noqa: F401
 except ImportError:
     pass
+else:
+    INSTALLED_APPS.append("scitex_sdk.ui")
+    if SCITEX_APP_MODE == "standalone":
+        from scitex_sdk.app.project_context import STANDALONE_PROVIDER_PATH
+
+        SCITEX_PROJECT_PROVIDER = STANDALONE_PROVIDER_PATH
 
 MIDDLEWARE = [
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]
 
@@ -85,6 +89,7 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
+                "scitex_writer._django.context_processors.project_context",
                 # Enables scitex-ui's element inspector (Alt+I / Ctrl+I) in the
                 # standalone editor: sets `stx_element_inspector_enabled` so the
                 # shared shell's `_element_inspector.html` partial injects the
@@ -92,43 +97,16 @@ TEMPLATES = [
                 # for the local `scitex-writer gui` server). Without this the
                 # partial emits only its placeholder comment and Alt+I/Ctrl+I
                 # are no-ops.
-                "scitex_ui.context_processors.element_inspector",
+                "scitex_sdk.ui.context_processors.element_inspector",
             ],
         },
     },
 ]
 
-# The database is the fleet's PostgreSQL, the same cluster every SciTeX
-# package reaches through `scitex_dev.store`. Writer's Django app is
-# MODEL-LESS by design, so nothing here opens a connection during a normal
-# request; this entry exists so a future model works out of the box and so
-# `manage.py` subcommands that touch the DB reach the fleet store rather than
-# a private file.
-#
-# THE DEFAULT NAMES THE PRIMARY DELIBERATELY. Every host's loopback :55432 is
-# a READ-ONLY REPLICA of the same cluster (operator ruling, 2026-08-29), so a
-# loopback default would accept reads and refuse every write — a server that
-# looks healthy until the first INSERT. `SCITEX_WRITER_DATABASE_URL` overrides
-# for a deployment with its own cluster; `SCITEX_STORE_DSN` is the fleet-wide
-# variable the store primitive already resolves, so honouring it keeps Django
-# and the store pointed at ONE database instead of two that can disagree.
-_DEFAULT_DATABASE_URL = "postgresql://scitex-primary:55432/scitex"
-_DATABASE_URL = (
-    os.environ.get("SCITEX_WRITER_DATABASE_URL")
-    or os.environ.get("SCITEX_STORE_DSN")
-    or _DEFAULT_DATABASE_URL
-)
-_DB = urlsplit(_DATABASE_URL)
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": _DB.path.lstrip("/") or "scitex",
-        "USER": _DB.username or "",
-        "PASSWORD": _DB.password or "",
-        "HOST": _DB.hostname or "",
-        "PORT": str(_DB.port) if _DB.port else "",
-    }
-}
+# The normal local editor is model-less, matching SDK run_standalone().
+# Django's dummy backend makes accidental database use fail rather than
+# selecting the fleet store or creating a private database.
+DATABASES = {}
 
 STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

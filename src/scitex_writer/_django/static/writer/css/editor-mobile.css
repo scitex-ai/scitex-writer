@@ -91,13 +91,15 @@
      their state instead of being torn down and rebuilt on every tap. */
   body[data-writer-mobile-pane] .writer-mobile-files,
   body[data-writer-mobile-pane] .writer-editor-pane,
-  body[data-writer-mobile-pane] .writer-preview-pane {
+  body[data-writer-mobile-pane] .writer-preview-pane,
+  body[data-writer-mobile-pane] .details-pane {
     display: none;
   }
 
   body[data-writer-mobile-pane="files"] .writer-mobile-files,
   body[data-writer-mobile-pane="editor"] .writer-editor-pane,
-  body[data-writer-mobile-pane="preview"] .writer-preview-pane {
+  body[data-writer-mobile-pane="preview"] .writer-preview-pane,
+  body[data-writer-mobile-pane="details"] .details-pane {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
@@ -109,8 +111,7 @@
   /* The desktop-only splitter and side panels are not part of a single-pane
      layout: at 390px the insert rail alone would take a seventh of the width. */
   body[data-writer-mobile-pane] .writer-split-resizer,
-  body[data-writer-mobile-pane] .insert-bar,
-  body[data-writer-mobile-pane] .details-pane {
+  body[data-writer-mobile-pane] .insert-bar {
     display: none;
   }
 
@@ -167,6 +168,13 @@
 
   body[data-writer-mobile-pane] .writer-toolbar {
     padding: 6px 8px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  body[data-writer-mobile-pane] .writer-toolbar-right {
+    flex: 1 1 100%;
+    justify-content: flex-start;
   }
 
   /* Every remaining control is a finger target, not a 25px mouse target. */

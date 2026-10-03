@@ -160,7 +160,7 @@ def _refresh_workspace_scripts(writer_path):
     (``01_manuscript/``/``00_shared/``). A missing source (stripped install)
     is a no-op, not an error.
     """
-    from logging import getLogger
+    from scitex_logging import getLogger
 
     from pathlib import Path
 
