@@ -454,13 +454,20 @@ def declared_metadata(project):
 
 
 def metadata_source_identity(wheel_raw, sdist_raw, entry_points, project):
+    if any(key in project for key in ("import-names", "import-namespaces")):
+        raise ValueError("source import declarations are not qualified")
     expected = declared_metadata(project)
     for raw in (wheel_raw, sdist_raw):
         headers = BytesParser().parsebytes(raw)
         if headers.get_all("Metadata-Version") not in [
-            [x] for x in ("2.1", "2.2", "2.3", "2.4")
+            [x] for x in ("2.1", "2.2", "2.3", "2.4", "2.5")
         ]:
             raise ValueError("unsupported generated metadata version")
+        if any(
+            headers.get_all(key) is not None
+            for key in ("Import-Name", "Import-Namespace")
+        ):
+            raise ValueError("generated import declarations are not qualified")
         python = headers.get_all("Requires-Python", [])
         if len(python) != (1 if expected["requires_python"] else 0) or (
             python and specifier_identity(python[0]) != expected["requires_python"]
@@ -519,6 +526,45 @@ def git_read(argv, source_root, stdin=None):
     if process.returncode:
         raise ValueError("public source Git read failed")
     return stdout
+
+
+def declared_public_omissions(project):
+    """Allow only three explicitly declared generated logs outside public payload."""
+    build = project["tool"]["hatch"]["build"]
+    config = build["targets"]["sdist"]
+    generated_logs = (
+        "/scripts/shell/.compile_manuscript.sh.log",
+        "/scripts/shell/.compile_revision.sh.log",
+        "/scripts/shell/.compile_supplementary.sh.log",
+    )
+    if (
+        config.get("include")
+        != [
+            "src/scitex_writer",
+            "/scripts",
+            "README.md",
+            "CHANGELOG.md",
+            "LICENSE",
+            "pyproject.toml",
+        ]
+        or config.get("exclude")
+        != [
+            "/src/scitex_writer/_django/frontend/node_modules",
+            "/00_shared",
+            "/01_manuscript",
+            "/02_supplementary",
+            "/03_revision",
+            "/.scitex",
+            "/config",
+            *generated_logs,
+        ]
+        or build.get("ignore-vcs", False)
+        or config.get("ignore-vcs", False)
+    ):
+        raise ValueError("reviewed Writer sdist selection changed")
+    return {
+        name.removeprefix("/") for name in config["exclude"] if name in generated_logs
+    }
 
 
 def source_payload_identity(wheel_raw, sdist_raw, commit, source_root=Path(".")):
@@ -588,6 +634,7 @@ def source_payload_identity(wheel_raw, sdist_raw, commit, source_root=Path("."))
     if entries.get("pyproject.toml", ("", ""))[0] not in {"100644", "100755"}:
         raise ValueError("public source metadata is missing")
     project = tomllib.loads(bodies[entries["pyproject.toml"][1]].decode())
+    omitted_paths = declared_public_omissions(project)
     config = project["tool"]["hatch"]["build"]["targets"]["wheel"]
     if (
         config.get("packages") != ["src/scitex_writer"]
@@ -598,6 +645,8 @@ def source_payload_identity(wheel_raw, sdist_raw, commit, source_root=Path("."))
     expected = {}
     source_paths = set()
     for path, (mode, oid) in entries.items():
+        if path in omitted_paths:
+            continue
         if path.startswith("src/scitex_writer/_django/frontend/node_modules/"):
             continue
         if path.startswith("src/scitex_writer/"):
@@ -687,6 +736,8 @@ def source_payload_identity(wheel_raw, sdist_raw, commit, source_root=Path("."))
             relative = item.name.removeprefix(root + "/")
             if relative == "PKG-INFO":
                 continue
+            if relative in omitted_paths:
+                raise ValueError("sdist contains declared excluded generated log")
             if (
                 relative not in entries
                 or entries[relative][0] not in {"100644", "100755"}

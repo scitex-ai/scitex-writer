@@ -246,6 +246,9 @@ exclude = [
     "/03_revision",
     "/.scitex",
     "/config",
+    "/scripts/shell/.compile_manuscript.sh.log",
+    "/scripts/shell/.compile_revision.sh.log",
+    "/scripts/shell/.compile_supplementary.sh.log",
 ]
 
 [tool.pytest.ini_options]
