@@ -365,24 +365,46 @@ def test_matching_duplicate_project_selectors_do_not_remember_resource_selection
     assert (response.status_code, 'data-project-id="17"' in response.content.decode(), mounted.projects.selected, mounted.projects.remembered) == (200, True, "21", [])
 
 
-def test_anonymous_builder_raises_typed_error_and_renderer_returns_resource_401(mounted):
-    # Arrange: both generic consumer entry points receive an anonymous session.
+def test_anonymous_builder_exposes_typed_401_without_project_state(mounted):
+    # Arrange: the dictionary ABI receives an anonymous session.
     request = authorized_request(authenticated=False)
-    # Act: call the dictionary ABI and the real HTTP resource independently.
-    with pytest.raises(host.AccessError) as raised:
+    error = None
+    # Act: capture the actual typed refusal; unexpected exception types propagate.
+    try:
         hosting.build_context(request, mounted.current)
+    except host.AccessError as exc:
+        error = exc
+    # Assert: the typed 401 reaches no provider or project state.
+    assert (isinstance(error, host.AccessError), getattr(error, "status", None), mounted.projects.lookups, mounted.storage.path_calls, bool(services._project_cache)) == (True, 401, [], [], False)
+
+
+def test_anonymous_renderer_returns_resource_401_without_project_state(mounted):
+    # Arrange: the HTTP resource receives no authenticated session.
+    # Act: traverse the real renderer boundary through the generic content route.
     response = mounted.client.get("/workspace/content/")
-    # Assert: anonymous access reaches no provider or project state.
-    assert (raised.value.status, response.status_code, mounted.projects.lookups, mounted.storage.path_calls, bool(services._project_cache)) == (401, 401, [], [], False)
+    # Assert: a resource 401 reaches no provider or project state.
+    assert (response.status_code, mounted.projects.lookups, mounted.storage.path_calls, bool(services._project_cache)) == (401, [], [], False)
 
 
 @pytest.mark.parametrize("setting", ["SCITEX_PROJECT_PROVIDER", "SCITEX_PROJECT_STORAGE"])
-def test_missing_host_capability_is_typed_and_never_uses_local_defaults(mounted, setting):
+def test_missing_host_capability_builder_is_typed_without_local_defaults(mounted, setting):
+    # Arrange: the host deliberately supplies no requested capability.
+    error = None
+    with override_settings(**{setting: None}):
+        # Act: capture the actual builder refusal without substituting a provider.
+        try:
+            hosting.build_context(authorized_request(), mounted.current)
+        except host.CapabilityUnavailable as exc:
+            error = exc
+    # Assert: a typed capability failure cannot hide a cached local workspace.
+    assert (isinstance(error, host.CapabilityUnavailable), bool(services._project_cache)) == (True, False)
+
+
+@pytest.mark.parametrize("setting", ["SCITEX_PROJECT_PROVIDER", "SCITEX_PROJECT_STORAGE"])
+def test_missing_host_capability_renderer_refuses_without_local_defaults(mounted, setting):
     # Arrange: the host deliberately supplies no requested capability.
     with override_settings(**{setting: None}):
-        # Act: exercise the real builder and renderer failure mappings.
-        with pytest.raises(host.CapabilityUnavailable):
-            hosting.build_context(authorized_request(), mounted.current)
+        # Act: exercise the real renderer's HTTP failure mapping.
         response = content(mounted)
     # Assert: no successful partial or cached workspace hides the missing capability.
     assert (response.status_code, bool(services._project_cache)) == (503, False)
@@ -398,21 +420,61 @@ def test_supplied_current_project_is_a_selector_not_an_access_grant(mounted):
     assert (response.status_code, mounted.storage.path_calls, bool(services._project_cache)) == (404, [], False)
 
 
-@pytest.mark.parametrize("namespace_state", ["missing", "ambiguous"])
-def test_missing_or_ambiguous_leaf_urlconf_is_unavailable_before_project_load(mounted, namespace_state):
-    # Arrange: only one actual Writer namespace declares a usable API mount.
+def test_missing_leaf_urlconf_builder_is_unavailable_before_project_load(mounted):
+    # Arrange: the request's actual URLconf declares no Writer mount.
     candidate = urlconf_for("/first/writer")
-    if namespace_state == "missing":
-        candidate.urlpatterns = []
-    else:
-        candidate.urlpatterns.append(
-            path("second/writer/", include("scitex_writer._django.urls", namespace="second_writer"))
-        )
+    candidate.urlpatterns = []
     request = authorized_request()
     request.urlconf = candidate
-    # Act: call the actual builder and guarded renderer without guessing an instance.
-    with pytest.raises(host.CapabilityUnavailable):
+    error = None
+    # Act: capture the actual builder refusal without guessing a default route.
+    try:
         hosting.build_context(request, mounted.current)
+    except host.CapabilityUnavailable as exc:
+        error = exc
+    # Assert: a typed missing-mount failure precedes any cached project load.
+    assert (isinstance(error, host.CapabilityUnavailable), bool(services._project_cache)) == (True, False)
+
+
+def test_missing_leaf_urlconf_renderer_is_unavailable_before_project_load(mounted):
+    # Arrange: the request's actual URLconf declares no Writer mount.
+    candidate = urlconf_for("/first/writer")
+    candidate.urlpatterns = []
+    request = authorized_request()
+    request.urlconf = candidate
+    # Act: call the guarded renderer without guessing a default route.
+    response = hosting.render_content(request, mounted.current, stx_mount=mounted.prefix)
+    # Assert: a missing mount cannot fall back to a cached local workspace.
+    assert (response.status_code, bool(services._project_cache)) == (503, False)
+
+
+def test_ambiguous_leaf_urlconf_builder_is_unavailable_before_project_load(mounted):
+    # Arrange: two actual Writer instances leave the trusted reverse ambiguous.
+    candidate = urlconf_for("/first/writer")
+    candidate.urlpatterns.append(
+        path("second/writer/", include("scitex_writer._django.urls", namespace="second_writer"))
+    )
+    request = authorized_request()
+    request.urlconf = candidate
+    error = None
+    # Act: capture the actual builder refusal without choosing an instance.
+    try:
+        hosting.build_context(request, mounted.current)
+    except host.CapabilityUnavailable as exc:
+        error = exc
+    # Assert: the typed ambiguity refusal precedes any cached project load.
+    assert (isinstance(error, host.CapabilityUnavailable), bool(services._project_cache)) == (True, False)
+
+
+def test_ambiguous_leaf_urlconf_renderer_is_unavailable_before_project_load(mounted):
+    # Arrange: two actual Writer instances leave the trusted reverse ambiguous.
+    candidate = urlconf_for("/first/writer")
+    candidate.urlpatterns.append(
+        path("second/writer/", include("scitex_writer._django.urls", namespace="second_writer"))
+    )
+    request = authorized_request()
+    request.urlconf = candidate
+    # Act: call the guarded renderer without choosing a convenient instance.
     response = hosting.render_content(request, mounted.current, stx_mount=mounted.prefix)
     # Assert: an ambiguous reverse cannot fall back to a convenient route.
     assert (response.status_code, bool(services._project_cache)) == (503, False)

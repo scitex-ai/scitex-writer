@@ -709,29 +709,37 @@ def test_rendered_token_works_with_http_only_cookie_and_session_storage_writes_a
 @pytest.mark.parametrize('prefix', ['/plugin/writer/', '/relocated/writer/'])
 @pytest.mark.parametrize('route', ['editor-v2/', 'viewer-v2/'])
 def test_v2_pages_derive_api_base_from_actual_include(mounted, prefix, route):
+    # Arrange
     client, _, _, _ = mounted
+    # Act
     response = client.get(
         prefix + route,
         {'api_base': 'https://attacker.invalid/', 'view_path': '/spoofed/'},
         HTTP_AUDIT_SESSION='synthetic',
     )
     body = response.content.decode()
+    # Assert
     assert re.search(r'data-api-base="([^"]+)"', body).group(1) == prefix + 'v2/'
 
 
 @pytest.mark.parametrize('prefix', ['/plugin/writer/', '/relocated/writer/'])
 @pytest.mark.parametrize('route', ['editor-v2/', 'viewer-v2/'])
 def test_v2_pages_declare_actual_mount_without_route_suffix(mounted, prefix, route):
+    # Arrange
     client, _, _, _ = mounted
+    # Act
     response = client.get(prefix + route, HTTP_AUDIT_SESSION='synthetic')
     body = response.content.decode()
+    # Assert
     assert re.search(r'name="stx-mount" content="([^"]*)"', body).group(1) == prefix.rstrip('/')
 
 
 @pytest.mark.parametrize('prefix', ['/plugin/writer/', '/relocated/writer/'])
 @pytest.mark.parametrize('route', ['editor-v2/', 'viewer-v2/'])
 def test_v2_rendered_csrf_token_authorizes_confined_save(mounted, prefix, route):
+    # Arrange
     client, _, candidate, foreign = mounted
+    # Act
     response = client.get(prefix + route, HTTP_AUDIT_SESSION='synthetic')
     csrf = re.search(r'name="writer-csrf-token" content="([^"]+)"', response.content.decode()).group(1)
     client.post(
@@ -740,4 +748,5 @@ def test_v2_rendered_csrf_token_authorizes_confined_save(mounted, prefix, route)
         content_type='application/json', HTTP_AUDIT_SESSION='synthetic',
         HTTP_X_CSRFTOKEN=csrf,
     )
+    # Assert
     assert (candidate / 'new-v2.tex').read_text() == 'V2 synthetic prose'

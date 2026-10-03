@@ -1065,10 +1065,14 @@ def test_invalid_host_mode_refuses_readiness_and_section_requests(mounted, mode)
     ('manuscript-status', 'has_pdf', False),
 ])
 def test_v2_numeric_routes_reach_resource_views_before_dispatch(mounted, endpoint, field, expected):
+    # Arrange
+    url = api_url(mounted, 17, endpoint, version='v2/')
+    # Act
     response = mounted.client.get(
-        api_url(mounted, 17, endpoint, version='v2/'),
+        url,
         HTTP_SYNTHETIC_ACTOR='owner',
     )
+    # Assert
     assert (response.status_code, response.json()[field]) == (200, expected)
 
 
@@ -1076,16 +1080,22 @@ def test_v2_numeric_routes_reach_resource_views_before_dispatch(mounted, endpoin
 @pytest.mark.parametrize('actor,status', [('', 401), ('stranger', 404)])
 @pytest.mark.parametrize('endpoint', ['section/abstract', 'manuscript-status'])
 def test_v2_numeric_routes_preserve_host_access_refusals(mounted, actor, status, endpoint):
+    # Arrange
+    url = api_url(mounted, 17, endpoint, version='v2/')
+    # Act
     response = mounted.client.get(
-        api_url(mounted, 17, endpoint, version='v2/'),
+        url,
         HTTP_SYNTHETIC_ACTOR=actor,
     )
+    # Assert
     assert response.status_code == status
 
 
 @pytest.mark.parametrize('mounted', ['default', 'custom'], indirect=True)
 def test_v2_numeric_save_uses_url_project_without_changing_selection(mounted):
+    # Arrange
     projects.selected = '17'
+    # Act
     response = mounted.client.post(
         section_url(mounted, 21, version='v2/', working_dir=str(mounted.roots['17'])),
         {'content': 'Scoped v2 edit.', 'project': '17', 'working_dir': str(mounted.roots['17'])},
@@ -1093,6 +1103,7 @@ def test_v2_numeric_save_uses_url_project_without_changing_selection(mounted):
         HTTP_X_CSRFTOKEN=csrf(mounted),
     )
     saved = mounted.roots['21'] / '.scitex/writer/01_manuscript/contents/abstract.tex'
+    # Assert
     assert (response.status_code, saved.read_text(), projects.selected,
             (mounted.workspace / '01_manuscript/contents/abstract.tex').read_text()) == (
         200, 'Scoped v2 edit.', '17', 'Synthetic abstract.',
@@ -1101,12 +1112,15 @@ def test_v2_numeric_save_uses_url_project_without_changing_selection(mounted):
 
 @pytest.mark.parametrize('mounted', ['default', 'custom'], indirect=True)
 def test_v2_numeric_csrf_refusal_preserves_selection_and_foreign_content(mounted):
+    # Arrange
     projects.selected = '17'
+    # Act
     response = mounted.client.post(
         section_url(mounted, 21, version='v2/'), {'content': 'Forbidden.'},
         content_type='application/json', HTTP_SYNTHETIC_ACTOR='owner',
     )
     target = mounted.roots['21'] / '.scitex/writer/01_manuscript/contents/abstract.tex'
+    # Assert
     assert (response.status_code, projects.selected, target.read_text()) == (
         403, '17', 'Synthetic beta.',
     )
