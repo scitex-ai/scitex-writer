@@ -117,10 +117,10 @@ def mounted(tmp_path, request):
         )
 
 
-def api_url(mounted, project_id, endpoint, **query):
+def api_url(mounted, project_id, endpoint, *, version='', **query):
     if mounted.mode == "standalone":
         query.setdefault("working_dir", str(mounted.roots[str(project_id)]))
-    base = f"{mounted.prefix}api/project/{project_id}/{endpoint}/"
+    base = f"{mounted.prefix}{version}api/project/{project_id}/{endpoint}/"
     return base + ("?" + urlencode(query, doseq=True) if query else "")
 
 
@@ -128,9 +128,9 @@ def section_url(mounted, project_id, section="abstract", **query):
     return api_url(mounted, project_id, "section/" + section, **query)
 
 
-def get(mounted, project_id, section="abstract"):
+def get(mounted, project_id, section="abstract", *, version=''):
     return mounted.client.get(
-        section_url(mounted, project_id, section), HTTP_SYNTHETIC_ACTOR="owner"
+        section_url(mounted, project_id, section, version=version), HTTP_SYNTHETIC_ACTOR="owner"
     )
 
 
@@ -993,19 +993,20 @@ def test_workspace_and_section_symlinks_cannot_escape_the_capability_refuses_out
 
 
 @pytest.mark.parametrize('mounted', ['default', 'custom'], indirect=True)
-def test_workspace_and_section_symlinks_cannot_escape_the_capability_refuses_outbound_workspace(mounted):
+@pytest.mark.parametrize('version', ['', 'v2/'])
+def test_workspace_and_section_symlinks_cannot_escape_the_capability_refuses_outbound_workspace(mounted, version):
     # Arrange: pytest fixtures and local setup.
     target = mounted.workspace / '01_manuscript/contents/abstract.tex'
     target.unlink()
     target.symlink_to(mounted.roots['21'] / '.scitex/writer/01_manuscript/contents/abstract.tex')
     # Act: exercise the real scenario.
-    get(mounted, 17)
+    get(mounted, 17, version=version)
     target.unlink()
     escaped = mounted.roots['18'] / '.scitex'
     escaped.mkdir()
     (escaped / 'writer').symlink_to(mounted.roots['21'] / '.scitex/writer', target_is_directory=True)
     # Assert
-    assert get(mounted, 18).status_code == 403
+    assert get(mounted, 18, version=version).status_code == 403
 
 
 def test_readiness_never_follows_an_outbound_pdf_symlink(mounted):
@@ -1056,3 +1057,70 @@ def test_invalid_host_mode_refuses_readiness_and_section_requests(mounted, mode)
             response = mounted.client.get(api_url(mounted, 17, endpoint), HTTP_SYNTHETIC_ACTOR='owner')
             # Assert
             assert response.status_code == 503
+
+
+@pytest.mark.parametrize('mounted', ['default', 'custom'], indirect=True)
+@pytest.mark.parametrize('endpoint,field,expected', [
+    ('section/abstract', 'content', 'Synthetic abstract.'),
+    ('manuscript-status', 'has_pdf', False),
+])
+def test_v2_numeric_routes_reach_resource_views_before_dispatch(mounted, endpoint, field, expected):
+    # Arrange
+    url = api_url(mounted, 17, endpoint, version='v2/')
+    # Act
+    response = mounted.client.get(
+        url,
+        HTTP_SYNTHETIC_ACTOR='owner',
+    )
+    # Assert
+    assert (response.status_code, response.json()[field]) == (200, expected)
+
+
+@pytest.mark.parametrize('mounted', ['default', 'custom'], indirect=True)
+@pytest.mark.parametrize('actor,status', [('', 401), ('stranger', 404)])
+@pytest.mark.parametrize('endpoint', ['section/abstract', 'manuscript-status'])
+def test_v2_numeric_routes_preserve_host_access_refusals(mounted, actor, status, endpoint):
+    # Arrange
+    url = api_url(mounted, 17, endpoint, version='v2/')
+    # Act
+    response = mounted.client.get(
+        url,
+        HTTP_SYNTHETIC_ACTOR=actor,
+    )
+    # Assert
+    assert response.status_code == status
+
+
+@pytest.mark.parametrize('mounted', ['default', 'custom'], indirect=True)
+def test_v2_numeric_save_uses_url_project_without_changing_selection(mounted):
+    # Arrange
+    projects.selected = '17'
+    # Act
+    response = mounted.client.post(
+        section_url(mounted, 21, version='v2/', working_dir=str(mounted.roots['17'])),
+        {'content': 'Scoped v2 edit.', 'project': '17', 'working_dir': str(mounted.roots['17'])},
+        content_type='application/json', HTTP_SYNTHETIC_ACTOR='owner',
+        HTTP_X_CSRFTOKEN=csrf(mounted),
+    )
+    saved = mounted.roots['21'] / '.scitex/writer/01_manuscript/contents/abstract.tex'
+    # Assert
+    assert (response.status_code, saved.read_text(), projects.selected,
+            (mounted.workspace / '01_manuscript/contents/abstract.tex').read_text()) == (
+        200, 'Scoped v2 edit.', '17', 'Synthetic abstract.',
+    )
+
+
+@pytest.mark.parametrize('mounted', ['default', 'custom'], indirect=True)
+def test_v2_numeric_csrf_refusal_preserves_selection_and_foreign_content(mounted):
+    # Arrange
+    projects.selected = '17'
+    # Act
+    response = mounted.client.post(
+        section_url(mounted, 21, version='v2/'), {'content': 'Forbidden.'},
+        content_type='application/json', HTTP_SYNTHETIC_ACTOR='owner',
+    )
+    target = mounted.roots['21'] / '.scitex/writer/01_manuscript/contents/abstract.tex'
+    # Assert
+    assert (response.status_code, projects.selected, target.read_text()) == (
+        403, '17', 'Synthetic beta.',
+    )

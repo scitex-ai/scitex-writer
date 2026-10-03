@@ -60,6 +60,7 @@ urlpatterns = [
     path("host/writer/viewer-alias/", views.viewer_page,
          {"view_path": "viewer-alias/", "api_base": "/host/writer/v2/"}, name="aliased-viewer"),
     path("plugin/writer/", include("scitex_writer._django.urls")),
+    path("relocated/writer/", include("scitex_writer._django.urls")),
 ]
 
 
@@ -93,17 +94,17 @@ def token(client):
     return client.cookies["csrftoken"].value
 
 
-@pytest.mark.parametrize('route', ['', 'viewer/', 'ping', 'api/project-info', 'api/file', 'api/compile'])
+@pytest.mark.parametrize('route', ['', 'viewer/', 'ping', 'api/project-info', 'api/file', 'api/compile', 'editor-v2/', 'viewer-v2/', 'v2/ping', 'v2/api/project-info'])
 def test_anonymous_requests_never_reach_project_or_handlers_returns_authentication_refusal(mounted, route):
     # Arrange: pytest fixtures and local setup.
     client, _, candidate, _ = mounted
     # Act: exercise the real scenario.
     response = client.get('/plugin/writer/' + route)
     # Assert
-    assert response.status_code == (302 if route in {'', 'viewer/'} else 401)
+    assert response.status_code == (302 if route in {'', 'viewer/', 'editor-v2/', 'viewer-v2/'} else 401)
 
 
-@pytest.mark.parametrize('route', ['', 'viewer/', 'ping', 'api/project-info', 'api/file', 'api/compile'])
+@pytest.mark.parametrize('route', ['', 'viewer/', 'ping', 'api/project-info', 'api/file', 'api/compile', 'editor-v2/', 'viewer-v2/', 'v2/ping', 'v2/api/project-info'])
 def test_anonymous_requests_never_reach_project_or_handlers_leaves_project_cache_empty(mounted, route):
     # Arrange: pytest fixtures and local setup.
     client, _, candidate, _ = mounted
@@ -210,12 +211,13 @@ def test_denied_explicit_project_does_not_fall_back_leaves_project_cache_empty(m
 
 
 @pytest.mark.parametrize('missing', ['SCITEX_PROJECT_PROVIDER', 'SCITEX_PROJECT_STORAGE'])
-def test_missing_capability_does_not_use_local_defaults_returns_unavailable(mounted, missing):
+@pytest.mark.parametrize('route', ['ping', 'v2/ping'])
+def test_missing_capability_does_not_use_local_defaults_returns_unavailable(mounted, missing, route):
     # Arrange: pytest fixtures and local setup.
     client, _, _, foreign = mounted
     with override_settings(**{missing: ''}):
         # Act: exercise the real scenario.
-        response = client.get('/plugin/writer/ping', {'working_dir': str(foreign)}, HTTP_AUDIT_SESSION='synthetic')
+        response = client.get('/plugin/writer/' + route, {'working_dir': str(foreign)}, HTTP_AUDIT_SESSION='synthetic')
     # Assert
     assert response.status_code == 503
 
@@ -355,12 +357,13 @@ def test_invalid_mode_denies_anonymous_and_authenticated_requests_does_not_creat
     assert not (candidate / 'new.tex').exists()
 
 
-def test_session_csrf_denial_and_authorized_save_ignore_body_working_dir_denies_missing_csrf(mounted):
+@pytest.mark.parametrize('route', ['api/file', 'v2/api/file'])
+def test_session_csrf_denial_and_authorized_save_ignore_body_working_dir_denies_missing_csrf(mounted, route):
     # Arrange: pytest fixtures and local setup.
     client, _, candidate, foreign = mounted
     csrf = token(client)
     data = {'path': '01_manuscript/contents/text.tex', 'content': 'Edited synthetic prose', 'working_dir': str(foreign)}
-    url = '/plugin/writer/api/file?working_dir=' + str(foreign)
+    url = '/plugin/writer/' + route + '?working_dir=' + str(foreign)
     # Act: exercise the real scenario.
     denied = client.post(url, data, content_type='application/json', HTTP_AUDIT_SESSION='synthetic')
     # Assert
@@ -393,12 +396,13 @@ def test_session_csrf_denial_and_authorized_save_ignore_body_working_dir_accepts
     assert allowed.status_code == 200
 
 
-def test_session_csrf_denial_and_authorized_save_ignore_body_working_dir_writes_owned_file(mounted):
+@pytest.mark.parametrize('route', ['api/file', 'v2/api/file'])
+def test_session_csrf_denial_and_authorized_save_ignore_body_working_dir_writes_owned_file(mounted, route):
     # Arrange: pytest fixtures and local setup.
     client, _, candidate, foreign = mounted
     csrf = token(client)
     data = {'path': '01_manuscript/contents/text.tex', 'content': 'Edited synthetic prose', 'working_dir': str(foreign)}
-    url = '/plugin/writer/api/file?working_dir=' + str(foreign)
+    url = '/plugin/writer/' + route + '?working_dir=' + str(foreign)
     # Act: exercise the real scenario.
     denied = client.post(url, data, content_type='application/json', HTTP_AUDIT_SESSION='synthetic')
     (candidate / data['path']).read_text()
@@ -462,7 +466,8 @@ def test_cross_origin_write_with_token_is_denied_does_not_create_file(mounted):
     assert not (candidate / 'new.tex').exists()
 
 
-def test_workspace_symlink_cannot_escape_authorized_project_returns_forbidden(mounted):
+@pytest.mark.parametrize('route', ['ping', 'v2/ping'])
+def test_workspace_symlink_cannot_escape_authorized_project_returns_forbidden(mounted, route):
     # Arrange: pytest fixtures and local setup.
     client, storage, _, foreign = mounted
     other = storage.root.parent / 'other'
@@ -470,7 +475,7 @@ def test_workspace_symlink_cannot_escape_authorized_project_returns_forbidden(mo
     (other / '.scitex/writer').symlink_to(foreign, target_is_directory=True)
     storage.root = other
     # Act: exercise the real scenario.
-    response = client.get('/plugin/writer/ping', HTTP_AUDIT_SESSION='synthetic')
+    response = client.get('/plugin/writer/' + route, HTTP_AUDIT_SESSION='synthetic')
     # Assert
     assert response.status_code == 403
 
@@ -699,3 +704,49 @@ def test_rendered_token_works_with_http_only_cookie_and_session_storage_writes_a
         saved = client.post('/api/file?working_dir=' + str(local), {'path': 'new.tex', 'content': 'X'}, content_type='application/json', HTTP_X_CSRFTOKEN=csrf)
         # Assert
         assert (local / 'new.tex').read_text() == 'X'
+
+
+@pytest.mark.parametrize('prefix', ['/plugin/writer/', '/relocated/writer/'])
+@pytest.mark.parametrize('route', ['editor-v2/', 'viewer-v2/'])
+def test_v2_pages_derive_api_base_from_actual_include(mounted, prefix, route):
+    # Arrange
+    client, _, _, _ = mounted
+    # Act
+    response = client.get(
+        prefix + route,
+        {'api_base': 'https://attacker.invalid/', 'view_path': '/spoofed/'},
+        HTTP_AUDIT_SESSION='synthetic',
+    )
+    body = response.content.decode()
+    # Assert
+    assert re.search(r'data-api-base="([^"]+)"', body).group(1) == prefix + 'v2/'
+
+
+@pytest.mark.parametrize('prefix', ['/plugin/writer/', '/relocated/writer/'])
+@pytest.mark.parametrize('route', ['editor-v2/', 'viewer-v2/'])
+def test_v2_pages_declare_actual_mount_without_route_suffix(mounted, prefix, route):
+    # Arrange
+    client, _, _, _ = mounted
+    # Act
+    response = client.get(prefix + route, HTTP_AUDIT_SESSION='synthetic')
+    body = response.content.decode()
+    # Assert
+    assert re.search(r'name="stx-mount" content="([^"]*)"', body).group(1) == prefix.rstrip('/')
+
+
+@pytest.mark.parametrize('prefix', ['/plugin/writer/', '/relocated/writer/'])
+@pytest.mark.parametrize('route', ['editor-v2/', 'viewer-v2/'])
+def test_v2_rendered_csrf_token_authorizes_confined_save(mounted, prefix, route):
+    # Arrange
+    client, _, candidate, foreign = mounted
+    # Act
+    response = client.get(prefix + route, HTTP_AUDIT_SESSION='synthetic')
+    csrf = re.search(r'name="writer-csrf-token" content="([^"]+)"', response.content.decode()).group(1)
+    client.post(
+        prefix + 'v2/api/file',
+        {'path': 'new-v2.tex', 'content': 'V2 synthetic prose', 'working_dir': str(foreign)},
+        content_type='application/json', HTTP_AUDIT_SESSION='synthetic',
+        HTTP_X_CSRFTOKEN=csrf,
+    )
+    # Assert
+    assert (candidate / 'new-v2.tex').read_text() == 'V2 synthetic prose'

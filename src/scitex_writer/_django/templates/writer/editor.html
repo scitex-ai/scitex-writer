@@ -1,4 +1,4 @@
-{% extends "scitex_sdk/ui/standalone_shell.html" %}
+{% extends writer_shell_template|default:"scitex_sdk/ui/standalone_shell.html" %}
 {% load static %}
 {% block extra_css %}
     <meta name="stx-app-scope" content="{{ app_scope }}">
