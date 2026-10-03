@@ -28,7 +28,7 @@ jobs:
     # tag-push and release workflows whenever the auto-commit happens to be
     # the most recent commit on develop at release time.
     if: "!contains(github.event.head_commit.message, 'docs(sphinx_html): refresh from CI build')"
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, scitex-ci]
     permissions:
       contents: write
     steps:
