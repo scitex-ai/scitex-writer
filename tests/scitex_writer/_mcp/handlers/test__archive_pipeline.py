@@ -13,6 +13,7 @@ The dirty-tree case is the contract: an archive is stamped with a commit hash, s
 it may only snapshot a tree that actually matches that commit.
 """
 
+import os
 import subprocess
 from datetime import datetime
 
@@ -31,6 +32,26 @@ _CONFIG = (
 )
 
 _STAMP = datetime(2026, 7, 12, 9, 30, 0)
+
+
+@pytest.fixture(autouse=True)
+def _isolated_git_environment(tmp_path):
+    """Keep hook-local Git context out of temporary projects, then restore it."""
+    local_env_vars = subprocess.run(
+        ["git", "-C", str(tmp_path.resolve()), "rev-parse", "--local-env-vars"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    saved_values = {name: os.environ[name] for name in local_env_vars if name in os.environ}
+    try:
+        for name in local_env_vars:
+            os.environ.pop(name, None)
+        yield
+    finally:
+        for name in local_env_vars:
+            os.environ.pop(name, None)
+        os.environ.update(saved_values)
 
 
 def _git_cmd(repo, *args):
