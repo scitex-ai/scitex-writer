@@ -55,6 +55,7 @@ CROSS_PACKAGE_IMPORTS = [
     'scitex_logging',
     'scitex_scholar',
     'scitex_sdk',
+    'scitex_sdk.app.project_context',
     'scitex_sdk.ui',
 ]
 # ===== END AUTO-GENERATED =====

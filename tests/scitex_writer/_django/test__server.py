@@ -22,7 +22,11 @@ the except back over `django.setup()` fails HERE instead of in production.
 
 import ast
 import inspect
+import json
+import subprocess
+import sys
 import textwrap
+from pathlib import Path
 
 from scitex_writer._django import _server
 
@@ -218,3 +222,125 @@ class TestAllowedHosts:
         warning = warn_if_wildcard_bind("127.0.0.1", allowed)
         # Assert
         assert warning is None
+
+
+@pytest.fixture
+def normal_local_launch(tmp_path):
+    """Run the actual launcher until Django has parsed its server options.
+
+    The child refuses real migration/database/compiler boundaries before
+    imports and stops before binding. It owns no manuscript or project data.
+    """
+    directory = tmp_path
+    workspace = directory / "empty-workspace"
+    workspace.mkdir()
+    source_root = Path(__file__).resolve().parents[3] / "src"
+    program = r'''
+import json
+import os
+import sys
+
+observation = {}
+
+class ObservedBoundary(RuntimeError):
+    pass
+
+def observe(frame, event, _argument):
+    if event != "call":
+        return
+    path = frame.f_code.co_filename.replace("\\", "/")
+    name = frame.f_code.co_name
+    if path.endswith("/django/core/management/commands/migrate.py") and name == "handle":
+        observation["boundary"] = "migration-refused"
+        raise ObservedBoundary
+    if "/django/db/backends/" in path and name in {"connect", "get_new_connection"}:
+        observation["boundary"] = "database-refused"
+        raise ObservedBoundary
+    if "/scitex_writer/" in path and "/_compiler/" in path and name.startswith("compile"):
+        observation["boundary"] = "compiler-refused"
+        raise ObservedBoundary
+    if path.endswith("/django/core/management/commands/runserver.py") and name == "handle":
+        observation["boundary"] = "runserver-before-bind"
+        observation["insecure_serving"] = frame.f_locals["options"].get("insecure_serving")
+        raise ObservedBoundary
+
+def audit(event, _arguments):
+    if event in {"subprocess.Popen", "os.system", "sqlite3.connect", "socket.connect"}:
+        raise RuntimeError("unexpected side effect: " + event)
+
+sys.addaudithook(audit)
+sys.setprofile(observe)
+try:
+    from scitex_writer._django._server import run
+    run(sys.argv[1], host="127.0.0.1", port=8050, open_browser=False)
+except ObservedBoundary:
+    pass
+finally:
+    sys.setprofile(None)
+
+from django.conf import settings
+observation["mode"] = getattr(settings, "SCITEX_APP_MODE", None)
+observation["debug"] = settings.DEBUG
+observation["workspace_entries"] = os.listdir(sys.argv[1])
+print("NORMAL_LAUNCH_OBSERVATION=" + json.dumps(observation))
+'''
+    environment = dict(os.environ)
+    for key in ("DJANGO_SETTINGS_MODULE", "SCITEX_APP_MODE", "RUN_MAIN"):
+        environment.pop(key, None)
+    environment.update(
+        PYTHONPATH=str(source_root) + os.pathsep + environment.get("PYTHONPATH", ""),
+        PYTHONDONTWRITEBYTECODE="1",
+        SCITEX_DIR=str(directory / "scitex-runtime"),
+        TMPDIR=str(directory),
+        DJANGO_DEBUG="false",
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", program, str(workspace)],
+        cwd=directory,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=20,
+    )
+    line = next(
+        line for line in completed.stdout.splitlines()
+        if line.startswith("NORMAL_LAUNCH_OBSERVATION=")
+    )
+    return json.loads(line.partition("=")[2])
+
+
+def test_normal_local_launch_reaches_server_without_migrations(normal_local_launch):
+    # Arrange
+    observed = normal_local_launch
+    # Act
+    boundary = observed["boundary"]
+    # Assert
+    assert boundary == "runserver-before-bind"
+
+
+def test_normal_local_launch_serves_development_assets(normal_local_launch):
+    # Arrange
+    observed = normal_local_launch
+    # Act
+    enabled = observed.get("insecure_serving")
+    # Assert
+    assert enabled is True
+
+
+def test_normal_local_launch_preserves_debug_false(normal_local_launch):
+    # Arrange
+    observed = normal_local_launch
+    # Act
+    debug = observed["debug"]
+    # Assert
+    assert debug is False
+
+
+def test_normal_local_launch_leaves_the_workspace_empty(normal_local_launch):
+    # Arrange
+    observed = normal_local_launch
+    # Act
+    entries = observed["workspace_entries"]
+    # Assert
+    assert entries == []

@@ -25,6 +25,7 @@ from .conftest import _init_django
 _init_django()
 
 from django.conf import settings  # noqa: E402
+from scitex_writer._django import settings as local_settings  # noqa: E402
 
 
 def _context_processor_paths() -> list[str]:
@@ -48,3 +49,60 @@ def test_sdk_ui_context_processors_module_exists():
     spec = importlib.util.find_spec(name)
     # Assert
     assert spec is not None
+
+
+def test_local_settings_do_not_select_a_database():
+    # Arrange
+    configured = local_settings
+    # Act
+    databases = configured.DATABASES
+    # Assert
+    assert databases == {}
+
+
+def test_local_settings_use_the_existing_standalone_provider():
+    # Arrange
+    configured = local_settings
+    # Act
+    provider = configured.SCITEX_PROJECT_PROVIDER
+    # Assert
+    assert provider == "scitex_sdk.app.project_context.StandaloneProjectProvider"
+
+
+def test_local_settings_activate_real_browser_language():
+    # Arrange
+    configured = local_settings
+    # Act
+    middleware = configured.MIDDLEWARE
+    # Assert
+    assert "django.middleware.locale.LocaleMiddleware" in middleware
+
+
+def test_locale_middleware_precedes_common_middleware():
+    # Arrange
+    middleware = local_settings.MIDDLEWARE
+    # Act
+    positions = (
+        middleware.index("django.middleware.locale.LocaleMiddleware"),
+        middleware.index("django.middleware.common.CommonMiddleware"),
+    )
+    # Assert
+    assert positions[0] < positions[1]
+
+
+def test_local_template_context_receives_the_registered_project_provider():
+    # Arrange
+    configured = local_settings
+    # Act
+    paths = configured.TEMPLATES[0]["OPTIONS"]["context_processors"]
+    # Assert
+    assert "scitex_sdk.app.project_context.project_context" in paths
+
+
+def test_local_settings_retain_csrf_protection():
+    # Arrange
+    configured = local_settings
+    # Act
+    middleware = configured.MIDDLEWARE
+    # Assert
+    assert "django.middleware.csrf.CsrfViewMiddleware" in middleware
