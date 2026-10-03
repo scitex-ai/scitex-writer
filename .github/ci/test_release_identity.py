@@ -39,6 +39,13 @@ SPEC.loader.exec_module(RELEASE)
 CONFIG = "scitex_writer/_dataclasses/config/__init__.py"
 SCRIPT = "scitex_writer/scripts/shell/modules/check_dependancy_commands.sh"
 PREFIX = "repos/scitex-ai/scitex-writer"
+OMITTED_GENERATED_LOGS = frozenset(
+    {
+        "scripts/shell/.compile_manuscript.sh.log",
+        "scripts/shell/.compile_revision.sh.log",
+        "scripts/shell/.compile_supplementary.sh.log",
+    }
+)
 
 
 def git(*arguments):
@@ -84,8 +91,10 @@ def public_source_files():
     files = {}
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:") as archive:
         for item in archive:
-            if item.isdir() or item.name.startswith(
-                "src/scitex_writer/_django/frontend/node_modules/"
+            if (
+                item.isdir()
+                or item.name in OMITTED_GENERATED_LOGS
+                or item.name.startswith("src/scitex_writer/_django/frontend/node_modules/")
             ):
                 continue
             if not item.isfile():
@@ -108,6 +117,12 @@ def public_wheel_files():
 # The pure fixtures carry genuine requirements/extras/Python/entry points;
 # dependency metadata changes require refreshing this independently produced fixture.
 GENERATED_METADATA = b"Metadata-Version: 2.4\nName: scitex-writer\nVersion: 2.43.8\nSummary: LaTeX manuscript compilation system for scientific documents with MCP server\nProject-URL: Homepage, https://github.com/ywatanabe1989/scitex-writer\nProject-URL: Documentation, https://scitex-writer.readthedocs.io\nProject-URL: Repository, https://github.com/ywatanabe1989/scitex-writer.git\nProject-URL: Issues, https://github.com/ywatanabe1989/scitex-writer/issues\nAuthor-email: Yusuke Watanabe <ywatanabe@scitex.ai>\nLicense-Expression: AGPL-3.0-only\nLicense-File: LICENSE\nKeywords: academic,bibliography,bibtex,compilation,latex,manuscript,mcp,mcp-server,paper,scientific-writing,scitex\nClassifier: Development Status :: 4 - Beta\nClassifier: Environment :: Console\nClassifier: Intended Audience :: Science/Research\nClassifier: Operating System :: OS Independent\nClassifier: Programming Language :: Python :: 3\nClassifier: Programming Language :: Python :: 3.10\nClassifier: Programming Language :: Python :: 3.11\nClassifier: Programming Language :: Python :: 3.12\nClassifier: Programming Language :: Python :: 3.13\nClassifier: Topic :: Scientific/Engineering\nClassifier: Topic :: Text Processing :: Markup :: LaTeX\nRequires-Python: >=3.10\nRequires-Dist: bibtexparser<2.0,>=1.4\nRequires-Dist: click>=8.0\nRequires-Dist: django>=4.2\nRequires-Dist: fastmcp>=2.0.0\nRequires-Dist: pandas>=2.0\nRequires-Dist: pillow>=9.0\nRequires-Dist: scitex-config>=0.3.6\nRequires-Dist: scitex-dev>=0.48.0\nRequires-Dist: scitex-logging>=0.2.1\nRequires-Dist: scitex-sdk>=0.3.1\nProvides-Extra: all\nRequires-Dist: myst-parser>=2.0; extra == 'all'\nRequires-Dist: openpyxl; extra == 'all'\nRequires-Dist: pre-commit>=3.5.0; extra == 'all'\nRequires-Dist: pytest-cov>=4.0.0; extra == 'all'\nRequires-Dist: pytest-xdist>=3.0.0; extra == 'all'\nRequires-Dist: pytest>=7.0.0; extra == 'all'\nRequires-Dist: pywebview>=4.0.0; extra == 'all'\nRequires-Dist: scitex-scholar>=1.5.2; extra == 'all'\nRequires-Dist: sphinx-autodoc-typehints>=1.25; extra == 'all'\nRequires-Dist: sphinx-copybutton>=0.5; extra == 'all'\nRequires-Dist: sphinx-rtd-theme>=2.0; extra == 'all'\nRequires-Dist: sphinx>=7.0; extra == 'all'\nProvides-Extra: dev\nRequires-Dist: openpyxl; extra == 'dev'\nRequires-Dist: pre-commit>=3.5.0; extra == 'dev'\nRequires-Dist: pytest-cov>=4.0.0; extra == 'dev'\nRequires-Dist: pytest-xdist>=3.0.0; extra == 'dev'\nRequires-Dist: pytest>=7.0.0; extra == 'dev'\nRequires-Dist: scitex-scholar>=1.5.2; extra == 'dev'\nProvides-Extra: docs\nRequires-Dist: myst-parser>=2.0; extra == 'docs'\nRequires-Dist: sphinx-autodoc-typehints>=1.25; extra == 'docs'\nRequires-Dist: sphinx-copybutton>=0.5; extra == 'docs'\nRequires-Dist: sphinx-rtd-theme>=2.0; extra == 'docs'\nRequires-Dist: sphinx>=7.0; extra == 'docs'\nDescription-Content-Type: text/markdown\n"
+# Genuine header bytes from the private Hatchling 1.32.4 sdist-to-wheel build.
+# Original Metadata 2.4 fixture above remains unchanged.
+# Wheel SHA256: 25ce08ecccba1829da0c0d687756fe3d29067858e6224d4be25008077e1a33e3.
+# Full METADATA SHA256: 530bcc5fe58cb914e218b0692a598b7bf53abba33a88cc453b530a548c272bce.
+# Exact header SHA256: 3f319bc7953caa3e2e1a9ad779193ebdf5f27ddd70c64c646b43830ea1bf28e0.
+GENERATED_METADATA_25 = b"Metadata-Version: 2.5\nName: scitex-writer\nVersion: 2.43.8\nSummary: LaTeX manuscript compilation system for scientific documents with MCP server\nProject-URL: Homepage, https://github.com/ywatanabe1989/scitex-writer\nProject-URL: Documentation, https://scitex-writer.readthedocs.io\nProject-URL: Repository, https://github.com/ywatanabe1989/scitex-writer.git\nProject-URL: Issues, https://github.com/ywatanabe1989/scitex-writer/issues\nAuthor-email: Yusuke Watanabe <ywatanabe@scitex.ai>\nLicense-Expression: AGPL-3.0-only\nLicense-File: LICENSE\nKeywords: academic,bibliography,bibtex,compilation,latex,manuscript,mcp,mcp-server,paper,scientific-writing,scitex\nClassifier: Development Status :: 4 - Beta\nClassifier: Environment :: Console\nClassifier: Intended Audience :: Science/Research\nClassifier: Operating System :: OS Independent\nClassifier: Programming Language :: Python :: 3\nClassifier: Programming Language :: Python :: 3.10\nClassifier: Programming Language :: Python :: 3.11\nClassifier: Programming Language :: Python :: 3.12\nClassifier: Programming Language :: Python :: 3.13\nClassifier: Topic :: Scientific/Engineering\nClassifier: Topic :: Text Processing :: Markup :: LaTeX\nRequires-Python: >=3.10\nRequires-Dist: bibtexparser<2.0,>=1.4\nRequires-Dist: click>=8.0\nRequires-Dist: django>=4.2\nRequires-Dist: fastmcp>=2.0.0\nRequires-Dist: pandas>=2.0\nRequires-Dist: pillow>=9.0\nRequires-Dist: scitex-config>=0.3.6\nRequires-Dist: scitex-dev>=0.48.0\nRequires-Dist: scitex-logging>=0.2.1\nRequires-Dist: scitex-sdk>=0.3.1\nProvides-Extra: all\nRequires-Dist: myst-parser>=2.0; extra == 'all'\nRequires-Dist: openpyxl; extra == 'all'\nRequires-Dist: pre-commit>=3.5.0; extra == 'all'\nRequires-Dist: pytest-cov>=4.0.0; extra == 'all'\nRequires-Dist: pytest-xdist>=3.0.0; extra == 'all'\nRequires-Dist: pytest>=7.0.0; extra == 'all'\nRequires-Dist: pywebview>=4.0.0; extra == 'all'\nRequires-Dist: scitex-scholar>=1.5.2; extra == 'all'\nRequires-Dist: sphinx-autodoc-typehints>=1.25; extra == 'all'\nRequires-Dist: sphinx-copybutton>=0.5; extra == 'all'\nRequires-Dist: sphinx-rtd-theme>=2.0; extra == 'all'\nRequires-Dist: sphinx>=7.0; extra == 'all'\nProvides-Extra: dev\nRequires-Dist: openpyxl; extra == 'dev'\nRequires-Dist: pre-commit>=3.5.0; extra == 'dev'\nRequires-Dist: pytest-cov>=4.0.0; extra == 'dev'\nRequires-Dist: pytest-xdist>=3.0.0; extra == 'dev'\nRequires-Dist: pytest>=7.0.0; extra == 'dev'\nRequires-Dist: scitex-scholar>=1.5.2; extra == 'dev'\nProvides-Extra: docs\nRequires-Dist: myst-parser>=2.0; extra == 'docs'\nRequires-Dist: sphinx-autodoc-typehints>=1.25; extra == 'docs'\nRequires-Dist: sphinx-copybutton>=0.5; extra == 'docs'\nRequires-Dist: sphinx-rtd-theme>=2.0; extra == 'docs'\nRequires-Dist: sphinx>=7.0; extra == 'docs'\nDescription-Content-Type: text/markdown\n"
 GENERATED_ENTRY_POINTS = b"[console_scripts]\nscitex-writer = scitex_writer._cli:main\n\n[scitex.apps]\nwriter = scitex_writer._django.apps:WriterEditorConfig\n\n[scitex_dev.docs]\nscitex-writer = scitex_writer\n\n[scitex_dev.skills]\nscitex-writer = scitex_writer\n\n[scitex_dev.system_deps]\nscitex-writer = scitex_writer._core._system_deps:provide\n"
 
 
@@ -252,6 +267,49 @@ def routes(project=PYPROJECT):
             "sha": digest,
         },
     }
+
+
+@contextlib.contextmanager
+def source_commit_with_project(project):
+    """Make an owned real Git source commit; original public refs stay unchanged."""
+    with tempfile.TemporaryDirectory(prefix="writer-release-selection-") as temporary:
+        directory = Path(temporary)
+        source = directory / "public-source.git"
+        environment = {
+            "PATH": "/usr/bin:/bin",
+            "LANG": "C.UTF-8",
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": "/dev/null",
+            "GIT_INDEX_FILE": str(directory / "owned-index"),
+            "GIT_AUTHOR_NAME": "Public fixture",
+            "GIT_AUTHOR_EMAIL": "fixture@example.invalid",
+            "GIT_COMMITTER_NAME": "Public fixture",
+            "GIT_COMMITTER_EMAIL": "fixture@example.invalid",
+        }
+
+        def command(*arguments, body=None):
+            return subprocess.run(
+                ["/usr/bin/git", *arguments],
+                input=body,
+                check=True,
+                capture_output=True,
+                timeout=7,
+                env=environment,
+            ).stdout
+
+        command("clone", "--bare", "--shared", "--quiet", str(REPOSITORY), str(source))
+        blob = command("-C", str(source), "hash-object", "-w", "--stdin", body=project)
+        command("-C", str(source), "read-tree", SOURCE)
+        command(
+            "-C", str(source), "update-index", "--cacheinfo", "100644",
+            blob.decode().strip(), "pyproject.toml",
+        )
+        tree = command("-C", str(source), "write-tree").decode().strip()
+        commit = command(
+            "-C", str(source), "commit-tree", tree, "-p", SOURCE,
+            body=b"Disposable declared-selection control\n",
+        ).decode().strip()
+        yield source, commit
 
 
 class QueryFixture:
@@ -1001,6 +1059,90 @@ class WholeSourceTests(unittest.TestCase):
                 assert refused
 
 
+    def test_sdist_selection_refuses_missing_broad_or_fourth_exclusions(self):
+        # Arrange
+        literal = b'    "/scripts/shell/.compile_manuscript.sh.log",\n'
+        candidates = (
+            PYPROJECT.replace(literal, b"", 1),
+            PYPROJECT.replace(literal, b'    "/scripts/**/*.log",\n', 1),
+            PYPROJECT.replace(
+                literal,
+                literal
+                + b'    "/scripts/shell/modules/check_dependancy_commands.sh",\n',
+                1,
+            ),
+            PYPROJECT.replace(
+                b"[tool.hatch.build.targets.sdist]\n",
+                b"[tool.hatch.build.targets.sdist]\nignore-vcs = true\n",
+                1,
+            ),
+        )
+        for project in candidates:
+            with self.subTest(project_sha256=hashlib.sha256(project).hexdigest()):
+                if project == PYPROJECT:
+                    raise RuntimeError("selection counterexample did not change source")
+                files = dict(public_source_files())
+                changed = sdist(files=files, project=project)
+                RELEASE.sdist_identity(changed, VERSION)
+                with source_commit_with_project(project) as (source, commit):
+                    # Act
+                    refused = refusal(
+                        lambda: RELEASE.source_payload_identity(
+                            whole_archives()[0], changed, commit, source_root=source
+                        ),
+                        ValueError,
+                        "sdist selection",
+                    )
+                    # Assert
+                    assert refused
+
+    def test_each_declared_generated_log_is_refused_in_wheel(self):
+        # Arrange
+        for path in sorted(OMITTED_GENERATED_LOGS):
+            with self.subTest(path=path):
+                files = public_wheel_files()
+                files["scitex_writer/" + path] = b"Disposable generated log\n"
+                changed = wheel(files=files)
+                RELEASE.wheel_identity(changed, VERSION)
+                # Act
+                refused = refusal(
+                    lambda: self.source_identity(wheel_raw=changed),
+                    ValueError,
+                    "membership",
+                )
+                # Assert
+                assert refused
+
+    def test_each_declared_generated_log_is_refused_in_sdist(self):
+        # Arrange
+        for path in sorted(OMITTED_GENERATED_LOGS):
+            with self.subTest(path=path):
+                files = dict(public_source_files())
+                files[path] = b"Disposable generated log\n"
+                changed = sdist(files=files)
+                RELEASE.sdist_identity(changed, VERSION)
+                # Act
+                refused = refusal(
+                    lambda: self.source_identity(sdist_raw=changed),
+                    ValueError,
+                    "excluded generated log",
+                )
+                # Assert
+                assert refused
+
+    def test_missing_real_compiler_script_refused_with_valid_record(self):
+        # Arrange
+        files = public_wheel_files()
+        del files[SCRIPT]
+        changed = wheel(files=files)
+        # Act
+        refused = refusal(
+            lambda: self.source_identity(wheel_raw=changed), ValueError, "membership"
+        )
+        # Assert
+        assert refused
+
+
 def rewrite_wheel_metadata(raw, changes):
     """Create valid newly-recorded artifacts with intentionally different semantics."""
     with zipfile.ZipFile(io.BytesIO(raw)) as archive:
@@ -1404,6 +1546,110 @@ class GeneratedMetadataTests(unittest.TestCase):
             )
             # Assert
             assert refused
+
+
+    def test_genuine_current_metadata_25_absent_import_fields_passes(self):
+        # Arrange
+        project = tomllib.loads(PYPROJECT.decode())["project"]
+        # Act
+        result = RELEASE.metadata_source_identity(
+            GENERATED_METADATA_25,
+            GENERATED_METADATA_25,
+            GENERATED_ENTRY_POINTS,
+            project,
+        )
+        # Assert
+        assert result == {
+            "runtime_requirements": 33,
+            "extras": 3,
+            "entry_point_groups": 5,
+        }
+
+    def test_unqualified_metadata_versions_refused_in_either_artifact(self):
+        # Arrange
+        for replacement in (b"2.6", b"3.0"):
+            bad = GENERATED_METADATA_25.replace(
+                b"Metadata-Version: 2.5", b"Metadata-Version: " + replacement
+            )
+            for wheel_body, sdist_body in (
+                (bad, GENERATED_METADATA_25), (GENERATED_METADATA_25, bad)
+            ):
+                with self.subTest(
+                    version=replacement, wheel_tampered=wheel_body == bad
+                ):
+                    # Act
+                    refused = refusal(
+                        lambda: RELEASE.metadata_source_identity(
+                            wheel_body, sdist_body, GENERATED_ENTRY_POINTS,
+                            tomllib.loads(PYPROJECT.decode())["project"],
+                        ),
+                        ValueError,
+                        "metadata version",
+                    )
+                    # Assert
+                    assert refused
+
+    def test_duplicate_metadata_version_refused(self):
+        # Arrange
+        bad = GENERATED_METADATA_25 + b"Metadata-Version: 2.5\n"
+        # Act
+        refused = refusal(
+            lambda: RELEASE.metadata_source_identity(
+                bad, bad, GENERATED_ENTRY_POINTS,
+                tomllib.loads(PYPROJECT.decode())["project"],
+            ),
+            ValueError,
+            "metadata version",
+        )
+        # Assert
+        assert refused
+
+    def test_unqualified_generated_import_headers_refused_in_either_artifact(self):
+        # Arrange
+        declarations = (
+            b"Import-Name: scitex_writer\n",
+            b"Import-Name:\n",
+            b"Import-Namespace: scitex\n",
+            b"Import-Namespace:\n",
+        )
+        for declaration in declarations:
+            bad = GENERATED_METADATA_25 + declaration
+            for wheel_body, sdist_body in (
+                (bad, GENERATED_METADATA_25), (GENERATED_METADATA_25, bad)
+            ):
+                with self.subTest(
+                    declaration=declaration, wheel_tampered=wheel_body == bad
+                ):
+                    # Act
+                    refused = refusal(
+                        lambda: RELEASE.metadata_source_identity(
+                            wheel_body, sdist_body, GENERATED_ENTRY_POINTS,
+                            tomllib.loads(PYPROJECT.decode())["project"],
+                        ),
+                        ValueError,
+                        "generated import declarations",
+                    )
+                    # Assert
+                    assert refused
+
+    def test_unqualified_source_import_declarations_refused(self):
+        # Arrange
+        for key in ("import-names", "import-namespaces"):
+            for value in ([], ["scitex_writer"]):
+                with self.subTest(key=key, value=value):
+                    project = dict(tomllib.loads(PYPROJECT.decode())["project"])
+                    project[key] = value
+                    # Act
+                    refused = refusal(
+                        lambda: RELEASE.metadata_source_identity(
+                            GENERATED_METADATA_25, GENERATED_METADATA_25,
+                            GENERATED_ENTRY_POINTS, project,
+                        ),
+                        ValueError,
+                        "source import declarations",
+                    )
+                    # Assert
+                    assert refused
 
 
 class ProofAndCliTests(unittest.TestCase):
