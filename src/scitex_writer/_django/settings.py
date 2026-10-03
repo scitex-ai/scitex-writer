@@ -89,7 +89,7 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
-                "scitex_sdk.app.project_context.project_context",
+                "scitex_writer._django.context_processors.project_context",
                 # Enables scitex-ui's element inspector (Alt+I / Ctrl+I) in the
                 # standalone editor: sets `stx_element_inspector_enabled` so the
                 # shared shell's `_element_inspector.html` partial injects the
