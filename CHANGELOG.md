@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The editor header now speaks the shared scitex-ui app-header contract: the row is `.stx-app-header`, the title/version/actions slot carry the canonical class names, and the SDK's `css/app/app-header.css` is loaded by the header partial. Writer's own stylesheet keeps only what the shared sheet does not cover (the identity grouping and the picker control's phone sizing), so the row has one definition instead of two.
 - The vendored scripts read their project root from `SCITEX_WRITER_PROJECT_ROOT` (fleet convention) instead of the unprefixed `PROJECT_ROOT`, and the scitex-dev §6a exemption in `pyproject.toml` is gone with it. The old name is still honoured for one migration cycle — a workspace that exports it keeps compiling — but never silently: reading it prints a warning naming the replacement. `manage_builds --help` now names the new variable too.
 
+## [2.43.9] - 2026-10-03
+
+### Fixed
+
+- Initialize the empty editor and Details panel without automatic project requests when no project directory is declared; declared projects retain normal loading.
+- Exclude only the three generated compilation logs from release artifacts while retaining the complete declared compiler-script payload.
+
+### Changed
+
+- Validate genuine core metadata 2.5 without accepting unqualified import declarations.
+- Run release tests and builds through the pinned shared workflow using the preflight-resolved source commit, then use the hosted interpreter for the existing verified OIDC publisher.
+
 ## [2.43.8] - 2026-10-03
 
 ### Fixed
