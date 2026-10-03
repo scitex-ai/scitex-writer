@@ -138,6 +138,8 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-xdist>=3.0.0",
+    # The canonical pre-push gate runs pytest with --testmon.
+    "pytest-testmon>=2.2.0",
     "pre-commit>=3.5.0",
     # Feature deps whose tests live in the suite, so a fresh
     # `pip install -e .[dev]` runs the FULL suite. Production users get these
