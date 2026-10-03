@@ -7,7 +7,7 @@
  * the pane as top-level vendor entries. Collapsed/expanded state stored in localStorage.
  */
 
-import { manuscriptHints, projectInfo } from "./api";
+import { PROJECT_DIR, manuscriptHints, projectInfo } from "./api";
 import type { Hint, HintsFeed, ProjectInfo } from "./api";
 import { controlsTranslate as t } from "./controls-i18n";
 
@@ -59,8 +59,13 @@ export class DetailsPanel {
     this.onJumpToPage = options.onJumpToPage;
     this.open = this.loadOpenState();
     this.render();
-    void this.loadProject();
-    void this.refreshHints();
+    // Automatic project-dependent loads run only with a declared project
+    // (api.ts PROJECT_DIR from the shell dataset). The pane itself always
+    // renders; handlers below are unaffected.
+    if (PROJECT_DIR) {
+      void this.loadProject();
+      void this.refreshHints();
+    }
   }
 
   setCompileStatus(mode: "preview" | "full", status: string): void {
@@ -162,7 +167,10 @@ export class DetailsPanel {
         title: t("project"),
         icon: "fa-circle-info",
         render: () => {
-          if (!this.project) return `<p class="details-hint">Loading…</p>`;
+          // No catalog key exists for the undeclared-root state; plain text it is.
+          // A declared project keeps the genuine loading text while it loads.
+          if (!this.project)
+            return `<p class="details-hint">${PROJECT_DIR ? "Loading…" : "No project selected"}</p>`;
           return `
             <div class="details-row"><span>Name</span><span>${escapeHtml(this.project.project_name)}</span></div>
             <div class="details-row"><span>Path</span><span class="details-mono">${escapeHtml(this.project.project_dir)}</span></div>
