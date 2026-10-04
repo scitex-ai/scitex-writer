@@ -4,7 +4,7 @@
  * the cursor in Monaco.
  */
 
-import { listFigures, listTables } from "./api";
+import { listFigures, listTables, resourceUrl } from "./api";
 import type { MediaEntry } from "./api";
 import { CitationsPanel } from "./citations-panel";
 
@@ -217,7 +217,7 @@ export class InsertPanel {
     const listHtml = items
       .map((item, index) => {
         const thumb = item.thumbnail_url
-          ? `<img class="insert-item-thumb" src="${escapeAttr(item.thumbnail_url)}" alt="" loading="lazy" />`
+          ? `<img class="insert-item-thumb" src="${escapeAttr(resourceUrl(item.thumbnail_url.replace(/^\//, "")))}" alt="" loading="lazy" />`
           : anyThumbnail
             ? `<div class="insert-item-thumb insert-item-thumb--empty">${escapeHtml((item.media_ext || "").toUpperCase().replace(".", ""))}</div>`
             : "";
