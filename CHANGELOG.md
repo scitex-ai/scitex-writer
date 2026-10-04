@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show Hints once inside the Details panel's Compilation group alongside Draft and Full, preserving hint callbacks and document state.
 - Declare the pytest-testmon prerequisite used by the canonical pre-push gate and isolate archive-pipeline fixtures from inherited Git environment variables.
 
+### Added
+
+- Expose a guarded, leaf-owned Writer workspace renderer and v2 routes for generic SDK hosts. Content requests retain project access and CSRF checks without changing navigation's selected project.
+
 ## [2.43.9] - 2026-10-03
 
 ### Fixed
