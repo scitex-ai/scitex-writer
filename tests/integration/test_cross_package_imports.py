@@ -46,7 +46,6 @@ CROSS_PACKAGE_IMPORTS = [
     'scitex_config._ecosystem',
     'scitex_container.apptainer',
     'scitex_dev',
-    'scitex_dev.cli',
     'scitex_dev.decorators',
     'scitex_dev.ecosystem',
     'scitex_dev.status',
