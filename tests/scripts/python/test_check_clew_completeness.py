@@ -90,7 +90,15 @@ class TestResolveClewWorkdir:
 
     def test_falls_back_to_project_dir_when_no_clew_dir_exists(self, tmp_path):
         # Arrange: no .scitex/clew anywhere above — nothing to walk up to.
-        proj = tmp_path / "plain"
+        # Hermetic: _resolve_clew_workdir walks ALL parents to /, so a
+        # .scitex/clew store above pytest's tmp base would otherwise leak
+        # in and break the fallback. Build the project under an isolated
+        # root created fresh inside tmp_path: the walk from proj can only
+        # meet real dirs the test itself made, never a store above the
+        # tmp base. No mocks, no Path surgery — plain filesystem.
+        root = tmp_path.resolve() / "sandbox"
+        root.mkdir()
+        proj = root / "plain"
         proj.mkdir()
 
         # Act
