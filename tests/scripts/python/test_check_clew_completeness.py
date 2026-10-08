@@ -88,27 +88,28 @@ class TestResolveClewWorkdir:
         # Assert
         assert resolved == repo
 
-    def test_falls_back_to_project_dir_when_no_clew_dir_exists(
-        self, tmp_path, monkeypatch
-    ):
+    def test_falls_back_to_project_dir_when_no_clew_dir_exists(self, tmp_path):
         # Arrange: no .scitex/clew anywhere above — nothing to walk up to.
         # Hermetic: _resolve_clew_workdir walks ALL parents to /, so a
-        # .scitex/clew store above pytest's tmp base (e.g. /home/runner on
-        # CI runners) would otherwise leak in and break the fallback. Mask
-        # clew-dir probes outside tmp_path so the test cannot escape it.
-        proj = tmp_path / "plain"
-        proj.mkdir()
+        # .scitex/clew store above pytest's tmp base would otherwise leak
+        # in and break the fallback. Bound the walk with a local Path
+        # subclass whose clew-dir probes answer False outside tmp_path;
+        # everything inside hits the real filesystem. A hand-rolled
+        # boundary, not a global rewrite — Path itself is never touched.
+        root = tmp_path.resolve()
         real_is_dir = Path.is_dir
 
-        def _scoped_is_dir(self):
-            if self.name == "clew" and self.parent.name == ".scitex":
-                try:
-                    self.relative_to(tmp_path)
-                except ValueError:
-                    return False
-            return real_is_dir(self)
+        class _BoundedPath(Path):
+            def is_dir(self, *args, **kwargs):
+                if self.name == "clew" and self.parent.name == ".scitex":
+                    try:
+                        self.relative_to(root)
+                    except ValueError:
+                        return False
+                return real_is_dir(self, *args, **kwargs)
 
-        monkeypatch.setattr(Path, "is_dir", _scoped_is_dir)
+        proj = _BoundedPath(root) / "plain"
+        proj.mkdir()
 
         # Act
         resolved = _resolve_clew_workdir(proj)
