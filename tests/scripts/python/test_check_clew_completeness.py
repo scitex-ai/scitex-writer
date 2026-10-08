@@ -92,23 +92,13 @@ class TestResolveClewWorkdir:
         # Arrange: no .scitex/clew anywhere above — nothing to walk up to.
         # Hermetic: _resolve_clew_workdir walks ALL parents to /, so a
         # .scitex/clew store above pytest's tmp base would otherwise leak
-        # in and break the fallback. Bound the walk with a local Path
-        # subclass whose clew-dir probes answer False outside tmp_path;
-        # everything inside hits the real filesystem. A hand-rolled
-        # boundary, not a global rewrite — Path itself is never touched.
-        root = tmp_path.resolve()
-        real_is_dir = Path.is_dir
-
-        class _BoundedPath(Path):
-            def is_dir(self, *args, **kwargs):
-                if self.name == "clew" and self.parent.name == ".scitex":
-                    try:
-                        self.relative_to(root)
-                    except ValueError:
-                        return False
-                return real_is_dir(self, *args, **kwargs)
-
-        proj = _BoundedPath(root) / "plain"
+        # in and break the fallback. Build the project under an isolated
+        # root created fresh inside tmp_path: the walk from proj can only
+        # meet real dirs the test itself made, never a store above the
+        # tmp base. No mocks, no Path surgery — plain filesystem.
+        root = tmp_path.resolve() / "sandbox"
+        root.mkdir()
+        proj = root / "plain"
         proj.mkdir()
 
         # Act
