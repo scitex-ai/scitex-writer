@@ -59,13 +59,13 @@ jobs:
 
   test:
     # Fixed guarded shared defining callee (Infrastructure-owned):
-    # writer-release-sif.yml@442f4e5dcd938c0297e36a5f07461d809f9416ff
+    # writer-release-sif.yml@525907ed0d5dbed8186f9ae5deb5665f5216a8ea
     # (central PR #60 merged). Typed inputs per supported-caller-input-map-v1.
     # DAG + AUTHORIZATION PRESERVED: no test executes without release-identity
     # preflight + admission, same as the leaf job this replaces.
     needs: [admission, preflight]
     if: needs.admission.outputs.native_authorized == 'true'
-    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@442f4e5dcd938c0297e36a5f07461d809f9416ff
+    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@525907ed0d5dbed8186f9ae5deb5665f5216a8ea
     with:
       operation: test
       source_commit: ${{ needs.preflight.outputs.commit }}
@@ -80,7 +80,7 @@ jobs:
     # github.sha divergence.
     needs: [admission, preflight, test]
     if: needs.admission.outputs.native_authorized == 'true'
-    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@442f4e5dcd938c0297e36a5f07461d809f9416ff
+    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@525907ed0d5dbed8186f9ae5deb5665f5216a8ea
     with:
       operation: build
       source_commit: ${{ needs.preflight.outputs.commit }}
