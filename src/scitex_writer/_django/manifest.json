@@ -29,6 +29,12 @@
     "python": ["scitex-writer", "django"]
   },
   "mount_policy": {
-    "login_required": true
+    "login_required": true,
+    "touches_files": true,
+    "jail": {
+      "scope": "project",
+      "working_dir_param": "working_dir",
+      "path_params": ["path", "target", "output_file", "pdf"]
+    }
   }
 }

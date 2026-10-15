@@ -40,7 +40,10 @@ classifiers = [
 ]
 dependencies = [
     # Plugin discovery imports SDK metadata even in a base install.
-    "scitex-sdk>=0.3.1",
+    # FLOOR IS 0.3.5: Slice 2 of the leaf migration (CCT 2786) builds on
+    # scitex_sdk.app.jail + validate_mount_policy, and 0.3.5 is the Hub
+    # floor this lane aligns with (verified importable from 0.3.5 here).
+    "scitex-sdk>=0.3.5",
     "click>=8.0",
     "fastmcp>=2.0.0",
     # FLOOR IS 0.48.0: compile diagnostics (_compile/_diagnostics/_report.py)
