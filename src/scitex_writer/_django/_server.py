@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 """Standalone local-dev launcher for the writer editor.
 
-Delegates to `scitex_app._standalone.run_standalone`, which pre-wires
-scitex-ui static assets + the workspace shell so the same local server
-looks like scitex.ai/apps/writer.
+Delegates to `scitex_sdk.app.embed.run_standalone`, which pre-wires
+the SDK workspace shell (static assets + shell chrome) so the same local
+server looks like scitex.ai/apps/writer.
 
 Cloud deployments do NOT use this — they mount `scitex_writer._django.urls`
 into their own Django project.
@@ -101,9 +101,9 @@ def run(
 ) -> None:
     """Launch the Django editor server locally on exactly ``port``.
 
-    Uses `scitex_app.embed.run_standalone` (gets the full workspace shell
-    from scitex-ui). When that import fails, names WHICH failure it was —
-    scitex-app absent, or present but too old to expose `.embed` — and
+    Uses `scitex_sdk.app.embed.run_standalone` (gets the full workspace shell
+    from the SDK). When that import fails, names WHICH failure it was —
+    scitex-sdk absent, or present but too old to expose `.embed` — and
     serves bare Django instead; every other error propagates.
 
     The requested port is bound as given: when it is already in use the
