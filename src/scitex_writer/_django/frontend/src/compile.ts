@@ -42,6 +42,8 @@ interface CompileOptions {
   modeToggleBtn: HTMLElement | null;
   /** Explicit choices share the same controller as the legacy toggle. */
   modeButtons?: HTMLButtonElement[];
+  /** Quiet dropdown replacing the radiogroup (declutter mandate 2026-10-16). */
+  modeSelect?: HTMLSelectElement | null;
   pdf: PDFViewer;
   getDocType: () => string;
   /** Optional observer — Details panel subscribes to live lamp state. */
@@ -74,6 +76,10 @@ export class CompileController {
       this.setLogOpen(false),
     );
     this.opts.modeToggleBtn?.addEventListener("click", () => this.toggleMode());
+    this.opts.modeSelect?.addEventListener("change", () => {
+      const value = this.opts.modeSelect?.value;
+      if (value === "preview" || value === "full") this.selectMode(value);
+    });
     for (const button of this.opts.modeButtons ?? []) {
       button.addEventListener("click", () => {
         const mode = button.dataset.compileMode;
@@ -264,6 +270,10 @@ export class CompileController {
     if (btn) {
       btn.textContent = controlsTranslate(this.mode === "preview" ? "draft" : "full");
       btn.classList.toggle("active-full", this.mode === "full");
+    }
+    if (this.opts.modeSelect) {
+      this.opts.modeSelect.value = this.mode;
+      this.opts.modeSelect.disabled = this.status === "compiling";
     }
     for (const button of this.opts.modeButtons ?? []) {
       const active = button.dataset.compileMode === this.mode;

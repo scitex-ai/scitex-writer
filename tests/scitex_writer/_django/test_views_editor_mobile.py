@@ -372,7 +372,7 @@ def test_the_phone_toolbar_drops_the_controls_the_bar_owns():
     owned_by_the_bar = [
         "#btn-compile",
         "#btn-toggle-log",
-        "#btn-compile-mode",
+        "#compile-mode-select",
     ]
     css = _MOBILE_CSS.read_text(encoding="utf-8")
     # Act
