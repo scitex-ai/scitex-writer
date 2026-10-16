@@ -82,9 +82,12 @@
   --text-muted: #888888;
   --border-color: #d4d0cb;
   --border-light: #e8e5e0;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-bg: #eff6ff;
+  /* SciTeX navy (operator 2026-09-15; stats palette reference): the odd blue
+     (#2563eb) is gone from here. Fallbacks are the raw literals so the
+     header accents survive even where the shared palette is not loaded. */
+  --accent: var(--color-primary, #1a2a40);
+  --accent-hover: var(--color-primary-hover, #243752);
+  --accent-bg: var(--color-primary-subtle, rgba(26, 42, 64, 0.08));
   --danger: #dc2626;
   --success: #16a34a;
   --warning: #d97706;
@@ -125,9 +128,12 @@
   --text-muted: #666666;
   --border-color: #3e3e3e;
   --border-light: #333333;
-  --accent: #4a9eff;
-  --accent-hover: #2d8cf0;
-  --accent-bg: #1a3a5c;
+  /* Dark is black-based (operator mandate): surfaces stay near-black and the
+     accent is scitex gold (light #d4a87a on dark, navy text on it) — never
+     the odd blue (#4a9eff) that lived here before. */
+  --accent: var(--color-primary, #d4a87a);
+  --accent-hover: var(--color-primary-hover, #e0bb93);
+  --accent-bg: var(--color-primary-subtle, rgba(212, 168, 122, 0.14));
   --danger: #f87171;
   --success: #4ade80;
   --warning: #fbbf24;
