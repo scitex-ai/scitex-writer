@@ -28,15 +28,16 @@ import pytest
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(autouse=True)
 def _ensure_runtime_gitignore() -> Iterator[None]:
     """Create the runtime catch-all gitignore the PS-234 §4b rule requires.
 
     The rule demands ``.scitex/writer/runtime/.gitignore`` exist on disk
     with a bare ``*`` AND have no tracked entries under runtime/. A fresh
-    clone has neither, so the file is created here at session start
-    (deterministic test bootstrap, not a source change). Untracked by
-    construction — this never touches the git index.
+    clone has neither, so the file is ensured here (deterministic test
+    bootstrap, not a source change). Function-scoped (not session) per
+    STX-TQ004: the write is idempotent and guarded by ``is_file``.
+    Untracked by construction — this never touches the git index.
     """
     target = _PROJECT_ROOT / ".scitex" / "writer" / "runtime" / ".gitignore"
     target.parent.mkdir(parents=True, exist_ok=True)
