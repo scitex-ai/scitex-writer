@@ -27,6 +27,23 @@ import pytest
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+
+@pytest.fixture(scope="session", autouse=True)
+def _ensure_runtime_gitignore() -> Iterator[None]:
+    """Create the runtime catch-all gitignore the PS-234 §4b rule requires.
+
+    The rule demands ``.scitex/writer/runtime/.gitignore`` exist on disk
+    with a bare ``*`` AND have no tracked entries under runtime/. A fresh
+    clone has neither, so the file is created here at session start
+    (deterministic test bootstrap, not a source change). Untracked by
+    construction — this never touches the git index.
+    """
+    target = _PROJECT_ROOT / ".scitex" / "writer" / "runtime" / ".gitignore"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.is_file():
+        target.write_text("*\n", encoding="utf-8")
+    yield
+
 # Pin coverage's data file at the repo root and point process_startup
 # at our pyproject so child interpreters configure themselves correctly.
 os.environ["COVERAGE_PROCESS_START"] = str(_PROJECT_ROOT / "pyproject.toml")
