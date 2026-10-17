@@ -160,7 +160,7 @@
      from the same fetch. */
   body[data-writer-mobile-pane] #section-tabs,
   body[data-writer-mobile-pane] #btn-compile,
-  body[data-writer-mobile-pane] #btn-compile-mode,
+  body[data-writer-mobile-pane] #compile-mode-select,
   body[data-writer-mobile-pane] #btn-toggle-log,
   body[data-writer-mobile-pane] .current-file {
     display: none;

@@ -156,7 +156,7 @@ def test_a_host_that_renders_its_own_header_gets_no_second_one(project_dir):
         "app_name": "writer",
         "project_dir": str(project_dir),
         "writer_version": _installed_version(),
-        "writer_label": "Writer",
+        "writer_label": "SciTeX Writer",
         "project_picker_available": False,
         "app_header_rendered": True,
     }
@@ -173,6 +173,7 @@ def test_the_header_names_the_app_from_the_manifest(project_dir):
     block = _header_block(_editor_html(project_dir))
     # Assert
     assert f">{label}<" in block
+    assert label == "SciTeX Writer"
 
 
 def test_the_header_precedes_the_toolbar(project_dir):

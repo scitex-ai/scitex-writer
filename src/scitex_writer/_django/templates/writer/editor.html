@@ -84,35 +84,51 @@
             </div>
             <div class="writer-toolbar-center">
                 <span id="word-count" class="word-count">0 words</span>
-                <select id="font-size-select"
-                        class="writer-select writer-select-sm"
-                        title="Font size">
-                    <option value="12">12px</option>
-                    <option value="13">13px</option>
-                    <option value="14" selected>14px</option>
-                    <option value="15">15px</option>
-                    <option value="16">16px</option>
-                    <option value="18">18px</option>
-                    <option value="20">20px</option>
-                </select>
-                <button id="btn-toggle-theme"
-                        class="btn btn-icon"
-                        title="Toggle dark/light mode">
-                    <i class="fas fa-moon"></i>
-                </button>
-                <button id="btn-show-shortcuts"
-                        class="btn btn-icon"
-                        title="Keyboard shortcuts">
-                    <i class="fas fa-keyboard"></i>
-                </button>
+                <details class="writer-toolbar-overflow">
+                    <summary class="btn btn-icon"
+                             title="More display controls"
+                             aria-label="More display controls">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </summary>
+                    <div class="writer-toolbar-overflow-body">
+                        <label class="writer-toolbar-overflow-row">
+                            <span>Font size</span>
+                            <select id="font-size-select"
+                                    class="writer-select writer-select-sm"
+                                    title="Font size">
+                                <option value="12">12px</option>
+                                <option value="13">13px</option>
+                                <option value="14" selected>14px</option>
+                                <option value="15">15px</option>
+                                <option value="16">16px</option>
+                                <option value="18">18px</option>
+                                <option value="20">20px</option>
+                            </select>
+                        </label>
+                        <button id="btn-toggle-theme"
+                                class="btn btn-icon"
+                                title="Toggle dark/light mode">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                        <button id="btn-show-shortcuts"
+                                class="btn btn-icon"
+                                title="Keyboard shortcuts">
+                            <i class="fas fa-keyboard"></i>
+                        </button>
+                    </div>
+                </details>
                 <span id="current-file" class="current-file"></span>
                 <span id="save-status" class="save-status"></span>
             </div>
             <div class="writer-toolbar-right">
                 <span id="compile-lamp" class="writer-lamp lamp-idle" title="Idle"></span>
-                <div class="writer-compile-modes" role="radiogroup" aria-label="Compile mode">
-                    <button type="button" role="radio" aria-checked="true" data-compile-mode="preview">Draft</button>
-                    <button type="button" role="radio" aria-checked="false" tabindex="-1" data-compile-mode="full">Full</button>
+                <div class="writer-compile-modes">
+                    <select id="compile-mode-select"
+                            class="writer-select writer-select-sm"
+                            aria-label="Compile mode">
+                        <option value="preview" selected>Draft</option>
+                        <option value="full">Full</option>
+                    </select>
                 </div>
                 <button id="btn-compile"
                         class="btn btn-primary"
