@@ -19,10 +19,38 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR / "scripts" / "python"))
 
 _SCRIPT = ROOT_DIR / "scripts" / "python" / "check_clew_completeness.py"
+
+
+@pytest.fixture
+def project_without_clew_above(tmp_path):
+    """Sandbox project dir with a host-contamination guard.
+
+    `_resolve_clew_workdir` walks ALL the way to /, so a `.scitex/clew`
+    store ABOVE pytest's tmp base — e.g. a shared runner's own
+    $HOME/.scitex/clew, as seen on one py3.12 leg (resolved to the runner
+    home instead of the sandbox) — breaks the fallback through no fault
+    of the resolver. Guard the premise here (not in the test body:
+    STX-TQ007 counts `pytest.skip` as an assertion construct, so the
+    skip must live outside `test_*` functions). Skip, don't fail: the
+    premise is contaminated, not the code.
+    """
+    root = tmp_path.resolve() / "sandbox"
+    root.mkdir()
+    proj = root / "plain"
+    proj.mkdir()
+    for _ancestor in (proj, *proj.parents):
+        if (_ancestor / ".scitex" / "clew").is_dir():
+            pytest.skip(
+                "host store leaks into the upward walk: "
+                f"{_ancestor}/.scitex/clew"
+            )
+    return proj
 
 from check_clew_completeness import (  # noqa: E402
     _resolve_clew_workdir,
@@ -88,18 +116,18 @@ class TestResolveClewWorkdir:
         # Assert
         assert resolved == repo
 
-    def test_falls_back_to_project_dir_when_no_clew_dir_exists(self, tmp_path):
+    def test_falls_back_to_project_dir_when_no_clew_dir_exists(
+        self, project_without_clew_above
+    ):
         # Arrange: no .scitex/clew anywhere above — nothing to walk up to.
         # Hermetic: _resolve_clew_workdir walks ALL parents to /, so a
         # .scitex/clew store above pytest's tmp base would otherwise leak
-        # in and break the fallback. Build the project under an isolated
-        # root created fresh inside tmp_path: the walk from proj can only
-        # meet real dirs the test itself made, never a store above the
-        # tmp base. No mocks, no Path surgery — plain filesystem.
-        root = tmp_path.resolve() / "sandbox"
-        root.mkdir()
-        proj = root / "plain"
-        proj.mkdir()
+        # in and break the fallback. The fixture builds the project under
+        # an isolated root created fresh inside tmp_path (the walk from
+        # proj can only meet real dirs the test itself made) and skips on
+        # a contaminated host. No mocks, no Path surgery — plain
+        # filesystem.
+        proj = project_without_clew_above
 
         # Act
         resolved = _resolve_clew_workdir(proj)
