@@ -183,6 +183,28 @@ def _no_accidental_fleet_store_writes() -> Iterator[None]:
                 os.environ[key] = previous
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _ensure_runtime_gitignore() -> Iterator[None]:
+    """PS-234: the checkout's own runtime/ dir must carry a catch-all .gitignore.
+
+    Tracked runtime entries are forbidden, so the file cannot arrive via git;
+    and the suite itself writes runtime state (citation-trust caches, GUI
+    state) into the checkout, which would otherwise leave a runtime/ dir
+    with no ignore policy by the time test_audit_all_clean runs. Ensure the
+    mandated `*` file once per session; the file's own catch-all keeps it
+    invisible to `git status`. Missing-only: a present-but-wrong file stays
+    the audit's to flag, loudly.
+    """
+    policy = _PROJECT_ROOT / ".scitex" / "writer" / "runtime" / ".gitignore"
+    try:
+        if not policy.is_file():
+            policy.parent.mkdir(parents=True, exist_ok=True)
+            policy.write_text("*\n", encoding="utf-8")
+    except OSError:
+        pass
+    yield
+
+
 @pytest.fixture()
 def pg_schema(_no_accidental_fleet_store_writes: None) -> Iterator[str]:
     """A throwaway PostgreSQL schema, wired in via `SCITEX_STORE_DSN`.
