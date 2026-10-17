@@ -31,11 +31,14 @@
    Set `app_header_rendered=True` in the template context when a host renders
    its own header and includes this one: editor.html then skips it and the page
    keeps exactly one header.
+
+   The title is `SciTeX Writer` (manifest `label`), matching the Scholar /
+   FigRecipe shape (`<title> + <version>`), never the bare `Writer`.
 {% endcomment %}
 <link rel="stylesheet" href="{% static 'scitex_sdk/ui/css/app/app-header.css' %}">
 <header class="stx-app-header writer-app-header" id="writer-app-header">
     <div class="writer-app-header__identity">
-        <span class="stx-app-header__title writer-app-header__title">{{ writer_label|default:"Writer" }}</span>
+        <span class="stx-app-header__title writer-app-header__title">{{ writer_label|default:"SciTeX Writer" }}</span>
         <span class="stx-app-header__version writer-app-header__version"
               title="scitex-writer package serving this page">v{{ writer_version }}</span>
     </div>
