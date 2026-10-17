@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Header shows the full `SciTeX Writer` title (manifest label), and the editor
+  accent is scitex navy in light mode / scitex gold in dark mode — the odd blue
+  is gone (operator mandate).
+- Editor declutter: Draft/Full is a quiet select, Markup and pen tools are
+  ghost buttons, the centre icon row collapses into an overflow disclosure,
+  and the details inspector starts collapsed on first visit. Compile keeps the
+  one accent.
+
 ### Changed
 
 - The editor header now speaks the shared scitex-ui app-header contract: the row is `.stx-app-header`, the title/version/actions slot carry the canonical class names, and the SDK's `css/app/app-header.css` is loaded by the header partial. Writer's own stylesheet keeps only what the shared sheet does not cover (the identity grouping and the picker control's phone sizing), so the row has one definition instead of two.
