@@ -173,6 +173,13 @@ def test_the_header_names_the_app_from_the_manifest(project_dir):
     block = _header_block(_editor_html(project_dir))
     # Assert
     assert f">{label}<" in block
+
+
+def test_the_manifest_label_is_the_full_product_name():
+    # Arrange: the operator mandate 2026-10-16 names the full product title.
+    # Act
+    label = json.loads(_MANIFEST.read_text(encoding="utf-8"))["label"]
+    # Assert
     assert label == "SciTeX Writer"
 
 
