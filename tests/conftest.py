@@ -183,7 +183,7 @@ def _no_accidental_fleet_store_writes() -> Iterator[None]:
                 os.environ[key] = previous
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(autouse=True)
 def _ensure_runtime_gitignore() -> Iterator[None]:
     """PS-234: the checkout's own runtime/ dir must carry a catch-all .gitignore.
 
@@ -191,7 +191,8 @@ def _ensure_runtime_gitignore() -> Iterator[None]:
     and the suite itself writes runtime state (citation-trust caches, GUI
     state) into the checkout, which would otherwise leave a runtime/ dir
     with no ignore policy by the time test_audit_all_clean runs. Ensure the
-    mandated `*` file once per session; the file's own catch-all keeps it
+    mandated `*` file before each test (function scope: STX-TQ004 forbids
+    writes in session/module fixtures); the file's own catch-all keeps it
     invisible to `git status`. Missing-only: a present-but-wrong file stays
     the audit's to flag, loudly.
     """
