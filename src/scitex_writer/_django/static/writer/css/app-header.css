@@ -1,18 +1,24 @@
 /* Writer's leaf header (templates/writer/_app_header.html).
- *
- * The ROW is the shared one: `.stx-app-header` from scitex-ui
- * (css/app/app-header.css, linked by the partial), which owns the flex layout,
- * the title/version typography, the wrap-at-600px behaviour and the touch
- * minimum for every button/link inside it. This file carries ONLY what the
- * shared sheet does not: writer's identity grouping, and the two phone rules
- * the picker control needs because the shared touch rule targets
- * button/a/[role=button] and the picker's control is a select.
- *
- * Writer's own app actions are deliberately NOT in the header — Compile / Save
- * / Log live in the editor toolbar and, on a phone, in the bottom action bar,
- * which already own their state; a second set here would be a second source of
- * truth for the same buttons.
- */
+
+The ROW is the shared one: `.stx-app-header` from scitex-ui
+(css/app/app-header.css, linked by the partial), which owns the flex layout,
+the title/version typography, the wrap-at-600px behaviour and the touch
+minimum for every button/link inside it. This file carries ONLY what the
+shared sheet does not cover: writer's identity grouping, and the two phone rules
+the picker control needs because the shared touch rule targets
+button/a/[role=button] and the picker's control is a select.
+
+Writer's app actions are deliberately NOT in the header — Compile / Save
+/ Log live in the editor toolbar and, on a phone, in the bottom action bar,
+which already own their state; a second set here would be a second source of
+truth for the same buttons.
+
+The title + accent follow the operator mandate 2026-10-16 (same shape as
+Scholar / FigRecipe, stats palette as reference): the title is the full
+`SciTeX Writer`, and the accent is scitex navy in light mode / scitex gold
+in dark mode — never the odd blue (#2563eb / #4a9eff) the editor palette
+used to carry here.
+*/
 
 /* Title and version sit on one baseline; the shared sheet styles each span,
    not their shared line. */

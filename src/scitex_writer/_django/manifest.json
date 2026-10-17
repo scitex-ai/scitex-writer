@@ -1,7 +1,7 @@
 {
   "name": "writer_app",
   "slug": "writer",
-  "label": "Writer",
+  "label": "SciTeX Writer",
   "scope": "project",
   "pip_package": "scitex-writer",
   "icon": "fas fa-file-alt",

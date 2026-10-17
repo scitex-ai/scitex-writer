@@ -38,12 +38,26 @@
 .annot-modes .annot-btn {
   font-size: 12px;
 }
+/* Declutter mandate 2026-10-16: mode + pen buttons are ghost — borderless,
+   transparent, no accent fill. The active state is a quiet text/border cue,
+   never the filled accent pill. Compile keeps the ONE accent. */
+.annot-toolbar .annot-btn {
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.annot-toolbar .annot-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
 .annot-btn.active {
-  background: var(--accent);
-  color: #fff;
+  background: transparent;
+  color: var(--text-primary);
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 .annot-btn.active:hover {
-  color: #fff;
+  color: var(--text-primary);
+  background: var(--hover-bg);
 }
 .annot-clear {
   margin-left: auto;

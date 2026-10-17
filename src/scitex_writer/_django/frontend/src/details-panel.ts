@@ -57,7 +57,10 @@ export class DetailsPanel {
     this.container = container;
     this.onJumpToLocation = options.onJumpToLocation;
     this.onJumpToPage = options.onJumpToPage;
-    this.open = this.loadOpenState();
+    // Declutter mandate 2026-10-16: the right inspector starts collapsed
+    // (first visit) so the editor/PDF own the width. A stored preference
+    // still wins — collapsing by default is not resetting the user.
+    this.open = this.loadOpenState(true);
     this.render();
     // Automatic project-dependent loads run only with a declared project
     // (api.ts PROJECT_DIR from the shell dataset). The pane itself always
@@ -341,10 +344,14 @@ export class DetailsPanel {
       });
   }
 
-  private loadOpenState(): Set<SectionId> {
+  private loadOpenState(firstVisitCollapsed = false): Set<SectionId> {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return new Set(["compile-preview", "project"]);
+      if (!raw) {
+        // Declutter mandate 2026-10-16: first visit starts collapsed so the
+        // editor/PDF own the width; a stored preference still wins.
+        return firstVisitCollapsed ? new Set() : new Set(["compile-preview", "project"]);
+      }
       return new Set(JSON.parse(raw));
     } catch {
       return new Set(["hints", "compile-preview", "project"]);

@@ -26,9 +26,10 @@
   .writer-toolbar-right {
     margin-left: auto;
   }
-  /* Keyboard-only controls earn no row space on a touch screen. */
-  #font-size-select,
-  #btn-show-shortcuts,
+  /* Keyboard-only controls earn no row space on a touch screen. They now live
+     inside the overflow disclosure, so hiding the whole disclosure hides them
+     together instead of naming each control. */
+  .writer-toolbar-overflow,
   .current-file {
     display: none;
   }

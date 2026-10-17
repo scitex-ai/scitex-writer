@@ -153,6 +153,7 @@ async function bootstrap(): Promise<void> {
         compileBtn: root.querySelector<HTMLElement>("#btn-compile"),
         modeToggleBtn: root.querySelector<HTMLElement>("#btn-compile-mode"),
         modeButtons: Array.from(root.querySelectorAll<HTMLButtonElement>("[data-compile-mode]")),
+        modeSelect: root.querySelector<HTMLSelectElement>("#compile-mode-select"),
         pdf,
         getDocType: () =>
           root.querySelector<HTMLSelectElement>("#doc-type-select")?.value ||
