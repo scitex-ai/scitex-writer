@@ -658,6 +658,40 @@ def test_standalone_local_file_save_requires_session_csrf_accepts_valid_csrf(mou
         assert client.post(url, payload, content_type='application/json', HTTP_X_CSRFTOKEN=client.cookies['csrftoken'].value).status_code == 200
 
 
+def test_grantless_user_reads_page_while_compile_is_refused_loads_page(mounted):
+    # Arrange: pytest fixtures and local setup.
+    client, storage, _, _ = mounted
+    storage.writable = False
+    # Act: exercise the real scenario.
+    response = client.get('/plugin/writer/?project=owned', HTTP_AUDIT_SESSION='synthetic')
+    # Assert
+    assert response.status_code == 200
+
+
+def test_grantless_user_reads_page_while_compile_is_refused_refuses_compile(mounted):
+    # Arrange: pytest fixtures and local setup.
+    client, storage, _, _ = mounted
+    csrf = token(client)
+    services._project_cache.clear()
+    storage.writable = False
+    # Act: exercise the real scenario.
+    response = client.post('/plugin/writer/api/compile?project=owned', {'doc_type': 'manuscript'}, content_type='application/json', HTTP_AUDIT_SESSION='synthetic', HTTP_X_CSRFTOKEN=csrf)
+    # Assert
+    assert response.status_code == 403
+
+
+def test_grantless_user_compile_refusal_names_write_access(mounted):
+    # Arrange: pytest fixtures and local setup.
+    client, storage, _, _ = mounted
+    csrf = token(client)
+    services._project_cache.clear()
+    storage.writable = False
+    # Act: exercise the real scenario.
+    response = client.post('/plugin/writer/api/compile?project=owned', {'doc_type': 'manuscript'}, content_type='application/json', HTTP_AUDIT_SESSION='synthetic', HTTP_X_CSRFTOKEN=csrf)
+    # Assert
+    assert response.json() == {"error": "Write access required"}
+
+
 def test_standalone_local_file_save_requires_session_csrf_writes_authorized_file(mounted):
     # Arrange: pytest fixtures and local setup.
     _, _, _, local = mounted
