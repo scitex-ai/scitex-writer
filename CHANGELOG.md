@@ -30,6 +30,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Vendored shell completion as a drop-in module (contract v1) (#435).
+## [2.43.11] - 2026-10-17
+
+### Added
+
+- Leaf migration Slices 1+2: SDK-only Django running, jail declaration
+  (CCT 2786) — content requests keep project access and CSRF checks.
+- Release pipeline pins the writer-release-sif to the qualified ci-cpu
+  image with prebuilt venvs.
+
+### Fixed
+
+- Runtime state stays local-only: `.gitkeep`/README untracked, star
+  gitignore with no exceptions, session fixture ensures the runtime
+  gitignore (PS-234), function-scoped fixture isolation (STX-TQ004).
+- One assertion per test in the header title pin (STX-TQ007).
+
+## [2.43.10] - 2026-10-03
+
+### Fixed
+
+- Show Hints once inside the Details panel's Compilation group alongside Draft and Full, preserving hint callbacks and document state.
+- Declare the pytest-testmon prerequisite used by the canonical pre-push gate and isolate archive-pipeline fixtures from inherited Git environment variables.
+
+### Added
+
+- Expose a guarded, leaf-owned Writer workspace renderer and v2 routes for generic SDK hosts. Content requests retain project access and CSRF checks without changing navigation's selected project.
 
 ## [2.43.9] - 2026-10-03
 

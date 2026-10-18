@@ -12,6 +12,19 @@ app_name = "writer"
 urlpatterns = [
     path("", views.editor_page, name="editor"),
     path("viewer/", views.viewer_page, name="viewer"),
+    path("editor-v2/", views.editor_v2_page, name="writer_v2_editor"),
+    path("viewer-v2/", views.viewer_v2_page, name="writer_v2_viewer"),
+    path(
+        "v2/api/project/<int:project_id>/section/<path:section_name>/",
+        section_content,
+        name="writer_v2_api_section",
+    ),
+    path(
+        "v2/api/project/<int:project_id>/manuscript-status/",
+        manuscript_status,
+        name="writer_v2_api_manuscript_status",
+    ),
+    path("v2/<path:endpoint>", views.api_dispatch, name="writer_v2_api"),
     path(
         "api/project/<int:project_id>/section/<path:section_name>/",
         section_content,
