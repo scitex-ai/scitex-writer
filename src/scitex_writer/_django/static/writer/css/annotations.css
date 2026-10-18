@@ -118,6 +118,10 @@
 }
 .annot-row[data-category="highlight"] {
   --annot-accent: #eab308;
+  /* Operator CCT4372 (mono/square direction, same as Cards CCT4368):
+     highlight cards go straight/square while every other category keeps
+     the base rounding. */
+  border-radius: 0;
 }
 .annot-row-head {
   display: flex;
