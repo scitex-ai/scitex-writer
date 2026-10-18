@@ -263,8 +263,20 @@ class TestDocumentBuilder:
         assert monaco_pos > begin_pos
 
 
+def _has_latex_package(sty: str) -> bool:
+    """True iff kpsewhich resolves the .sty (host TeX set varies by runner)."""
+    try:
+        proc = subprocess.run(
+            ["kpsewhich", sty], capture_output=True, text=True, timeout=30
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return proc.returncode == 0 and bool(proc.stdout.strip())
+
+
 _REQUIRES_LATEXMK = pytest.mark.skipif(
-    shutil.which("latexmk") is None, reason="latexmk not available"
+    shutil.which("latexmk") is None or not _has_latex_package("pagecolor.sty"),
+    reason="latexmk or the pagecolor.sty TeX package not available",
 )
 
 

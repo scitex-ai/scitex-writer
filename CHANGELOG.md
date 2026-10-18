@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.12] - 2026-10-18
+
 ### Fixed
 
 - Header shows the full `SciTeX Writer` title (manifest label), and the editor
@@ -16,12 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ghost buttons, the centre icon row collapses into an overflow disclosure,
   and the details inspector starts collapsed on first visit. Compile keeps the
   one accent.
+- Compile button goes monochrome, off the gold accent (#448).
+- Highlight annotation cards go square (CCT4372) (#449).
+- Overleaf extraction root resolves when TMPDIR is a symlink (#447).
 
 ### Changed
 
 - The editor header now speaks the shared scitex-ui app-header contract: the row is `.stx-app-header`, the title/version/actions slot carry the canonical class names, and the SDK's `css/app/app-header.css` is loaded by the header partial. Writer's own stylesheet keeps only what the shared sheet does not cover (the identity grouping and the picker control's phone sizing), so the row has one definition instead of two.
 - The vendored scripts read their project root from `SCITEX_WRITER_PROJECT_ROOT` (fleet convention) instead of the unprefixed `PROJECT_ROOT`, and the scitex-dev §6a exemption in `pyproject.toml` is gone with it. The old name is still honoured for one migration cycle — a workspace that exports it keeps compiling — but never silently: reading it prints a warning naming the replacement. `manage_builds --help` now names the new variable too.
 
+### Added
+
+- Vendored shell completion as a drop-in module (contract v1) (#435).
 ## [2.43.11] - 2026-10-17
 
 ### Added

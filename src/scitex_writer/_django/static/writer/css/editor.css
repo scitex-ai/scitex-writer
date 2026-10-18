@@ -88,6 +88,11 @@
   --accent: var(--color-primary, #1a2a40);
   --accent-hover: var(--color-primary-hover, #243752);
   --accent-bg: var(--color-primary-subtle, rgba(26, 42, 64, 0.08));
+  /* Compile is the primary action: monochrome (operator 2026-10-17), kept
+     out of the accent so the button never picks up a tint. */
+  --compile-bg: #1a1a1a;
+  --compile-hover: #333333;
+  --compile-text: #ffffff;
   --danger: #dc2626;
   --success: #16a34a;
   --warning: #d97706;
@@ -134,6 +139,11 @@
   --accent: var(--color-primary, #d4a87a);
   --accent-hover: var(--color-primary-hover, #e0bb93);
   --accent-bg: var(--color-primary-subtle, rgba(212, 168, 122, 0.14));
+  /* Compile stays monochrome in dark too (operator 2026-10-17): near-white
+     button, near-black text — never the gold accent. */
+  --compile-bg: #f0f0f0;
+  --compile-hover: #ffffff;
+  --compile-text: #1a1a1a;
   --danger: #f87171;
   --success: #4ade80;
   --warning: #fbbf24;
@@ -384,6 +394,21 @@
 .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+/* Compile buttons (desktop #btn-compile + mobile #btn-mobile-compile):
+   monochrome primary action (operator 2026-10-17, mono-unification
+   direction). ID selectors outrank .btn-primary, so Compile is decoupled
+   from the gold/navy accent while every other primary button keeps it. */
+#btn-compile,
+#btn-mobile-compile {
+  background: var(--compile-bg);
+  border-color: var(--compile-bg);
+  color: var(--compile-text);
+}
+#btn-compile:hover,
+#btn-mobile-compile:hover {
+  background: var(--compile-hover);
+  border-color: var(--compile-hover);
 }
 .btn-secondary {
   background: var(--bg-tertiary);
