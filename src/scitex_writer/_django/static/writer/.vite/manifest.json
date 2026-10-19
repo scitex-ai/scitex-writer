@@ -1,14 +1,4 @@
 {
-  "_claims-list.js": {
-    "file": "assets/claims-list.js",
-    "name": "claims-list",
-    "dynamicImports": [
-      "node_modules/pdfjs-dist/build/pdf.mjs"
-    ],
-    "assets": [
-      "assets/pdf.worker.min.mjs"
-    ]
-  },
   "_monaco-base.js": {
     "file": "assets/monaco-base.js",
     "name": "monaco-base",
@@ -22,6 +12,16 @@
   "_nls.js": {
     "file": "assets/nls.js",
     "name": "nls"
+  },
+  "_pdf-menu.js": {
+    "file": "assets/pdf-menu.js",
+    "name": "pdf-menu",
+    "dynamicImports": [
+      "node_modules/pdfjs-dist/build/pdf.mjs"
+    ],
+    "assets": [
+      "assets/pdf.worker.min.mjs"
+    ]
   },
   "node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.ttf": {
     "file": "assets/codicon.ttf",
@@ -144,7 +144,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/fsharp/fsharp.js": {
@@ -174,7 +174,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/hcl/hcl.js": {
@@ -192,7 +192,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/ini/ini.js": {
@@ -217,7 +217,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/julia/julia.js": {
@@ -253,7 +253,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/lua/lua.js": {
@@ -283,7 +283,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/mips/mips.js": {
@@ -385,7 +385,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/qsharp/qsharp.js": {
@@ -409,7 +409,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/redis/redis.js": {
@@ -535,7 +535,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/vb/vb.js": {
@@ -559,7 +559,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/yaml/yaml.js": {
@@ -571,7 +571,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/language/css/cssMode.js": {
@@ -583,7 +583,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/language/html/htmlMode.js": {
@@ -595,7 +595,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/language/json/jsonMode.js": {
@@ -607,7 +607,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/language/typescript/tsMode.js": {
@@ -619,7 +619,7 @@
       "src/index.ts",
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/min/vs/base/browser/ui/codicons/codicon/codicon.ttf": {
@@ -644,7 +644,7 @@
     "imports": [
       "_monaco-base.js",
       "_nls.js",
-      "_claims-list.js"
+      "_pdf-menu.js"
     ],
     "dynamicImports": [
       "node_modules/monaco-editor/esm/vs/basic-languages/abap/abap.js",
@@ -750,7 +750,7 @@
     "src": "src/viewer.ts",
     "isEntry": true,
     "imports": [
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
   },
   "style.css": {

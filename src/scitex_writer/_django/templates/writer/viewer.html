@@ -69,15 +69,22 @@
                         <button class="preview-tab" data-view="dag">DAG</button>
                     </div>
                     <div class="preview-actions">
-                        <button id="btn-pdf-zoom-out" class="btn btn-icon btn-sm" title="Zoom out">
-                            <i class="fas fa-search-minus"></i>
-                        </button>
-                        <button id="btn-pdf-fit" class="btn btn-icon btn-sm" title="Fit width">
-                            <i class="fas fa-arrows-alt-h"></i>
-                        </button>
-                        <button id="btn-pdf-zoom-in" class="btn btn-icon btn-sm" title="Zoom in">
-                            <i class="fas fa-search-plus"></i>
-                        </button>
+                        <div class="pdf-menu">
+                            <button id="btn-pdf-menu" class="btn btn-icon btn-sm" title="PDF options" aria-haspopup="menu" aria-expanded="false" aria-controls="pdf-menu-list">
+                                <i class="fas fa-bars"></i>
+                            </button>
+                            <div class="pdf-menu-list u-hidden" id="pdf-menu-list" role="menu">
+                                <button id="btn-pdf-zoom-out" class="btn btn-sm pdf-menu-item" role="menuitem" title="Zoom out (Ctrl+-)">
+                                    <i class="fas fa-search-minus"></i><span>Zoom out</span><kbd>Ctrl+-</kbd>
+                                </button>
+                                <button id="btn-pdf-fit" class="btn btn-sm pdf-menu-item" role="menuitem" title="Fit width (Ctrl+0)">
+                                    <i class="fas fa-arrows-alt-h"></i><span>Fit width</span><kbd>Ctrl+0</kbd>
+                                </button>
+                                <button id="btn-pdf-zoom-in" class="btn btn-sm pdf-menu-item" role="menuitem" title="Zoom in (Ctrl+=)">
+                                    <i class="fas fa-search-plus"></i><span>Zoom in</span><kbd>Ctrl+=</kbd>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="preview-content" id="preview-content">

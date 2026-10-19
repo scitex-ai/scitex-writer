@@ -12,6 +12,7 @@ import {
   renderDagFor,
 } from "./claims-list";
 import { PDFViewer } from "./pdf-viewer";
+import { mountPdfMenu } from "./pdf-menu";
 
 declare global {
   interface Window {
@@ -44,6 +45,7 @@ async function bootstrap(): Promise<void> {
   });
 
   wirePdfControls(root, pdf);
+  mountPdfMenu(root);
   wireTabs(root);
 
   const claimsList = root.querySelector<HTMLElement>("#viewer-claims-list");

@@ -190,6 +190,12 @@ export class DetailsPanel {
           <div class="details-row"><kbd>Ctrl</kbd>+<kbd>S</kbd><span>Save current section</span></div>
           <div class="details-row"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd><span>Compile</span></div>
           <div class="details-row"><kbd>Esc</kbd><span>Close open panel</span></div>
+          <div class="details-row"><kbd>Ctrl</kbd>+<kbd>=</kbd><span>PDF zoom in</span></div>
+          <div class="details-row"><kbd>Ctrl</kbd>+<kbd>-</kbd><span>PDF zoom out</span></div>
+          <div class="details-row"><kbd>Ctrl</kbd>+<kbd>0</kbd><span>PDF fit width</span></div>
+          <div class="details-row"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd><span>Refresh PDF</span></div>
+          <div class="details-row"><kbd>Alt</kbd>+<kbd>T</kbd><span>Cycle PDF theme</span></div>
+          <div class="details-row"><kbd>Alt</kbd>+<kbd>D</kbd><span>Download PDF</span></div>
         `,
       },
     ];

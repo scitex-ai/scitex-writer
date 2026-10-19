@@ -23,6 +23,7 @@ import { DetailsPanel } from "./details-panel";
 import { controlsTranslate } from "./controls-i18n";
 import { registerCiteProviders } from "./cite-completion";
 import { ClaimsTab } from "./claims-tab";
+import { mountPdfMenu } from "./pdf-menu";
 import {
   cyclePdfThemeMode,
   getPdfThemeMode,
@@ -250,7 +251,7 @@ async function bootstrap(): Promise<void> {
       const mode = getPdfThemeMode();
       const icon = pdfThemeBtn.querySelector<HTMLElement>("i");
       if (icon) icon.className = `fas ${pdfThemeIcon(mode)}`;
-      pdfThemeBtn.setAttribute("title", pdfThemeLabel(mode));
+      pdfThemeBtn.setAttribute("title", `${pdfThemeLabel(mode)} (Alt+T)`);
     };
     syncBtn();
     pdfThemeBtn.addEventListener("click", () => {
@@ -258,6 +259,9 @@ async function bootstrap(): Promise<void> {
       syncBtn();
     });
   }
+
+  // CCT4485: PDF ops live in the hamburger menu; shortcuts work globally.
+  mountPdfMenu(root);
 
   // silence unused warnings until richer use later
   void compile;
