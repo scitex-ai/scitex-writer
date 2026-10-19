@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.13] - 2026-10-19
+
+### Changed
+
+- Editor preview and viewer PDF toolbar buttons collapse into one hamburger
+  menu (`#btn-pdf-menu`) with per-item shortcuts; op button IDs unchanged
+  (CCT4485) (#454).
+
 ## [2.43.12] - 2026-10-18
 
 ### Fixed
