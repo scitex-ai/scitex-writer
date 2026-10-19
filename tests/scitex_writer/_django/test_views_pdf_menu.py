@@ -8,9 +8,14 @@ The six small PDF op icons collapse into one ``#btn-pdf-menu`` hamburger;
 every op keeps its button ID (existing action wiring untouched) and gains a
 keyboard shortcut, listed both on the menu item (``<kbd>``) and in
 Details > Shortcuts. The viewer carries the three zoom/fit ops only.
+
+STX-TQ007: one assertion per test (see 3af127ed) — membership checks are
+split into one test per op / hint rather than loops with asserts.
 """
 
 from __future__ import annotations
+
+import pytest
 
 import tempfile
 from pathlib import Path
@@ -24,76 +29,126 @@ _TEMPLATES = _DJANGO_DIR / "templates" / "writer"
 _FRONTEND_SRC = _DJANGO_DIR / "frontend" / "src"
 _EDITOR_CSS = _DJANGO_DIR / "static" / "writer" / "css" / "editor.css"
 
-_EDITOR_OPS = [
-    "btn-pdf-zoom-out",
-    "btn-pdf-fit",
-    "btn-pdf-zoom-in",
-    "btn-refresh-pdf",
-    "btn-pdf-theme",
-    "btn-pdf-download",
-]
-_VIEWER_OPS = ["btn-pdf-zoom-out", "btn-pdf-fit", "btn-pdf-zoom-in"]
-
 
 def _template(name: str) -> str:
     # Arrange
     return (_TEMPLATES / name).read_text(encoding="utf-8")
 
 
-def test_editor_preview_actions_have_one_hamburger_not_six_icons():
-    # Arrange
-    markup = _template("editor.html")
+@pytest.fixture
+def editor_markup() -> str:
+    # Arrange: the editor template on disk.
+    # Act: exercise the real markup.
+    return _template("editor.html")
+
+
+@pytest.fixture
+def viewer_markup() -> str:
+    # Arrange: the viewer template on disk.
+    # Act: exercise the real markup.
+    return _template("viewer.html")
+
+
+def test_editor_preview_actions_have_the_hamburger(editor_markup):
+    # Arrange (fixture builds the editor markup)
     # Act
     # Assert
-    assert 'id="btn-pdf-menu"' in markup
-    assert 'id="pdf-menu-list"' in markup
-    for op in _EDITOR_OPS:
-        assert f'id="{op}"' in markup, f"menu must keep #{op}"
+    assert 'id="btn-pdf-menu"' in editor_markup
 
 
-def test_editor_menu_items_carry_shortcut_hints():
-    # Arrange
-    markup = _template("editor.html")
+def test_editor_menu_has_the_menu_list(editor_markup):
+    # Arrange (fixture builds the editor markup)
     # Act
     # Assert
-    for hint in ("Ctrl+-", "Ctrl+0", "Ctrl+=", "Ctrl+Shift+R", "Alt+T", "Alt+D"):
-        assert hint in markup, f"menu must show {hint}"
+    assert 'id="pdf-menu-list"' in editor_markup
 
 
-def test_viewer_menu_has_zoom_ops_only():
-    # Arrange
-    markup = _template("viewer.html")
+@pytest.mark.parametrize("op", ["btn-pdf-zoom-out", "btn-pdf-fit", "btn-pdf-zoom-in", "btn-refresh-pdf", "btn-pdf-theme", "btn-pdf-download"])
+def test_editor_menu_keeps_op_button_id(editor_markup, op):
+    # Arrange (fixture builds the editor markup)
     # Act
     # Assert
-    assert 'id="btn-pdf-menu"' in markup
-    for op in _VIEWER_OPS:
-        assert f'id="{op}"' in markup, f"viewer menu must keep #{op}"
-    for op in ("btn-refresh-pdf", "btn-pdf-theme", "btn-pdf-download"):
-        assert f'id="{op}"' not in markup
+    assert f'id="{op}"' in editor_markup
 
 
-def test_pdf_menu_styles_exist():
+@pytest.mark.parametrize("hint", ["Ctrl+-", "Ctrl+0", "Ctrl+=", "Ctrl+Shift+R", "Alt+T", "Alt+D"])
+def test_editor_menu_item_shows_shortcut_hint(editor_markup, hint):
+    # Arrange (fixture builds the editor markup)
+    # Act
+    # Assert
+    assert hint in editor_markup
+
+
+def test_viewer_menu_has_the_hamburger(viewer_markup):
+    # Arrange (fixture builds the viewer markup)
+    # Act
+    # Assert
+    assert 'id="btn-pdf-menu"' in viewer_markup
+
+
+@pytest.mark.parametrize("op", ["btn-pdf-zoom-out", "btn-pdf-fit", "btn-pdf-zoom-in"])
+def test_viewer_menu_keeps_zoom_op_button_id(viewer_markup, op):
+    # Arrange (fixture builds the viewer markup)
+    # Act
+    # Assert
+    assert f'id="{op}"' in viewer_markup
+
+
+@pytest.mark.parametrize("op", ["btn-refresh-pdf", "btn-pdf-theme", "btn-pdf-download"])
+def test_viewer_menu_omits_editor_only_op(op, viewer_markup):
+    # Arrange (fixture builds the viewer markup)
+    # Act
+    # Assert
+    assert f'id="{op}"' not in viewer_markup
+
+
+def test_pdf_menu_list_styles_exist():
     # Arrange
     css = _EDITOR_CSS.read_text(encoding="utf-8")
     # Act
     # Assert
     assert ".pdf-menu-list" in css
+
+
+def test_pdf_menu_item_styles_exist():
+    # Arrange
+    css = _EDITOR_CSS.read_text(encoding="utf-8")
+    # Act
+    # Assert
     assert ".pdf-menu-item" in css
 
 
-def test_pdf_menu_module_is_shared_by_editor_and_viewer():
+def test_pdf_menu_module_exports_mount():
     # Arrange
     module = (_FRONTEND_SRC / "pdf-menu.ts").read_text(encoding="utf-8")
-    index = (_FRONTEND_SRC / "index.ts").read_text(encoding="utf-8")
-    viewer = (_FRONTEND_SRC / "viewer.ts").read_text(encoding="utf-8")
-    details = (_FRONTEND_SRC / "details-panel.ts").read_text(encoding="utf-8")
     # Act
     # Assert
     assert "export function mountPdfMenu" in module
+
+
+def test_editor_entry_mounts_pdf_menu():
+    # Arrange
+    index = (_FRONTEND_SRC / "index.ts").read_text(encoding="utf-8")
+    # Act
+    # Assert
     assert "mountPdfMenu(root)" in index
+
+
+def test_viewer_entry_mounts_pdf_menu():
+    # Arrange
+    viewer = (_FRONTEND_SRC / "viewer.ts").read_text(encoding="utf-8")
+    # Act
+    # Assert
     assert "mountPdfMenu(root)" in viewer
-    for hint in ("PDF zoom in", "PDF fit width", "Refresh PDF", "Cycle PDF theme", "Download PDF"):
-        assert hint in details, f"Shortcuts must list {hint}"
+
+
+@pytest.mark.parametrize("hint", ["PDF zoom in", "PDF fit width", "Refresh PDF", "Cycle PDF theme", "Download PDF"])
+def test_details_shortcuts_list_pdf_shortcut(hint):
+    # Arrange
+    details = (_FRONTEND_SRC / "details-panel.ts").read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert hint in details
 
 
 def _editor_html(project_dir) -> str:
@@ -101,17 +156,31 @@ def _editor_html(project_dir) -> str:
     return views.editor_page(request).content.decode()
 
 
-def test_served_editor_page_renders_the_hamburger():
+def test_served_editor_page_renders_the_hamburger_trigger():
     # Arrange
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "01_manuscript" / "contents").mkdir(parents=True)
         (root / "01_manuscript" / "contents" / "abstract.tex").write_text(
-            "\\begin{abstract}x\\end{abstract}\n", encoding="utf-8"
+            "\\\\begin{abstract}x\\\\end{abstract}\\n", encoding="utf-8"
         )
         (root / "00_shared").mkdir()
         # Act
         html = _editor_html(root)
     # Assert
     assert 'id="btn-pdf-menu"' in html
+
+
+def test_served_editor_page_renders_the_menu_list():
+    # Arrange
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "01_manuscript" / "contents").mkdir(parents=True)
+        (root / "01_manuscript" / "contents" / "abstract.tex").write_text(
+            "\\\\begin{abstract}x\\\\end{abstract}\\n", encoding="utf-8"
+        )
+        (root / "00_shared").mkdir()
+        # Act
+        html = _editor_html(root)
+    # Assert
     assert 'id="pdf-menu-list"' in html
