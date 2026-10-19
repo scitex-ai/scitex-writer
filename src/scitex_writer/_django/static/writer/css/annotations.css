@@ -40,9 +40,15 @@
 }
 /* Declutter mandate 2026-10-16: mode + pen buttons are ghost — borderless,
    transparent, no accent fill. The active state is a quiet text/border cue,
-   never the filled accent pill. Compile keeps the ONE accent. */
+   never the filled accent pill. Compile keeps the ONE accent.
+   CCT4700 (HARD NO on rounded active highlights): the active indicator is a
+   straight underline drawn with border-bottom — box-shadow is forbidden here
+   because a shadowed box reads as a rounded pill, and border-radius is
+   forbidden on any active annot button for the same reason. */
 .annot-toolbar .annot-btn {
   border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   background: transparent;
   color: var(--text-secondary);
 }
@@ -53,7 +59,8 @@
 .annot-btn.active {
   background: transparent;
   color: var(--text-primary);
-  box-shadow: inset 0 -2px 0 var(--accent);
+  border-bottom-color: var(--accent);
+  border-radius: 0;
 }
 .annot-btn.active:hover {
   color: var(--text-primary);
