@@ -184,28 +184,35 @@
                         <button class="preview-tab" data-view="claims">Claims</button>
                     </div>
                     <div class="preview-actions">
-                        <button id="btn-pdf-zoom-out" class="btn btn-icon btn-sm" title="Zoom out">
-                            <i class="fas fa-search-minus"></i>
-                        </button>
-                        <button id="btn-pdf-fit" class="btn btn-icon btn-sm" title="Fit width">
-                            <i class="fas fa-arrows-alt-h"></i>
-                        </button>
-                        <button id="btn-pdf-zoom-in" class="btn btn-icon btn-sm" title="Zoom in">
-                            <i class="fas fa-search-plus"></i>
-                        </button>
-                        <button id="btn-refresh-pdf" class="btn btn-icon btn-sm" title="Refresh PDF">
-                            <i class="fas fa-sync"></i>
-                        </button>
-                        <button id="btn-pdf-theme"
-                                class="btn btn-icon btn-sm"
-                                title="PDF theme (auto / light / dark)">
-                            <i class="fas fa-circle-half-stroke"></i>
-                        </button>
-                        <button id="btn-pdf-download"
-                                class="btn btn-icon btn-sm"
-                                title="Download PDF">
-                            <i class="fas fa-download"></i>
-                        </button>
+                        <div class="pdf-menu">
+                            <button id="btn-pdf-menu" class="btn btn-icon btn-sm" title="PDF options" aria-haspopup="menu" aria-expanded="false" aria-controls="pdf-menu-list">
+                                <i class="fas fa-bars"></i>
+                            </button>
+                            <div class="pdf-menu-list u-hidden" id="pdf-menu-list" role="menu">
+                                <button id="btn-pdf-zoom-out" class="btn btn-sm pdf-menu-item" role="menuitem" title="Zoom out (Ctrl+-)">
+                                    <i class="fas fa-search-minus"></i><span>Zoom out</span><kbd>Ctrl+-</kbd>
+                                </button>
+                                <button id="btn-pdf-fit" class="btn btn-sm pdf-menu-item" role="menuitem" title="Fit width (Ctrl+0)">
+                                    <i class="fas fa-arrows-alt-h"></i><span>Fit width</span><kbd>Ctrl+0</kbd>
+                                </button>
+                                <button id="btn-pdf-zoom-in" class="btn btn-sm pdf-menu-item" role="menuitem" title="Zoom in (Ctrl+=)">
+                                    <i class="fas fa-search-plus"></i><span>Zoom in</span><kbd>Ctrl+=</kbd>
+                                </button>
+                                <button id="btn-refresh-pdf" class="btn btn-sm pdf-menu-item" role="menuitem" title="Refresh PDF (Ctrl+Shift+R)">
+                                    <i class="fas fa-sync"></i><span>Refresh</span><kbd>Ctrl+Shift+R</kbd>
+                                </button>
+                                <button id="btn-pdf-theme"
+                                        class="btn btn-sm pdf-menu-item" role="menuitem"
+                                        title="PDF theme (Alt+T)">
+                                    <i class="fas fa-circle-half-stroke"></i><span>PDF theme</span><kbd>Alt+T</kbd>
+                                </button>
+                                <button id="btn-pdf-download"
+                                        class="btn btn-sm pdf-menu-item" role="menuitem"
+                                        title="Download PDF (Alt+D)">
+                                    <i class="fas fa-download"></i><span>Download</span><kbd>Alt+D</kbd>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="preview-content" id="preview-content">
