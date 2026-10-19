@@ -606,6 +606,61 @@ select:focus {
   font-weight: 600;
 }
 
+/* PDF options hamburger menu (CCT4485): the six small op icons collapse into
+   one hamburger; the menu lists each op with its shortcut. Anchored to the
+   preview header so it floats above the PDF pane in both themes. */
+.pdf-menu {
+  position: relative;
+}
+.pdf-menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.pdf-menu-item {
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+.pdf-menu-item:hover {
+  background: var(--hover-bg);
+}
+.pdf-menu-item i {
+  width: 16px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.pdf-menu-item span {
+  flex: 1;
+  text-align: left;
+}
+.pdf-menu-item kbd {
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
 /* PDF */
 .pdf-container {
   height: 100%;
