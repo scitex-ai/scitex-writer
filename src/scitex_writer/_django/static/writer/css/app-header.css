@@ -29,6 +29,17 @@ used to carry here.
   min-width: 0;
 }
 
+/* CCT4715 size standard: FigRecipe 45px header is the reference. The shared
+   row's min-height is 40px; writer pins its own row to the 45px standard
+   here (leaf-owned, same pattern as the identity grouping above) so the
+   reference does not depend on SDK release timing. Padding stays 4px — the
+   5px delta is row height, all of it usable content space. Specificity:
+   #writer-app-header (1,0,0) beats the shared .stx-app-header (0,1,0)
+   regardless of stylesheet order. */
+#writer-app-header {
+  min-height: 45px;
+}
+
 @media (max-width: 768px) {
   /* The identity takes the first row on its own, so the selector wraps under
      it exactly as the shared sheet lays out at 600px. */
