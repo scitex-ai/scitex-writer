@@ -196,12 +196,30 @@ def test_the_switcher_switches_that_state_on_click():
 
 
 def test_the_switcher_does_not_hijack_touch_gestures():
-    # Arrange
+    # Arrange: the ONLY touch listeners are the edge-zone swipe (edge starts
+    # only, vertical-drift cancelled) — nothing claims gestures over the
+    # editor or PDF surfaces where Monaco/PDF own the drag.
     source = _MOBILE_TS.read_text(encoding="utf-8")
     # Act
-    gestures = re.findall(r'touch(start|move|end)|"swipe', source)
+    starts = source.count('"touchstart"')
     # Assert
-    assert gestures == []
+    assert starts == 1 and "EDGE_PX" in source
+
+
+def test_edge_swipe_ignores_mid_screen_starts():
+    # Arrange: the swipe only arms when the touch starts at a screen edge.
+    source = _MOBILE_TS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert "t.clientX > EDGE_PX" in source
+
+
+def test_edge_swipe_cancels_on_vertical_drift_or_multitouch():
+    # Arrange: scrolls and pinch/zoom must never become pane switches.
+    source = _MOBILE_TS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert "SLOP_PX" in source and "e.touches.length !== 1" in source
 
 
 def test_opening_a_section_returns_to_the_editor_pane():
