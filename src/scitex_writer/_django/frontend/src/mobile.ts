@@ -23,8 +23,7 @@
 
 import { controlsTranslate } from "./controls-i18n";
 // Shared bottom action bar primitive (SDK owns geometry, height reservation,
-// 44px targets — the card that tracks this re-point). Mounted lazily: only
-// when a phone viewport actually shows the bar.
+// 44px targets). Mounted lazily: only when a phone viewport shows the bar.
 import { mountActionBar } from "@scitex/sdk/ui/ts/app/action-bar";
 
 export type MobilePane = "files" | "editor" | "preview" | "details";
@@ -74,12 +73,16 @@ export class MobileLayout {
   constructor(root: HTMLElement, hooks: MobileLayoutHooks = {}) {
     this.hooks = hooks;
 
-    // Hand geometry to the shared bar: it fixes itself, measures its own
-    // height, and publishes it as --stx-action-bar-height (the local
-    // hardcoded-56px and touch-target rules this replaces live in
-    // editor-mobile.css). Idempotent; phone-only in practice because the
-    // bar's element only displays <=768px. Default reserveOn (the bar's own
-    // parent) is the scrolling container here.
+    // Edge-zone single-finger pane swipe (operator gap): a horizontal swipe
+    // starting within EDGE_PX of the screen edge moves one pane left/right.
+    // Edges only — never over Monaco (selection) or the PDF (pan). Vertical
+    // drift beyond SLOP_PX, multi-touch, or form targets cancel. The shell's
+    // two-finger collapse stays untouched.
+    this.wireEdgeSwipe(root);
+
+    // Shared bar geometry (stx-action-bar primitive): it fixes itself,
+    // measures its own height (no hardcoded 56px), idempotent; phone-only
+    // in effect because the bar's element only displays <=768px.
     mountActionBar(root);
 
     const switcher = root.querySelector<HTMLElement>("#writer-mobile-panes");
@@ -155,5 +158,73 @@ export class MobileLayout {
     const label = this.compileBtn.querySelector<HTMLElement>("span");
     if (label) label.textContent = compiling ? "Compiling…" : "Compile";
     this.compileBtn.setAttribute("aria-busy", String(compiling));
+  }
+
+  /**
+   * Edge-zone single-finger pane swipe.
+   *
+   * A horizontal swipe that STARTS within EDGE_PX of the left/right screen
+   * edge moves one pane in swipe direction (left-edge swipe-right = previous
+   * pane, right-edge swipe-left = next pane). Anywhere else the gesture is
+   * ignored — Monaco owns horizontal drags for selection, the PDF owns them
+   * for pan. Vertical drift > SLOP_PX, multi-touch, or a start inside an
+   * input/select/textarea/contenteditable cancels.
+   */
+  private wireEdgeSwipe(root: HTMLElement): void {
+    const EDGE_PX = 24;
+    const THRESHOLD_PX = 48;
+    const SLOP_PX = 32;
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+
+    const isFormTarget = (t: EventTarget | null): boolean =>
+      t instanceof HTMLElement &&
+      Boolean(t.closest("input, textarea, select, [contenteditable='true']"));
+
+    root.addEventListener(
+      "touchstart",
+      (e) => {
+        if (!isMobileViewport() || e.touches.length !== 1) {
+          tracking = false;
+          return;
+        }
+        const t = e.touches[0];
+        const w = window.innerWidth;
+        if (t.clientX > EDGE_PX && t.clientX < w - EDGE_PX) return;
+        if (isFormTarget(e.target)) return;
+        startX = t.clientX;
+        startY = t.clientY;
+        tracking = true;
+      },
+      { passive: true },
+    );
+
+    root.addEventListener(
+      "touchmove",
+      (e) => {
+        if (!tracking || e.touches.length !== 1) {
+          tracking = false;
+          return;
+        }
+        const t = e.touches[0];
+        if (Math.abs(t.clientY - startY) > SLOP_PX) tracking = false;
+      },
+      { passive: true },
+    );
+
+    root.addEventListener("touchend", (e) => {
+      if (!tracking) return;
+      tracking = false;
+      if (!isMobileViewport()) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - startX;
+      if (Math.abs(dx) < THRESHOLD_PX) return;
+      if (Math.abs(t.clientY - startY) > SLOP_PX) return;
+      const i = PANES.indexOf(this.pane);
+      const next = dx < 0 ? i + 1 : i - 1;
+      if (next < 0 || next >= PANES.length) return;
+      this.setPane(PANES[next]);
+    });
   }
 }
