@@ -32,6 +32,7 @@
     <link rel="stylesheet" href="{% static 'writer/css/editor-mobile.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/annotations.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/compile-diagnostics.css' %}">
+    <link rel="stylesheet" href="{% static 'scitex_sdk/ui/css/app/action-bar.css' %}">
     {% comment %}
        Generic version metadata: the leaf states which package and version is
        serving this page, so a host can read it without knowing writer's slug or
@@ -263,23 +264,27 @@
                 <pre class="log-content" id="log-content"></pre>
             </div>
         </div>
-        <!-- Bottom action bar (<=768px). Compile forwards to #btn-compile, so
-             the one CompileController stays the only compile entry point; Save
-             goes through the same flushSave path Ctrl+S takes. -->
-        <div class="writer-mobile-actions" id="writer-mobile-actions">
+        <!-- Bottom action bar (<=768px), on the shared stx-action-bar primitive:
+             data-stx-action-bar mounts it (measured height, no hardcoded
+             56px) and data-stx-action-bar-item marks the buttons; the shared
+             stx-action-bar-space utility reserves the height on the scroller.
+             Compile forwards to #btn-compile, so the one CompileController
+             stays the only compile entry point; Save goes through the same
+             flushSave path Ctrl+S takes. -->
+        <div class="stx-action-bar" id="writer-mobile-actions" data-stx-action-bar>
             <button id="btn-mobile-save"
                     type="button"
-                    class="btn btn-secondary writer-mobile-action">
+                    class="btn btn-secondary" data-stx-action-bar-item>
                 <i class="fas fa-floppy-disk"></i><span>Save</span>
             </button>
             <button id="btn-mobile-log"
                     type="button"
-                    class="btn btn-secondary writer-mobile-action">
+                    class="btn btn-secondary" data-stx-action-bar-item>
                 <i class="fas fa-terminal"></i><span>Log</span>
             </button>
             <button id="btn-mobile-compile"
                     type="button"
-                    class="btn btn-primary writer-mobile-action">
+                    class="btn btn-primary" data-stx-action-bar-item>
                 <i class="fas fa-hammer"></i><span>Compile</span>
             </button>
         </div>

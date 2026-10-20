@@ -22,6 +22,10 @@
  */
 
 import { controlsTranslate } from "./controls-i18n";
+// Shared bottom action bar primitive (SDK owns geometry, height reservation,
+// 44px targets — the card that tracks this re-point). Mounted lazily: only
+// when a phone viewport actually shows the bar.
+import { mountActionBar } from "@scitex/sdk/ui/ts/app/action-bar";
 
 export type MobilePane = "files" | "editor" | "preview" | "details";
 
@@ -69,6 +73,14 @@ export class MobileLayout {
 
   constructor(root: HTMLElement, hooks: MobileLayoutHooks = {}) {
     this.hooks = hooks;
+
+    // Hand geometry to the shared bar: it fixes itself, measures its own
+    // height, and publishes it as --stx-action-bar-height (the local
+    // hardcoded-56px and touch-target rules this replaces live in
+    // editor-mobile.css). Idempotent; phone-only in practice because the
+    // bar's element only displays <=768px. Default reserveOn (the bar's own
+    // parent) is the scrolling container here.
+    mountActionBar(root);
 
     const switcher = root.querySelector<HTMLElement>("#writer-mobile-panes");
     for (const button of Array.from(

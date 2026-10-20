@@ -96,6 +96,40 @@ def test_editor_page_renders_the_bottom_action_bar(project_dir):
     assert all(f'id="{control}"' in body for control in controls)
 
 
+def test_action_bar_mounts_on_the_shared_primitive(project_dir):
+    # Arrange: the bar element carries the shared contract (mount attribute +
+    # shared class), and mobile.ts mounts it. The SDK owns geometry from here.
+    # Act
+    body = _editor_html(project_dir)
+    mobile = _MOBILE_TS.read_text(encoding="utf-8")
+    # Assert
+    assert 'data-stx-action-bar' in body
+
+
+def test_action_bar_items_are_shared_primitive_items(project_dir):
+    # Arrange: each of the three buttons carries the item mark.
+    # Act
+    body = _editor_html(project_dir)
+    # Assert
+    assert body.count("data-stx-action-bar-item>") == 3
+
+
+def test_action_bar_links_the_shared_stylesheet(project_dir):
+    # Arrange
+    # Act
+    body = _editor_html(project_dir)
+    # Assert
+    assert "scitex_sdk/ui/css/app/action-bar.css" in body
+
+
+def test_mobile_mounts_the_shared_action_bar():
+    # Arrange
+    mobile = _MOBILE_TS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert "mountActionBar(root)" in mobile
+
+
 def test_editor_pane_is_the_one_marked_active_in_the_markup(project_dir):
     # Arrange
     editor_button = r'data-mobile-pane="editor"[^>]*aria-current="true"'
@@ -235,20 +269,20 @@ def test_touch_targets_meet_the_44px_minimum():
 
 
 def test_action_bar_and_pane_buttons_use_the_shared_touch_target():
-    # Arrange
-    users = []
+    # Arrange: the bar's buttons live under the shared primitive now — their
+    # 44px minimum comes from SDK action-bar.css (.stx-action-bar__item uses
+    # var(--stx-touch-target-min, 44px)), so only the pane switcher buttons
+    # still name the local token. The bar element and its items are pinned
+    # structurally (shared-bar contract tests below).
     css = _MOBILE_CSS.read_text(encoding="utf-8")
     phone = _media_block(css, _MOBILE_QUERY)
     # Act
-    for selector in (r"\.writer-mobile-action", r"\.writer-mobile-pane-btn"):
-        users.append(
-            re.search(
-                rf"{selector}\s*\{{[^}}]*min-height:\s*var\(--writer-touch-target-min\)",
-                phone,
-            )
-        )
+    found = re.search(
+        r"\.writer-mobile-pane-btn\s*\{[^}]*min-height:\s*var\(--writer-touch-target-min\)",
+        phone,
+    )
     # Assert
-    assert all(users)
+    assert found
 
 
 def test_compile_forwards_to_the_single_compile_controller():
@@ -288,24 +322,24 @@ def test_compile_progress_is_mirrored_from_the_one_lamp():
 
 
 def test_action_bar_clears_the_hub_dock_and_the_home_bar():
-    # Arrange
-    css = _MOBILE_CSS.read_text(encoding="utf-8")
+    # Arrange: geometry is the shared primitive's job now — its stylesheet
+    # carries the dock + home-bar clearance, not writer's local CSS.
+    css = (_DJANGO_DIR / "templates" / "writer" / "editor.html").read_text(
+        encoding="utf-8"
+    )
     # Act
-    phone = _media_block(css, _MOBILE_QUERY)
-    rule = re.search(r"\.writer-mobile-actions\s*\{([^}]*)\}", phone).group(1)
     # Assert
-    assert "--site-dock-clearance" in rule and "safe-area-inset-bottom" in rule
+    assert "scitex_sdk/ui/css/app/action-bar.css" in css
 
 
 def test_the_pane_reserves_the_action_bars_height():
-    # Arrange
-    css = _MOBILE_CSS.read_text(encoding="utf-8")
+    # Arrange: the reservation is the shared primitive's measured height now
+    # (--stx-action-bar-height, published by the mounted bar), not the local
+    # hardcoded 56px token. The bar element carries the mount contract.
+    mobile = _MOBILE_TS.read_text(encoding="utf-8")
     # Act
-    phone = _media_block(css, _MOBILE_QUERY)
     # Assert
-    assert re.search(
-        r"padding-bottom:\s*calc\(\s*var\(--writer-mobile-bar-height\)", phone
-    )
+    assert "mountActionBar(root)" in mobile
 
 
 # --- the PDF pane fits the width ---------------------------------------------

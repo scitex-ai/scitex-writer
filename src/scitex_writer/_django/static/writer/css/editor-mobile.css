@@ -217,32 +217,19 @@
     row-gap: 4px;
   }
 
-  /* --- the bottom action bar --------------------------------------------- */
+  /* --- the bottom action bar: geometry is the shared stx-action-bar --------
+     The bar element carries .stx-action-bar (SDK action-bar.css, linked in
+     editor.html) and data-stx-action-bar (mounted by mobile.ts). What stays
+     here is ONLY the phone-visibility switch: the SDK owns position, height
+     measurement, reservation, and 44px targets. Keep #writer-mobile-actions
+     as the stable hook id — mobile.ts wiring and tests pin it. */
 
   .writer-mobile-actions {
-    position: fixed;
-    left: 0;
-    right: 0;
-    /* Above the hub's site dock when there is one, and above the iOS home bar
-       always: a fixed bar at bottom: 0 puts its buttons under both. */
-    bottom: calc(
-      var(--site-dock-clearance, 0px) + env(safe-area-inset-bottom, 0px)
-    );
-    z-index: 40;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    background: var(--toolbar-bg);
-    border-top: 1px solid var(--border-color);
+    display: none;
   }
 
-  .writer-mobile-action {
-    flex: 1 1 0;
-    justify-content: center;
-    gap: 6px;
-    min-height: var(--writer-touch-target-min);
-    font-size: 14px;
+  body[data-writer-mobile-pane] .writer-mobile-actions {
+    display: flex;
   }
 
   /* The editor's own font size is set by Monaco, not here; the shell chrome is
