@@ -25,6 +25,24 @@
   background: var(--toolbar-bg);
   border-bottom: 1px solid var(--border-color);
 }
+/* CCT4433 (desktop): the annotation toolbar floats over the PDF page —
+ * stacked below the floating tab header (editor.css) — instead of squeezing
+ * the scroll viewport. The viewport keeps full preview-pane height in every
+ * mode, matching the editor; the pen loop is untouched (same buttons, same
+ * DOM position, markup/review behavior unchanged). Solid background first
+ * for browsers without color-mix; translucency is progressive enhancement. */
+@media (min-width: 769px) {
+  #pdf-view.active > .annot-toolbar {
+    position: absolute;
+    top: var(--writer-preview-header-h, 34px);
+    left: 0;
+    right: 0;
+    z-index: 5;
+    background: var(--toolbar-bg);
+    background: color-mix(in srgb, var(--toolbar-bg) 92%, transparent);
+    backdrop-filter: blur(6px);
+  }
+}
 .annot-group {
   display: flex;
   align-items: center;

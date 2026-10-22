@@ -298,6 +298,30 @@
   background: var(--bg-tertiary);
   flex-shrink: 0;
 }
+/* CCT4433 (desktop): while the PDF view is showing, the tab header floats
+ * over the page instead of squeezing the scroll viewport, so the viewport
+ * fills the whole preview pane and matches the editor height. Bib/claims
+ * views keep the header in flow (no :has match, rule does not apply).
+ * Pair: the annotation-toolbar overlay in annotations.css, stacked directly
+ * below this header via the shared --writer-preview-header-h. */
+@media (min-width: 769px) {
+  .writer-preview-pane {
+    position: relative;
+    --writer-preview-header-h: 34px;
+  }
+  .writer-preview-pane:has(#pdf-view.active) .preview-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 6;
+    height: var(--writer-preview-header-h);
+    box-sizing: border-box;
+    background: var(--bg-tertiary);
+    background: color-mix(in srgb, var(--bg-tertiary) 88%, transparent);
+    backdrop-filter: blur(6px);
+  }
+}
 .preview-content {
   flex: 1;
   overflow: hidden;
