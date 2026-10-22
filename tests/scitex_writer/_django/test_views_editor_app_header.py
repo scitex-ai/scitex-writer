@@ -169,21 +169,21 @@ def test_a_host_that_renders_its_own_header_gets_no_second_one(project_dir):
     assert _MOUNT_DIV not in body
 
 
-def test_the_header_names_the_app_from_the_manifest(project_dir):
-    # Arrange
-    label = json.loads(_MANIFEST.read_text(encoding="utf-8"))["label"]
+def test_the_header_names_the_app_with_the_full_header_title(project_dir):
+    # Arrange — tile label and header title are independent (operator
+    # 2026-10-23): the header keeps the full product title.
     # Act
     block = _header_block(_editor_html(project_dir))
     # Assert
-    assert f'data-app-title="{label}"' in block
+    assert 'data-app-title="SciTeX Writer"' in block
 
 
-def test_the_manifest_label_is_the_full_product_name():
-    # Arrange: the operator mandate 2026-10-16 names the full product title.
+def test_the_header_title_differs_from_the_short_tile_label():
+    # Arrange — the manifest carries the short tile form, never the header.
     # Act
     label = json.loads(_MANIFEST.read_text(encoding="utf-8"))["label"]
     # Assert
-    assert label == "SciTeX Writer"
+    assert label == "Writer"
 
 
 def test_the_header_precedes_the_toolbar(project_dir):
