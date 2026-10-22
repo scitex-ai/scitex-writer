@@ -104,7 +104,7 @@
   --tab-active-bg: #ffffff;
   --scrollbar-thumb: #c4c0bb;
   --log-bg: #1e1e1e;
-  --log-text: #d4d4d4;
+  --log-text: #e6edf3;
   --cm-bg: #ffffff;
   --cm-text: #1a1a1a;
   --cm-gutter-bg: #f5f3f0;
@@ -124,15 +124,15 @@
 }
 [data-theme="dark"] .writer-app,
 .writer-app[data-theme="dark"] {
-  --bg-primary: #1e1e1e;
-  --bg-secondary: #252526;
-  --bg-tertiary: #2d2d2d;
-  --bg-editor: #1e1e1e;
-  --text-primary: #d4d4d4;
-  --text-secondary: #aaaaaa;
-  --text-muted: #666666;
-  --border-color: #3e3e3e;
-  --border-light: #333333;
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --bg-editor: #0d1117;
+  --text-primary: #e6edf3;
+  --text-secondary: #9198a1;
+  --text-muted: #6e7681;
+  --border-color: #30363d;
+  --border-light: #21262d;
   /* Dark is black-based (operator mandate): surfaces stay near-black and the
      accent is scitex gold (light #d4a87a on dark, navy text on it) — never
      the odd blue (#4a9eff) that lived here before. */
@@ -147,20 +147,20 @@
   --danger: #f87171;
   --success: #4ade80;
   --warning: #fbbf24;
-  --toolbar-bg: #252526;
-  --sidebar-bg: #252526;
-  --hover-bg: #2d2d2d;
-  --active-bg: #37373d;
-  --tab-bg: #2d2d2d;
-  --tab-active-bg: #1e1e1e;
-  --scrollbar-thumb: #555555;
-  --log-bg: #1a1a1a;
-  --log-text: #d4d4d4;
-  --cm-bg: #1e1e1e;
-  --cm-text: #d4d4d4;
-  --cm-gutter-bg: #252526;
-  --cm-gutter-text: #858585;
-  --cm-cursor: #d4d4d4;
+  --toolbar-bg: #161b22;
+  --sidebar-bg: #161b22;
+  --hover-bg: #21262d;
+  --active-bg: #2d333b;
+  --tab-bg: #21262d;
+  --tab-active-bg: #0d1117;
+  --scrollbar-thumb: #6e7681;
+  --log-bg: #0d1117;
+  --log-text: #e6edf3;
+  --cm-bg: #0d1117;
+  --cm-text: #e6edf3;
+  --cm-gutter-bg: #161b22;
+  --cm-gutter-text: #6e7681;
+  --cm-cursor: #e6edf3;
   --cm-selection: #264f78;
   --cm-keyword: #569cd6;
   --cm-atom: #b5cea8;

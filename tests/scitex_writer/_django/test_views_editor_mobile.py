@@ -87,31 +87,31 @@ def test_editor_page_renders_the_pane_switcher(project_dir):
     assert {m for m in re.findall(r'data-mobile-pane="(\w+)"', body)} == panes
 
 
-def test_editor_page_renders_the_bottom_action_bar(project_dir):
-    # Arrange
-    controls = {"btn-mobile-save", "btn-mobile-log", "btn-mobile-compile"}
+def test_editor_page_has_no_duplicate_bottom_action_bar(project_dir):
+    # Operator 2026-10-22: the desktop toolbar already carries
+    # Save/Log/Compile — a second div row duplicated them. Assert absence.
     # Act
     body = _editor_html(project_dir)
     # Assert
-    assert all(f'id="{control}"' in body for control in controls)
+    for gone in ("btn-mobile-save", "btn-mobile-log", "btn-mobile-compile",
+                 "writer-mobile-actions", "data-stx-action-bar"):
+        assert gone not in body
 
 
 def test_action_bar_mounts_on_the_shared_primitive(project_dir):
-    # Arrange: the bar element carries the shared contract (mount attribute +
-    # shared class), and mobile.ts mounts it. The SDK owns geometry from here.
+    # Retired 2026-10-22 with the bar itself: no mount attribute remains.
     # Act
     body = _editor_html(project_dir)
-    mobile = _MOBILE_TS.read_text(encoding="utf-8")
     # Assert
-    assert 'data-stx-action-bar' in body
+    assert 'data-stx-action-bar' not in body
 
 
 def test_action_bar_items_are_shared_primitive_items(project_dir):
-    # Arrange: each of the three buttons carries the item mark.
+    # Retired 2026-10-22 with the bar itself: no item marks remain.
     # Act
     body = _editor_html(project_dir)
     # Assert
-    assert body.count("data-stx-action-bar-item>") == 3
+    assert "data-stx-action-bar-item" not in body
 
 
 def test_action_bar_links_the_shared_stylesheet(project_dir):
