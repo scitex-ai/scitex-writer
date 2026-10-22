@@ -2,14 +2,16 @@
 # -*- coding: utf-8 -*-
 # File: tests/scitex_writer/_django/test_views_editor_app_header.py
 
-"""Writer's leaf header: one header, our title, OUR version, the host's picker.
+"""Writer's leaf header: one header mount, our title, OUR version, the host's picker.
 
 The hub's header showed its own `v0.20.0-alpha` for a writer build, and a source
 comment claimed 2.20.0; neither is a claim writer can make about itself. The leaf
-now states which installed package version is serving the page through the SDK
-contract, and offers the canonical project-selector slot — rendering the
-picker only when the host's tag library is actually installed, because
-`{% load %}`ing a library that is not there is a hard TemplateSyntaxError.
+states which installed package version is serving the page through the
+`data-stx-app-header` mount (client-rendered badge from `data-app-version`),
+and offers the picker partial that feeds the primitive's canonical
+project-selector slot — rendering the picker only when the host's tag
+library is actually installed, because `{% load %}`ing a library that is
+not there is a hard TemplateSyntaxError.
 """
 
 import json
@@ -30,9 +32,8 @@ _MANIFEST = _DJANGO_DIR / "manifest.json"
 _PYPROJECT = _PROJECT_ROOT / "pyproject.toml"
 _HEADER_CSS = _DJANGO_DIR / "static" / "writer" / "css" / "app-header.css"
 
-_HEADER_OPEN = (
-    '<header class="stx-app-header writer-app-header" id="writer-app-header">'
-)
+_HEADER_OPEN = '<div class="writer-app-header">'
+_MOUNT_DIV = "<div data-stx-app-header"
 _SHARED_HEADER_CSS = "scitex_sdk/ui/css/app/app-header.css"
 
 
@@ -55,7 +56,8 @@ def _editor_html(project_dir) -> str:
 
 def _header_block(body: str) -> str:
     start = body.index(_HEADER_OPEN)
-    end = body.index("</header>", start)
+    end_marker = 'header-picker.js"></script>'
+    end = body.index(end_marker, start) + len(end_marker)
     return body[start:end]
 
 
@@ -102,12 +104,13 @@ def test_manifest_delegates_version_to_installed_package_resolves_installed_vers
 
 
 def test_the_header_shows_the_installed_version(project_dir):
-    # Arrange
+    # Arrange — the primitive renders the badge client-side from the
+    # data attribute; the server contract is the attribute itself.
     expected = _installed_version()
     # Act
     block = _header_block(_editor_html(project_dir))
     # Assert
-    assert f"v{expected}" in block
+    assert f'data-app-version="{expected}"' in block
 
 
 def test_the_header_shows_the_leaf_package_not_a_host_or_a_comment(project_dir):
@@ -142,12 +145,12 @@ def test_the_views_app_config_is_the_sdk_one():
 
 
 def test_the_editor_page_renders_exactly_one_header(project_dir):
-    # Arrange
-    marker = _HEADER_OPEN
+    # Arrange — one AppHeader mount; toolbars below are functional bars,
+    # not the app row.
     # Act
     body = _editor_html(project_dir)
     # Assert
-    assert body.count(marker) == 1
+    assert body.count(_MOUNT_DIV) == 1
 
 
 def test_a_host_that_renders_its_own_header_gets_no_second_one(project_dir):
@@ -163,7 +166,7 @@ def test_a_host_that_renders_its_own_header_gets_no_second_one(project_dir):
     # Act
     body = render_to_string("writer/editor.html", context)
     # Assert
-    assert _HEADER_OPEN not in body
+    assert _MOUNT_DIV not in body
 
 
 def test_the_header_names_the_app_from_the_manifest(project_dir):
@@ -172,7 +175,7 @@ def test_the_header_names_the_app_from_the_manifest(project_dir):
     # Act
     block = _header_block(_editor_html(project_dir))
     # Assert
-    assert f">{label}<" in block
+    assert f'data-app-title="{label}"' in block
 
 
 def test_the_manifest_label_is_the_full_product_name():
@@ -187,7 +190,7 @@ def test_the_header_precedes_the_toolbar(project_dir):
     # Arrange
     body = _editor_html(project_dir)
     # Act
-    header = body.index(_HEADER_OPEN)
+    header = body.index(_MOUNT_DIV)
     toolbar = body.index('class="writer-toolbar"')
     # Assert
     assert header < toolbar
@@ -208,40 +211,44 @@ def test_no_template_comment_leaks_into_the_page(project_dir):
 
 
 def test_the_header_offers_the_canonical_project_selector_slot(project_dir):
-    # Arrange
-    slot = 'class="stx-app-header__slot--project-selector'
+    # Arrange — the slot is created client-side by the primitive; the
+    # server contract is the picker include that feeds it. The include
+    # resolves server-side, so assert its rendered marker, not its name.
     # Act
     block = _header_block(_editor_html(project_dir))
     # Assert
-    assert slot in block
+    assert '<div class="writer-project-scope">' in block
 
 
 def test_the_header_offers_the_actions_slot(project_dir):
-    # Arrange
-    slot = 'class="stx-app-header__actions"'
+    # Arrange — the actions slot is created client-side by the primitive;
+    # the leaf must NOT define its own (a second set of buttons would be a
+    # second source of truth). Assert absence, not presence.
     # Act
     block = _header_block(_editor_html(project_dir))
     # Assert
-    assert slot in block
+    assert "stx-app-header__actions" not in block
 
 
 def test_the_header_carries_the_shared_class_vocabulary(project_dir):
     """Adoption of the scitex-ui app-header primitive, not a parallel copy.
 
-    The row, the title, the version and the actions slot carry the canonical
-    class names the shared stylesheet defines.
+    The leaf emits the mount point and nothing else: no hand-written
+    row/title/version element classes. The canonical class names live in
+    the SDK's rendered output, not in leaf markup.
     """
     # Arrange
-    canonical = (
-        'class="stx-app-header writer-app-header"',
-        'class="stx-app-header__title writer-app-header__title"',
-        'class="stx-app-header__version writer-app-header__version"',
-        'class="stx-app-header__actions"',
+    leaf_definitions = (
+        'class="stx-app-header ',
+        "stx-app-header__title",
+        "stx-app-header__version",
+        "stx-app-header__actions",
     )
     # Act
     block = _header_block(_editor_html(project_dir))
     # Assert
-    assert [markup for markup in canonical if markup not in block] == []
+    assert _MOUNT_DIV in block
+    assert [markup for markup in leaf_definitions if markup in block] == []
 
 
 def test_the_retired_slot_adapter_classes_are_gone(project_dir):
