@@ -55,15 +55,15 @@ def _leaf_identity() -> dict:
     header showed `v0.20.0-alpha` for a writer build) and not a hand-written
     string in a source comment: both are claims about someone else's package.
 
-    The title is the manifest `label` (`SciTeX Writer`, operator mandate
-    2026-10-16) — the full product name, matching the Scholar / FigRecipe
-    shape, never the bare `Writer`.
+    The title is the full product header ``SciTeX Writer`` — deliberately NOT
+    the manifest `label`: the tile label (short form, operator 2026-10-23)
+    and the in-app header title are independent strings, and only the tile
+    reads from the manifest.
     """
     config = _app_config()
-    manifest = config.manifest
     return {
         "writer_version": config.app_version,
-        "writer_label": manifest.get("label", "SciTeX Writer"),
+        "writer_label": "SciTeX Writer",
     }
 
 
