@@ -24,7 +24,6 @@
 /* --- phone-only chrome: absent on a wide viewport ------------------------- */
 
 .writer-mobile-panes,
-.writer-mobile-actions,
 .writer-mobile-files {
   display: none;
 }
@@ -35,19 +34,12 @@
        --stx-touch-target-min token is not in a release yet, so this is the
        local name it will replace. */
     --writer-touch-target-min: 44px;
-    --writer-mobile-bar-height: 56px;
     /* `height: 100%` of an auto-height flex parent resolves to the CONTENT
        height, which on a phone left the editor 401px tall inside an 844px
        viewport with dead space below it. The shell's module pane is a column
        flex container, so growing into it is what actually fills the screen. */
     flex: 1 1 auto;
     min-height: 0;
-    /* The action bar is fixed, so the pane has to reserve its height or the
-       editor's last line hides behind it. */
-    padding-bottom: calc(
-      var(--writer-mobile-bar-height) + var(--site-dock-clearance, 0px) +
-        env(safe-area-inset-bottom, 0px)
-    );
   }
 
   /* --- the switcher ------------------------------------------------------ */
@@ -99,6 +91,8 @@
   body[data-writer-mobile-pane="files"] .writer-mobile-files,
   body[data-writer-mobile-pane="editor"] .writer-editor-pane,
   body[data-writer-mobile-pane="preview"] .writer-preview-pane,
+  /* The Panel pane ignores the desktop default-collapsed state: choosing it
+     on a phone must show it regardless of the toolbar toggle. */
   body[data-writer-mobile-pane="details"] .details-pane {
     display: flex;
     flex-direction: column;
@@ -215,21 +209,6 @@
   body[data-writer-mobile-pane="preview"] .preview-header {
     flex-wrap: wrap;
     row-gap: 4px;
-  }
-
-  /* --- the bottom action bar: geometry is the shared stx-action-bar --------
-     The bar element carries .stx-action-bar (SDK action-bar.css, linked in
-     editor.html) and data-stx-action-bar (mounted by mobile.ts). What stays
-     here is ONLY the phone-visibility switch: the SDK owns position, height
-     measurement, reservation, and 44px targets. Keep #writer-mobile-actions
-     as the stable hook id — mobile.ts wiring and tests pin it. */
-
-  .writer-mobile-actions {
-    display: none;
-  }
-
-  body[data-writer-mobile-pane] .writer-mobile-actions {
-    display: flex;
   }
 
   /* The editor's own font size is set by Monaco, not here; the shell chrome is
