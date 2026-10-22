@@ -171,19 +171,15 @@ def test_a_host_that_renders_its_own_header_gets_no_second_one(project_dir):
 
 def test_the_header_names_the_app_with_the_full_header_title(project_dir):
     # Arrange — tile label and header title are independent (operator
-    # 2026-10-23): the manifest carries the short tile form, the header
-    # keeps the full product title.
-    label = json.loads(_MANIFEST.read_text(encoding="utf-8"))["label"]
-    assert label == "Writer"
+    # 2026-10-23): the header keeps the full product title.
     # Act
     block = _header_block(_editor_html(project_dir))
     # Assert
     assert 'data-app-title="SciTeX Writer"' in block
 
 
-def test_the_manifest_label_is_the_short_tile_form():
-    # Arrange: tile labels read short (operator 2026-10-23); the in-app
-    # header keeps the full product title (see previous test).
+def test_the_header_title_differs_from_the_short_tile_label():
+    # Arrange — the manifest carries the short tile form, never the header.
     # Act
     label = json.loads(_MANIFEST.read_text(encoding="utf-8"))["label"]
     # Assert
