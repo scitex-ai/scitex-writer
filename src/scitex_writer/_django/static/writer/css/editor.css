@@ -445,6 +445,17 @@
   background: var(--compile-hover);
   border-color: var(--compile-hover);
 }
+/* Light-theme danger zone: --compile-bg is #1a1a1a with #fff text while
+ * .btn (the base every button shares) paints a flat --bg-secondary face on
+ * ALL themes — in light mode that reads as a dark button, which is wrong for
+ * every button EXCEPT Compile. Opt every non-mobile button EXCEPT the two
+ * Compile IDs back out to the light face + dark text on light theme. */
+[data-theme="light"] .btn:not(.writer-mobile-action):not(#btn-compile):not(#btn-mobile-compile),
+.writer-app[data-theme="light"] .btn:not(.writer-mobile-action):not(#btn-compile):not(#btn-mobile-compile) {
+  background: #ffffff;
+  color: var(--text-primary, #333333);
+  border-color: var(--border-default, #999999);
+}
 .btn-secondary {
   background: var(--bg-tertiary);
 }
