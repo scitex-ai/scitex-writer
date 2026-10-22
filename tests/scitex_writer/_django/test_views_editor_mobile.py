@@ -93,16 +93,20 @@ def test_editor_page_renders_the_pane_switcher(project_dir):
 
 def test_editor_page_has_no_bottom_action_bar(project_dir):
     # Arrange: operator 2026-10-22 — Log/Compile live in the toolbar row on
-    # every viewport and Save is autosave; no second fixed bar duplicates them.
+    # every viewport and Save is autosave, so no second fixed bar duplicates
+    # them. These are the retired second-row markers.
+    retired = (
+        "writer-mobile-actions",
+        "btn-mobile-save",
+        "btn-mobile-log",
+        "btn-mobile-compile",
+        "data-stx-action-bar",
+        "data-stx-action-bar-item",
+    )
     # Act
     body = _editor_html(project_dir)
     # Assert
-    assert "writer-mobile-actions" not in body
-    assert "btn-mobile-save" not in body
-    assert "btn-mobile-log" not in body
-    assert "btn-mobile-compile" not in body
-    assert "data-stx-action-bar" not in body
-    assert "data-stx-action-bar-item" not in body
+    assert [m for m in retired if m in body] == []
 
 
 def test_no_action_bar_stylesheet_is_linked(project_dir):
@@ -114,16 +118,17 @@ def test_no_action_bar_stylesheet_is_linked(project_dir):
 
 
 def test_mobile_wires_no_action_bar_forwarding():
-    # Arrange
+    # Arrange: with the bar gone, nothing forwards to it — the retired
+    # mount call, button id, and save/log hooks must be absent from both
+    # TypeScript entry points.
     mobile = _MOBILE_TS.read_text(encoding="utf-8")
     index = _INDEX_TS.read_text(encoding="utf-8")
+    retired = ("mountActionBar", "btn-mobile-compile", "onSave", "onToggleLog")
+    sources = (mobile, index)
     # Act
+    leaked = [(n, i) for i, s in enumerate(sources) for n in retired if n in s]
     # Assert
-    assert "mountActionBar" not in mobile
-    assert "btn-mobile-compile" not in mobile
-    assert "btn-mobile-compile" not in index
-    assert "onSave" not in mobile
-    assert "onToggleLog" not in mobile
+    assert leaked == []
 
 
 def test_editor_pane_is_the_one_marked_active_in_the_markup(project_dir):
@@ -300,13 +305,16 @@ def test_toolbar_owns_log_compile_on_every_viewport(project_dir):
     # Arrange: operator 2026-10-22 — the toolbar row carries Log and Compile
     # + the Draft/Full select on desktop AND phone; Save is autosave with a
     # status indicator. Nothing forwards, nothing mirrors.
+    present = (
+        'id="btn-compile"',
+        'id="btn-toggle-log"',
+        'id="compile-mode-select"',
+        'id="save-status"',
+    )
     # Act
     body = _editor_html(project_dir)
     # Assert
-    assert 'id="btn-compile"' in body
-    assert 'id="btn-toggle-log"' in body
-    assert 'id="compile-mode-select"' in body
-    assert 'id="save-status"' in body
+    assert [m for m in present if m not in body] == []
 
 
 # --- the PDF pane fits the width ---------------------------------------------
