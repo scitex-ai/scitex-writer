@@ -99,6 +99,8 @@
   body[data-writer-mobile-pane="files"] .writer-mobile-files,
   body[data-writer-mobile-pane="editor"] .writer-editor-pane,
   body[data-writer-mobile-pane="preview"] .writer-preview-pane,
+  /* The Panel pane ignores the desktop default-collapsed state: choosing it
+     on a phone must show it regardless of the toolbar toggle. */
   body[data-writer-mobile-pane="details"] .details-pane {
     display: flex;
     flex-direction: column;

@@ -165,11 +165,22 @@ async function bootstrap(): Promise<void> {
       })
     : null;
 
-  // Keyboard shortcut icon → expand the Shortcuts section in Details
+  // Keyboard shortcut icon → reveal the panel, expand the Shortcuts section
   root
     .querySelector<HTMLElement>("#btn-show-shortcuts")
     ?.addEventListener("click", () => {
+      detailsEl?.classList.remove("writer-panel-hidden");
       details?.openSection("shortcuts");
+    });
+
+  // Side panel toggle (manuscript/abstract toolbar row): the pane is dropped
+  // by default — this button brings it back. Revealing also refreshes the
+  // hints feed so a reopened panel never shows stale quiet.
+  root
+    .querySelector<HTMLElement>("#btn-toggle-panel")
+    ?.addEventListener("click", () => {
+      const hidden = detailsEl?.classList.toggle("writer-panel-hidden") ?? true;
+      if (!hidden) void details?.refreshHints();
     });
 
   // Phone layout (<=768px): Files / Editor / PDF, one at a time, plus the
