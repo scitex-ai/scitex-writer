@@ -2,13 +2,17 @@
 # -*- coding: utf-8 -*-
 # File: tests/scitex_writer/_django/test_views_editor_mobile.py
 
-"""Writer's phone layout: one pane at a time, a bottom action bar, 44px targets.
+"""Writer's phone layout: one pane at a time, 44px targets.
 
 The scitex-ui shell stacks every pane vertically below 768px. That is right for
 a workspace and wrong for writer — the section list, the editor and the PDF
 became three full-height blocks in one column, so compiling from a phone meant
 scrolling the editor off screen to reach the controls. Writer now swaps panes
 itself, inside `.writer-app`, and keeps the desktop split untouched.
+
+NO bottom action bar (operator 2026-10-22): Log/Compile live in the toolbar
+row on every viewport and Save is autosave, so no second fixed bar duplicates
+them.
 
 These are source-level assertions on purpose: what can be checked without a
 browser is the structure (which pane each state selects, where the compile
@@ -87,13 +91,44 @@ def test_editor_page_renders_the_pane_switcher(project_dir):
     assert {m for m in re.findall(r'data-mobile-pane="(\w+)"', body)} == panes
 
 
-def test_editor_page_renders_the_bottom_action_bar(project_dir):
-    # Arrange
-    controls = {"btn-mobile-save", "btn-mobile-log", "btn-mobile-compile"}
+def test_editor_page_has_no_bottom_action_bar(project_dir):
+    # Arrange: operator 2026-10-22 — Log/Compile live in the toolbar row on
+    # every viewport and Save is autosave, so no second fixed bar duplicates
+    # them. These are the retired second-row markers.
+    retired = (
+        "writer-mobile-actions",
+        "btn-mobile-save",
+        "btn-mobile-log",
+        "btn-mobile-compile",
+        "data-stx-action-bar",
+        "data-stx-action-bar-item",
+    )
     # Act
     body = _editor_html(project_dir)
     # Assert
-    assert all(f'id="{control}"' in body for control in controls)
+    assert [m for m in retired if m in body] == []
+
+
+def test_no_action_bar_stylesheet_is_linked(project_dir):
+    # Arrange: the shared action-bar primitive left with the bar.
+    # Act
+    body = _editor_html(project_dir)
+    # Assert
+    assert "scitex_sdk/ui/css/app/action-bar.css" not in body
+
+
+def test_mobile_wires_no_action_bar_forwarding():
+    # Arrange: with the bar gone, nothing forwards to it — the retired
+    # mount call, button id, and save/log hooks must be absent from both
+    # TypeScript entry points.
+    mobile = _MOBILE_TS.read_text(encoding="utf-8")
+    index = _INDEX_TS.read_text(encoding="utf-8")
+    retired = ("mountActionBar", "btn-mobile-compile", "onSave", "onToggleLog")
+    sources = (mobile, index)
+    # Act
+    leaked = [(n, i) for i, s in enumerate(sources) for n in retired if n in s]
+    # Assert
+    assert leaked == []
 
 
 def test_editor_pane_is_the_one_marked_active_in_the_markup(project_dir):
@@ -180,7 +215,7 @@ def test_the_desktop_chrome_is_absent_by_default():
     outside = css[: css.index(_MOBILE_QUERY)]
     # Assert
     assert re.search(
-        r"\.writer-mobile-panes,\s*\.writer-mobile-actions,\s*"
+        r"\.writer-mobile-panes,\s*"
         r"\.writer-mobile-files\s*\{\s*display:\s*none",
         outside,
     )
@@ -196,12 +231,30 @@ def test_the_switcher_switches_that_state_on_click():
 
 
 def test_the_switcher_does_not_hijack_touch_gestures():
-    # Arrange
+    # Arrange: the ONLY touch listeners are the edge-zone swipe (edge starts
+    # only, vertical-drift cancelled) — nothing claims gestures over the
+    # editor or PDF surfaces where Monaco/PDF own the drag.
     source = _MOBILE_TS.read_text(encoding="utf-8")
     # Act
-    gestures = re.findall(r'touch(start|move|end)|"swipe', source)
+    starts = source.count('"touchstart"')
     # Assert
-    assert gestures == []
+    assert starts == 1 and "EDGE_PX" in source
+
+
+def test_edge_swipe_ignores_mid_screen_starts():
+    # Arrange: the swipe only arms when the touch starts at a screen edge.
+    source = _MOBILE_TS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert "t.clientX > EDGE_PX" in source
+
+
+def test_edge_swipe_cancels_on_vertical_drift_or_multitouch():
+    # Arrange: scrolls and pinch/zoom must never become pane switches.
+    source = _MOBILE_TS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert "SLOP_PX" in source and "e.touches.length !== 1" in source
 
 
 def test_opening_a_section_returns_to_the_editor_pane():
@@ -222,7 +275,7 @@ def test_section_click_and_selection_use_one_data_source():
     assert "this.sections.forEach" in listed
 
 
-# --- the bottom action bar ---------------------------------------------------
+# --- the toolbar row owns Save/Log/Compile (no bar) ---------------------------
 
 
 def test_touch_targets_meet_the_44px_minimum():
@@ -234,78 +287,34 @@ def test_touch_targets_meet_the_44px_minimum():
     assert "--writer-touch-target-min: 44px" in phone
 
 
-def test_action_bar_and_pane_buttons_use_the_shared_touch_target():
-    # Arrange
-    users = []
+def test_pane_buttons_use_the_local_touch_target():
+    # Arrange: with no bar, the only finger targets left are the pane
+    # switcher buttons, which name the local token.
     css = _MOBILE_CSS.read_text(encoding="utf-8")
     phone = _media_block(css, _MOBILE_QUERY)
     # Act
-    for selector in (r"\.writer-mobile-action", r"\.writer-mobile-pane-btn"):
-        users.append(
-            re.search(
-                rf"{selector}\s*\{{[^}}]*min-height:\s*var\(--writer-touch-target-min\)",
-                phone,
-            )
-        )
-    # Assert
-    assert all(users)
-
-
-def test_compile_forwards_to_the_single_compile_controller():
-    # Arrange
-    source = _MOBILE_TS.read_text(encoding="utf-8")
-    # Act
-    forwarded = 'this.compileBtn?.addEventListener("click", () => desktopCompileBtn?.click())'
-    # Assert
-    assert forwarded in source
-
-
-def test_the_bar_does_not_reach_the_compile_api_directly():
-    # Arrange
-    source = _MOBILE_TS.read_text(encoding="utf-8")
-    # Act
-    calls = re.findall(r"api/compile|CompileController\(", source)
-    # Assert
-    assert calls == []
-
-
-def test_save_takes_the_same_path_as_ctrl_s():
-    # Arrange
-    source = _INDEX_TS.read_text(encoding="utf-8")
-    # Act
-    wiring = source[source.index("onSave: () => {") :]
-    # Assert
-    assert "void flushSave();" in wiring[:300]
-
-
-def test_compile_progress_is_mirrored_from_the_one_lamp():
-    # Arrange
-    source = _MOBILE_TS.read_text(encoding="utf-8")
-    # Act
-    mirror = source[source.index("private syncCompileButton") :]
-    # Assert
-    assert 'classList.contains("lamp-compiling")' in mirror
-
-
-def test_action_bar_clears_the_hub_dock_and_the_home_bar():
-    # Arrange
-    css = _MOBILE_CSS.read_text(encoding="utf-8")
-    # Act
-    phone = _media_block(css, _MOBILE_QUERY)
-    rule = re.search(r"\.writer-mobile-actions\s*\{([^}]*)\}", phone).group(1)
-    # Assert
-    assert "--site-dock-clearance" in rule and "safe-area-inset-bottom" in rule
-
-
-def test_the_pane_reserves_the_action_bars_height():
-    # Arrange
-    css = _MOBILE_CSS.read_text(encoding="utf-8")
-    # Act
-    phone = _media_block(css, _MOBILE_QUERY)
-    # Assert
-    assert re.search(
-        r"padding-bottom:\s*calc\(\s*var\(--writer-mobile-bar-height\)", phone
+    found = re.search(
+        r"\.writer-mobile-pane-btn\s*\{[^}]*min-height:\s*var\(--writer-touch-target-min\)",
+        phone,
     )
+    # Assert
+    assert found
+
+
+def test_toolbar_owns_log_compile_on_every_viewport(project_dir):
+    # Arrange: operator 2026-10-22 — the toolbar row carries Log and Compile
+    # + the Draft/Full select on desktop AND phone; Save is autosave with a
+    # status indicator. Nothing forwards, nothing mirrors.
+    present = (
+        'id="btn-compile"',
+        'id="btn-toggle-log"',
+        'id="compile-mode-select"',
+        'id="save-status"',
+    )
+    # Act
+    body = _editor_html(project_dir)
+    # Assert
+    assert [m for m in present if m not in body] == []
 
 
 # --- the PDF pane fits the width ---------------------------------------------

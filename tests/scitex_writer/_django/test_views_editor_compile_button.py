@@ -4,10 +4,10 @@
 
 """Compile button is monochrome (operator 2026-10-17, mono-unification).
 
-The desktop (#btn-compile) and mobile (#btn-mobile-compile) Compile buttons
-must not pick up the gold/navy accent: each theme defines --compile-*
-tokens in grayscale, and the button rule resolves only through them.
-"""
+The desktop (#btn-compile) Compile button must not pick up the gold/navy
+accent: each theme defines --compile-* tokens in grayscale, and the button
+rule resolves only through them. (The mobile duplicate was removed
+2026-10-22; only the desktop rule remains.)"""
 
 import re
 from pathlib import Path

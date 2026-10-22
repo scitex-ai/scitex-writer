@@ -157,4 +157,4 @@ def test_the_sdk_floor_covers_the_jail_contract():
     # Act
     dependencies = project["dependencies"]
     # Assert
-    assert "scitex-sdk>=0.3.5" in dependencies
+    assert "scitex-sdk>=0.3.9" in dependencies
