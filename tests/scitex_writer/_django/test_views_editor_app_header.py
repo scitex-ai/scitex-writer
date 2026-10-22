@@ -230,13 +230,19 @@ def test_the_header_offers_the_actions_slot(project_dir):
     assert "stx-app-header__actions" not in block
 
 
-def test_the_header_carries_the_shared_class_vocabulary(project_dir):
-    """Adoption of the scitex-ui app-header primitive, not a parallel copy.
+def test_the_header_mounts_the_shared_primitive(project_dir):
+    """The leaf emits the AppHeader mount point, not a hand-rolled row."""
+    # Arrange
+    block = _header_block(_editor_html(project_dir))
+    # Act
+    mounted = _MOUNT_DIV in block
+    # Assert
+    assert mounted
 
-    The leaf emits the mount point and nothing else: no hand-written
-    row/title/version element classes. The canonical class names live in
-    the SDK's rendered output, not in leaf markup.
-    """
+
+def test_the_header_defines_no_shared_element_classes(project_dir):
+    """No leaf-defined stx-app-header__* element classes: the canonical
+    class names live in the SDK's rendered output, not in leaf markup."""
     # Arrange
     leaf_definitions = (
         'class="stx-app-header ',
@@ -247,7 +253,6 @@ def test_the_header_carries_the_shared_class_vocabulary(project_dir):
     # Act
     block = _header_block(_editor_html(project_dir))
     # Assert
-    assert _MOUNT_DIV in block
     assert [markup for markup in leaf_definitions if markup in block] == []
 
 
