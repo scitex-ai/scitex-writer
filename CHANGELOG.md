@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.14] - 2026-10-22
+
+### Fixed
+
+- PDF viewport fills the whole preview pane while the PDF view is showing:
+  the preview tab header and annotation toolbar float as overlays on
+  desktop, closing the 86px gap with the editor height (CCT4433) (#464).
+- Dark chrome goes cool: warm `#1e1e1e/#252526/#2d2d2d` surfaces become the
+  fleet shell's GitHub-dark neutrals, so the editor no longer reads
+  brownish next to the gold accent (operator 2026-10-22).
+
+### Changed
+
+- Chrome follows the SDK shell theme (scitex navy light / gold dark) via
+  shell variables with shell-literal fallbacks; Compile stays
+  monochrome-dark in both themes (#465).
+- Draft vs Full compile modes read `Draft (current section)` /
+  `Full (whole manuscript)` in the select, hints, and both locales (#465).
+- Right inspector starts dropped and toggles from the toolbar overflow row
+  (#465).
+- Bottom Save/Log/Compile action bar removed: the desktop toolbar already
+  carries all three actions, including its stylesheet link and TypeScript
+  wiring (#465).
+
 ## [2.43.13] - 2026-10-19
 
 ### Changed
