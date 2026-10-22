@@ -183,18 +183,11 @@ async function bootstrap(): Promise<void> {
       if (!hidden) void details?.refreshHints();
     });
 
-  // Phone layout (<=768px): Files / Editor / PDF, one at a time, plus the
-  // bottom action bar. Built after the viewer and the compile controller so a
-  // pane change can re-lay-out what they own.
+  // Phone layout (<=768px): Files / Editor / PDF, one at a time. Built after
+  // the viewer and the compile controller so a pane change can re-lay out
+  // what they own. No bottom action bar: Save/Log/Compile live in the
+  // toolbar row on every viewport, so there is nothing to forward here.
   const mobile = new MobileLayout(root, {
-    onSave: () => {
-      // Same path Ctrl+S takes: cancel the pending debounce, save now.
-      if (saveTimer) window.clearTimeout(saveTimer);
-      void flushSave();
-    },
-    onToggleLog: () => {
-      root.querySelector<HTMLElement>("#btn-toggle-log")?.click();
-    },
     onPaneChange: (pane) => {
       if (!isMobileViewport()) return;
       if (pane === "editor") {

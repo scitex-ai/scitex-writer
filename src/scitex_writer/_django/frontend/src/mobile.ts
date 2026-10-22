@@ -1,6 +1,5 @@
 /**
- * Writer's phone layout (<=768px): one pane at a time, explicit tabs, and a
- * bottom action bar with Save / Log / Compile.
+ * Writer's phone layout (<=768px): one pane at a time, explicit tabs.
  *
  * WHY THIS EXISTS: below 768px the scitex-ui shell stacks every pane
  * vertically, which is the right default for a workspace but wrong for writer —
@@ -10,6 +9,15 @@
  * therefore declares its own single-pane layout: the switcher picks ONE
  * surface, and the choice lives on `body[data-writer-mobile-pane]`, which is
  * the only hook `static/writer/css/editor-mobile.css` reads.
+ *
+ * NO BOTTOM ACTION BAR (operator 2026-10-22): the Save/Log/Compile bar is
+ * dropped — the toolbar row already carries Log, Compile + the Draft/Full
+ * mode select on every viewport, and Save is autosave (debounced flushSave +
+ * save-status indicator, same path Ctrl+S takes), so a second fixed bar
+ * duplicates entry points instead of adding reachability. The
+ * one CompileController stays the only compile entry point. (The removed bar
+ * used to forward to #btn-compile and mirror the lamp; that whole layer is
+ * gone.)
  *
  * EXPLICIT TABS, NO SWIPE. A horizontal gesture over the editor would race
  * Monaco's own text selection and the PDF viewer's pan, and the failure mode
@@ -22,9 +30,6 @@
  */
 
 import { controlsTranslate } from "./controls-i18n";
-// Shared bottom action bar primitive (SDK owns geometry, height reservation,
-// 44px targets). Mounted lazily: only when a phone viewport shows the bar.
-import { mountActionBar } from "@scitex/sdk/ui/ts/app/action-bar";
 
 export type MobilePane = "files" | "editor" | "preview" | "details";
 
@@ -47,27 +52,22 @@ export function isMobileViewport(): boolean {
 }
 
 export interface MobileLayoutHooks {
-  /** Save now, without waiting for the autosave debounce. */
-  onSave?: () => void;
-  /** Open the compilation log/diagnostics panel. */
-  onToggleLog?: () => void;
   /** A pane became active — the caller re-lays out what it owns (Monaco was
    * hidden, so it needs a layout pass; the PDF needs a fit-width). */
   onPaneChange?: (pane: MobilePane) => void;
 }
 
 /**
- * The pane switcher and the bottom action bar.
+ * The pane switcher.
  *
- * Compile is NOT re-implemented here: the bar's button forwards a click to the
- * desktop `#btn-compile`, so there is exactly one compile entry point and one
- * `CompileController` — the bar only mirrors that controller's in-flight state.
+ * Compile is NOT re-implemented here: #btn-compile in the toolbar row is the
+ * one compile entry point and the one `CompileController`. Log is the toolbar
+ * #btn-toggle-log; Save is autosave with a status indicator. Nothing here
+ * forwards or mirrors — the bar is gone.
  */
 export class MobileLayout {
   private readonly hooks: MobileLayoutHooks;
   private readonly tabs = new Map<MobilePane, HTMLButtonElement>();
-  private readonly compileBtn: HTMLButtonElement | null;
-  private readonly lamp: HTMLElement | null;
   private pane: MobilePane = DEFAULT_PANE;
 
   constructor(root: HTMLElement, hooks: MobileLayoutHooks = {}) {
@@ -80,11 +80,6 @@ export class MobileLayout {
     // two-finger collapse stays untouched.
     this.wireEdgeSwipe(root);
 
-    // Shared bar geometry (stx-action-bar primitive): it fixes itself,
-    // measures its own height (no hardcoded 56px), idempotent; phone-only
-    // in effect because the bar's element only displays <=768px.
-    mountActionBar(root);
-
     const switcher = root.querySelector<HTMLElement>("#writer-mobile-panes");
     for (const button of Array.from(
       switcher?.querySelectorAll<HTMLButtonElement>("[data-mobile-pane]") ?? [],
@@ -96,31 +91,8 @@ export class MobileLayout {
       button.addEventListener("click", () => this.setPane(pane));
     }
 
-    root
-      .querySelector<HTMLElement>("#btn-mobile-save")
-      ?.addEventListener("click", () => this.hooks.onSave?.());
-    root
-      .querySelector<HTMLElement>("#btn-mobile-log")
-      ?.addEventListener("click", () => this.hooks.onToggleLog?.());
-
-    // The desktop button is hidden on a phone but still the real control; a
-    // hidden element receives programmatic clicks, so forwarding keeps the
-    // controller, the polling and the diagnostics in one place.
-    this.compileBtn = root.querySelector<HTMLButtonElement>("#btn-mobile-compile");
-    const desktopCompileBtn =
-      root.querySelector<HTMLButtonElement>("#btn-compile");
-    this.compileBtn?.addEventListener("click", () => desktopCompileBtn?.click());
-
-    // Compile status is published on the lamp (`lamp-compiling` and friends),
-    // so the bar mirrors that instead of duplicating the controller's state.
-    this.lamp = root.querySelector<HTMLElement>("#compile-lamp");
-    if (this.compileBtn && this.lamp) {
-      this.syncCompileButton();
-      new MutationObserver(() => this.syncCompileButton()).observe(this.lamp, {
-        attributes: true,
-        attributeFilter: ["class"],
-      });
-    }
+    // Save/Log/Compile live in the toolbar row on every viewport now — no
+    // forwarding, no mirroring, nothing to wire here.
 
     this.setPane(this.readPane());
   }
@@ -149,15 +121,6 @@ export class MobileLayout {
       | MobilePane
       | undefined;
     return initial && PANES.includes(initial) ? initial : DEFAULT_PANE;
-  }
-
-  private syncCompileButton(): void {
-    if (!this.compileBtn || !this.lamp) return;
-    const compiling = this.lamp.classList.contains("lamp-compiling");
-    this.compileBtn.disabled = compiling;
-    const label = this.compileBtn.querySelector<HTMLElement>("span");
-    if (label) label.textContent = compiling ? "Compiling…" : "Compile";
-    this.compileBtn.setAttribute("aria-busy", String(compiling));
   }
 
   /**

@@ -430,28 +430,26 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
-/* Compile buttons (desktop #btn-compile + mobile #btn-mobile-compile):
-   monochrome primary action (operator 2026-10-17, mono-unification
-   direction). ID selectors outrank .btn-primary, so Compile is decoupled
-   from the gold/navy accent while every other primary button keeps it. */
-#btn-compile,
-#btn-mobile-compile {
+/* Compile button (#btn-compile): monochrome primary action (operator
+   2026-10-17, mono-unification direction). ID selector outranks .btn-primary,
+   so Compile is decoupled from the gold/navy accent while every other
+   primary button keeps it. */
+#btn-compile {
   background: var(--compile-bg);
   border-color: var(--compile-bg);
   color: var(--compile-text);
 }
-#btn-compile:hover,
-#btn-mobile-compile:hover {
+#btn-compile:hover {
   background: var(--compile-hover);
   border-color: var(--compile-hover);
 }
 /* Light-theme danger zone: --compile-bg is #1a1a1a with #fff text while
  * .btn (the base every button shares) paints a flat --bg-secondary face on
  * ALL themes — in light mode that reads as a dark button, which is wrong for
- * every button EXCEPT Compile. Opt every non-mobile button EXCEPT the two
- * Compile IDs back out to the light face + dark text on light theme. */
-[data-theme="light"] .btn:not(.writer-mobile-action):not(#btn-compile):not(#btn-mobile-compile),
-.writer-app[data-theme="light"] .btn:not(.writer-mobile-action):not(#btn-compile):not(#btn-mobile-compile) {
+ * every button EXCEPT Compile. Opt every button EXCEPT #btn-compile back out
+ * to the light face + dark text on light theme. */
+[data-theme="light"] .btn:not(#btn-compile),
+.writer-app[data-theme="light"] .btn:not(#btn-compile) {
   background: #ffffff;
   color: var(--text-primary, #333333);
   border-color: var(--border-default, #999999);
