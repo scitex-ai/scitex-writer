@@ -175,7 +175,7 @@ def test_the_header_names_the_app_with_the_full_header_title(project_dir):
     # Act
     block = _header_block(_editor_html(project_dir))
     # Assert
-    assert 'data-app-title="SciTeX Writer"' in block
+    assert 'data-app-title="Writer"' in block
 
 
 def test_the_header_title_differs_from_the_short_tile_label():

@@ -63,7 +63,7 @@ def _leaf_identity() -> dict:
     config = _app_config()
     return {
         "writer_version": config.app_version,
-        "writer_label": "SciTeX Writer",
+        "writer_label": "Writer",
     }
 
 
@@ -192,7 +192,7 @@ def _shell_context(base_title: str) -> dict:
     Parameters
     ----------
     base_title : str
-        Tab title before the mode marker, e.g. ``"SciTeX Writer"``.
+        Tab title before the mode marker, e.g. ``"Writer"``.
 
     Returns
     -------
@@ -253,7 +253,7 @@ def editor_page(request, *, view_path="", api_base=None):
             # writer/_app_header.html; that host sets this True so the page
             # keeps exactly one header. Standalone renders the leaf one.
             "app_header_rendered": False,
-            **_shell_context("SciTeX Writer"),
+            **_shell_context("Writer"),
             **_page_mount(request, view_path, api_base),
         },
         request=request,
@@ -355,7 +355,7 @@ def viewer_page(request, *, view_path="viewer/", api_base=None):
             "project_id": getattr(
                 getattr(request, "writer_project_access", None), "id", ""
             ),
-            **_shell_context("SciTeX Writer — Viewer"),
+            **_shell_context("Writer — Viewer"),
             **_page_mount(request, view_path, api_base),
         },
         request=request,
