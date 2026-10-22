@@ -25,6 +25,24 @@
   background: var(--toolbar-bg);
   border-bottom: 1px solid var(--border-color);
 }
+/* CCT4433 (desktop): the annotation toolbar floats over the PDF page —
+ * stacked below the floating tab header (editor.css) — instead of squeezing
+ * the scroll viewport. The viewport keeps full preview-pane height in every
+ * mode, matching the editor; the pen loop is untouched (same buttons, same
+ * DOM position, markup/review behavior unchanged). Solid background first
+ * for browsers without color-mix; translucency is progressive enhancement. */
+@media (min-width: 769px) {
+  #pdf-view.active > .annot-toolbar {
+    position: absolute;
+    top: var(--writer-preview-header-h, 34px);
+    left: 0;
+    right: 0;
+    z-index: 5;
+    background: var(--toolbar-bg);
+    background: color-mix(in srgb, var(--toolbar-bg) 92%, transparent);
+    backdrop-filter: blur(6px);
+  }
+}
 .annot-group {
   display: flex;
   align-items: center;
@@ -40,9 +58,15 @@
 }
 /* Declutter mandate 2026-10-16: mode + pen buttons are ghost — borderless,
    transparent, no accent fill. The active state is a quiet text/border cue,
-   never the filled accent pill. Compile keeps the ONE accent. */
+   never the filled accent pill. Compile keeps the ONE accent.
+   CCT4700 (HARD NO on rounded active highlights): the active indicator is a
+   straight underline drawn with border-bottom — box-shadow is forbidden here
+   because a shadowed box reads as a rounded pill, and border-radius is
+   forbidden on any active annot button for the same reason. */
 .annot-toolbar .annot-btn {
   border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   background: transparent;
   color: var(--text-secondary);
 }
@@ -53,7 +77,8 @@
 .annot-btn.active {
   background: transparent;
   color: var(--text-primary);
-  box-shadow: inset 0 -2px 0 var(--accent);
+  border-bottom-color: var(--accent);
+  border-radius: 0;
 }
 .annot-btn.active:hover {
   color: var(--text-primary);

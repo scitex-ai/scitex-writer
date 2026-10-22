@@ -71,7 +71,7 @@
                     data-mobile-pane="editor"
                     aria-current="true">Editor</button>
             <button type="button" class="writer-mobile-pane-btn" data-mobile-pane="preview">PDF</button>
-            <button type="button" class="writer-mobile-pane-btn" data-mobile-pane="details">Details</button>
+            <button type="button" class="writer-mobile-pane-btn" data-mobile-pane="details">Panel</button>
         </nav>
         <header class="writer-toolbar">
             <div class="writer-toolbar-left">
@@ -110,6 +110,11 @@
                                 title="Toggle dark/light mode">
                             <i class="fas fa-moon"></i>
                         </button>
+                        <button id="btn-toggle-panel"
+                                class="btn btn-icon"
+                                title="Toggle side panel (hints, compilation, import/export, project info)">
+                            <i class="fas fa-panel-right"></i>
+                        </button>
                         <button id="btn-show-shortcuts"
                                 class="btn btn-icon"
                                 title="Keyboard shortcuts">
@@ -126,8 +131,8 @@
                     <select id="compile-mode-select"
                             class="writer-select writer-select-sm"
                             aria-label="Compile mode">
-                        <option value="preview" selected>Draft</option>
-                        <option value="full">Full</option>
+                        <option value="preview" selected>Draft (current section)</option>
+                        <option value="full">Full (whole manuscript)</option>
                     </select>
                 </div>
                 <button id="btn-compile"
@@ -240,7 +245,7 @@
                     </div>
                 </div>
             </div>
-            <aside class="details-pane" id="details-panel" aria-label="Details">
+            <aside class="details-pane writer-panel-hidden" id="details-panel" aria-label="Side panel">
             </aside>
         </div>
         <div class="log-panel u-hidden" id="log-panel">
@@ -263,26 +268,10 @@
                 <pre class="log-content" id="log-content"></pre>
             </div>
         </div>
-        <!-- Bottom action bar (<=768px). Compile forwards to #btn-compile, so
-             the one CompileController stays the only compile entry point; Save
-             goes through the same flushSave path Ctrl+S takes. -->
-        <div class="writer-mobile-actions" id="writer-mobile-actions">
-            <button id="btn-mobile-save"
-                    type="button"
-                    class="btn btn-secondary writer-mobile-action">
-                <i class="fas fa-floppy-disk"></i><span>Save</span>
-            </button>
-            <button id="btn-mobile-log"
-                    type="button"
-                    class="btn btn-secondary writer-mobile-action">
-                <i class="fas fa-terminal"></i><span>Log</span>
-            </button>
-            <button id="btn-mobile-compile"
-                    type="button"
-                    class="btn btn-primary writer-mobile-action">
-                <i class="fas fa-hammer"></i><span>Compile</span>
-            </button>
-        </div>
+        <!-- Bottom action bar REMOVED per operator 2026-10-22: the desktop
+             toolbar already carries Save/Log/Compile, so a second div row
+             duplicated the actions. Single source of actions wins. -->
+        
     </div>
 {% endblock %}
 {% block extra_js %}

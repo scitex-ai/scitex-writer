@@ -24,7 +24,6 @@
 /* --- phone-only chrome: absent on a wide viewport ------------------------- */
 
 .writer-mobile-panes,
-.writer-mobile-actions,
 .writer-mobile-files {
   display: none;
 }
@@ -35,19 +34,12 @@
        --stx-touch-target-min token is not in a release yet, so this is the
        local name it will replace. */
     --writer-touch-target-min: 44px;
-    --writer-mobile-bar-height: 56px;
     /* `height: 100%` of an auto-height flex parent resolves to the CONTENT
        height, which on a phone left the editor 401px tall inside an 844px
        viewport with dead space below it. The shell's module pane is a column
        flex container, so growing into it is what actually fills the screen. */
     flex: 1 1 auto;
     min-height: 0;
-    /* The action bar is fixed, so the pane has to reserve its height or the
-       editor's last line hides behind it. */
-    padding-bottom: calc(
-      var(--writer-mobile-bar-height) + var(--site-dock-clearance, 0px) +
-        env(safe-area-inset-bottom, 0px)
-    );
   }
 
   /* --- the switcher ------------------------------------------------------ */
@@ -99,6 +91,8 @@
   body[data-writer-mobile-pane="files"] .writer-mobile-files,
   body[data-writer-mobile-pane="editor"] .writer-editor-pane,
   body[data-writer-mobile-pane="preview"] .writer-preview-pane,
+  /* The Panel pane ignores the desktop default-collapsed state: choosing it
+     on a phone must show it regardless of the toolbar toggle. */
   body[data-writer-mobile-pane="details"] .details-pane {
     display: flex;
     flex-direction: column;
@@ -215,34 +209,6 @@
   body[data-writer-mobile-pane="preview"] .preview-header {
     flex-wrap: wrap;
     row-gap: 4px;
-  }
-
-  /* --- the bottom action bar --------------------------------------------- */
-
-  .writer-mobile-actions {
-    position: fixed;
-    left: 0;
-    right: 0;
-    /* Above the hub's site dock when there is one, and above the iOS home bar
-       always: a fixed bar at bottom: 0 puts its buttons under both. */
-    bottom: calc(
-      var(--site-dock-clearance, 0px) + env(safe-area-inset-bottom, 0px)
-    );
-    z-index: 40;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    background: var(--toolbar-bg);
-    border-top: 1px solid var(--border-color);
-  }
-
-  .writer-mobile-action {
-    flex: 1 1 0;
-    justify-content: center;
-    gap: 6px;
-    min-height: var(--writer-touch-target-min);
-    font-size: 14px;
   }
 
   /* The editor's own font size is set by Monaco, not here; the shell chrome is
