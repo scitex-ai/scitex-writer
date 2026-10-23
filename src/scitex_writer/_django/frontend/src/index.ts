@@ -18,7 +18,7 @@ import { MobileLayout, isMobileViewport } from "./mobile";
 import { PDFViewer } from "./pdf-viewer";
 import { type AnnotationUIHandle, mountAnnotationUI } from "./annotation-ui";
 import { CompileController } from "./compile";
-import { InsertPanel } from "./insert-panel";
+import { InsertPanel, type InsertPaneId } from "./insert-panel";
 import { DetailsPanel } from "./details-panel";
 import { controlsTranslate } from "./controls-i18n";
 import { registerCiteProviders } from "./cite-completion";
@@ -364,9 +364,43 @@ async function bootstrap(): Promise<void> {
   // Insert panel (cite/fig/table/history icon bar)
   const insertBar = root.querySelector<HTMLElement>("#insert-bar");
   const insertPanel = root.querySelector<HTMLElement>("#insert-panel");
-  const insert =
-    insertBar && insertPanel
-      ? new InsertPanel({
+
+  // Operator 2026-10-23: one switched large pane. The rail and the
+  // preview-header tabs share showPreviewView — rail picks cite/fig/
+  // table/collab/history (rendered into #insert-view, no expand beside
+  // the editor), header tabs pick PDF/Claims. Re-clicking the active
+  // rail icon returns to PDF.
+  type PreviewView = "pdf" | "claims" | InsertPaneId;
+  let previewView: PreviewView = "pdf";
+  const previewViewId: Record<PreviewView, string> = {
+    pdf: "pdf-view",
+    claims: "claims-view",
+    cite: "insert-view",
+    fig: "insert-view",
+    table: "insert-view",
+    collab: "insert-view",
+    history: "insert-view",
+  };
+  function showPreviewView(view: PreviewView): void {
+    previewView = view;
+    root
+      ?.querySelectorAll<HTMLElement>(".preview-view")
+      .forEach((v) =>
+        v.classList.toggle("active", v.id === previewViewId[view]),
+      );
+    root
+      ?.querySelectorAll<HTMLElement>(".preview-tab")
+      .forEach((t) =>
+        t.classList.toggle(
+          "active",
+          (t as HTMLElement).dataset.view === view,
+        ),
+      );
+    if (view === "pdf" || view === "claims") insert?.close();
+  }
+  let insert: InsertPanel | null = null;
+  if (insertBar && insertPanel) {
+    const panel = new InsertPanel({
           bar: insertBar,
           panel: insertPanel,
           getDocType: () =>
@@ -385,8 +419,28 @@ async function bootstrap(): Promise<void> {
             ]);
             mEditor.focus();
           },
-        })
-      : null;
+          onSelect: (pane) => {
+            if (previewView === pane) {
+              insert?.close();
+              showPreviewView("pdf");
+            } else {
+              insert?.open(pane);
+              showPreviewView(pane);
+            }
+          },
+        });
+    insert = panel;
+  }
+  root
+    ?.querySelectorAll<HTMLElement>('.preview-tab[data-view="pdf"]')
+    .forEach((t) =>
+      t.addEventListener("click", () => showPreviewView("pdf")),
+    );
+  root
+    ?.querySelectorAll<HTMLElement>('.preview-tab[data-view="claims"]')
+    .forEach((t) =>
+      t.addEventListener("click", () => showPreviewView("claims")),
+    );
 
   // Citation drop: drag a card into the Monaco host → insert at drop position.
   // Only accept our own custom MIME type so arbitrary text drops (e.g. a
