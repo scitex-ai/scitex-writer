@@ -8,7 +8,13 @@ import { listFigures, listTables } from "./api";
 import type { MediaEntry } from "./api";
 import { CitationsPanel } from "./citations-panel";
 
-export type InsertPaneId = "cite" | "fig" | "table" | "collab" | "history";
+export type InsertPaneId =
+  | "pdf"
+  | "cite"
+  | "fig"
+  | "table"
+  | "collab"
+  | "history";
 
 interface PanelOptions {
   bar: HTMLElement;
@@ -65,6 +71,10 @@ export class InsertPanel {
       .querySelectorAll<HTMLElement>("[data-pane]")
       .forEach((b) => b.classList.toggle("active", b.dataset.pane === pane));
     switch (pane) {
+      case "pdf":
+        // The PDF lives in #pdf-view, not the insert panel — the rail
+        // just switches the large pane; nothing to render here.
+        return;
       case "cite":
         void this.renderCite();
         break;
@@ -160,32 +170,17 @@ export class InsertPanel {
 
   private renderCollab(): void {
     this.opts.panel.innerHTML = `
-      <div class="insert-panel-header">Real-time collaboration</div>
+      <div class="insert-panel-header">Collaboration</div>
       <div class="insert-panel-body insert-panel-info">
-        <p><strong>Not supported in this local instance.</strong></p>
         <p>
-          Collaboration (operational transforms, presence, inline comments)
-          requires a cloud backend with auth, WebSocket consumers, and a
-          shared project store.
+          This project is not on a shared host yet. Push it to SciTeX Hub
+          and open it from there to review and merge changes together —
+          Hub is where collaboration lives (2026-10-23).
         </p>
         <p>
-          Two ways to use it:
+          Real-time co-editing (presence, inline comments) needs the Hub
+          session backend, which is not wired to this view yet.
         </p>
-        <ul>
-          <li>
-            Public hosted instance &mdash;
-            <a href="https://scitex.ai/apps/writer/" target="_blank" rel="noreferrer">
-              scitex.ai/apps/writer/
-            </a>
-          </li>
-          <li>
-            Self-host &mdash; the
-            <a href="https://github.com/ywatanabe1989/scitex-cloud" target="_blank" rel="noreferrer">
-              scitex-cloud
-            </a>
-            backend is AGPL-3.0 and runnable on your own infrastructure.
-          </li>
-        </ul>
       </div>
     `;
   }

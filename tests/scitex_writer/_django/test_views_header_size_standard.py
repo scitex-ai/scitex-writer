@@ -46,3 +46,12 @@ def test_writer_picker_bar_carries_no_underline():
     # Act
     # Assert
     assert "border-bottom: none;" in block
+
+
+def test_writer_picker_trigger_sits_on_the_app_surface():
+    # Arrange (stylesheet on disk): operator 2026-10-23 — the picker must
+    # follow the writer bluish-gray chrome, not SDK light defaults.
+    css = _PICKER_CSS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert "background: var(--bg-secondary);" in css

@@ -60,10 +60,9 @@ def _leaf_identity() -> dict:
     and the in-app header title are independent strings, and only the tile
     reads from the manifest.
     """
-    config = _app_config()
     return {
-        "writer_version": config.app_version,
-        "writer_label": "Writer",
+        "writer_version": _app_config().app_version,
+        "writer_label": "SciTeX Writer",
     }
 
 
