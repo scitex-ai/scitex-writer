@@ -102,9 +102,8 @@
     width: 100%;
   }
 
-  /* The desktop-only splitter and side panels are not part of a single-pane
+  /* The desktop-only side panels are not part of a single-pane
      layout: at 390px the insert rail alone would take a seventh of the width. */
-  body[data-writer-mobile-pane] .writer-split-resizer,
   body[data-writer-mobile-pane] .insert-bar {
     display: none;
   }

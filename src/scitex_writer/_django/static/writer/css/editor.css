@@ -72,14 +72,9 @@
   flex: 1;
   background: var(--bg-editor);
 }
-.writer-split-resizer {
-  flex: 0 0 4px;
-  background: var(--border-color);
-  cursor: col-resize;
-}
-.writer-split-resizer:hover {
-  background: var(--accent);
-}
+/* The editor|rail split is fixed — the old drag resizer div is gone from
+ * the markup (operator 2026-10-23: it rendered as a stray accent line).
+ * Kept as documentation; no rule needed. */
 
 [data-theme="light"] .writer-app,
 .writer-app[data-theme="light"] {
@@ -1350,7 +1345,11 @@ select:focus {
   max-width: 100%;
 }
 
-/* PR5: insert icon-bar + side panel (Cite/Fig/Table/History) */
+/* PR5: insert icon-bar + side panel (Cite/Fig/Table/History).
+ * Operator 2026-10-23: the column itself carries NO accent — no full-height
+ * gold line on its left edge, plain token borders only (the old accent
+ * bled from the resizer/slider era). Only the selected BUTTON shows the
+ * vertical accent bar (see .insert-bar-btn.active). */
 .insert-bar {
   display: flex;
   flex-direction: column;
@@ -1367,11 +1366,11 @@ select:focus {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 2px;
+  padding: 6px 2px 6px 4px;
   background: transparent;
   color: var(--text-secondary);
   border: none;
-  border-bottom: 2px solid transparent;
+  border-left: 2px solid transparent;
   border-radius: 0;
   font-size: 10px;
   cursor: pointer;
@@ -1379,16 +1378,16 @@ select:focus {
 .insert-bar-btn i {
   font-size: 14px;
 }
-/* Operator 2026-10-23: no left-side highlight on the rail buttons — there
- * is no slider anymore, and the active state is the bottom underline
- * (matching .preview-tab.active). No background, no left border. */
+/* Operator 2026-10-23: the selected rail button reads as a vertical bar
+ * on its left edge — not a bottom underline. Hover is text-only (the
+ * earlier no-fill direction stands); only the active state carries ink. */
 .insert-bar-btn:hover {
   color: var(--text-primary);
 }
 .insert-bar-btn.active {
   background: transparent;
   color: var(--text-primary);
-  border-bottom-color: var(--accent);
+  border-left-color: var(--accent);
   border-radius: 0;
 }
 .insert-panel {
@@ -2269,10 +2268,7 @@ select:focus {
   .writer-split {
     flex-direction: column;
   }
-  /* The horizontal drag handle is meaningless once stacked — hide it. */
-  .writer-split-resizer {
-    display: none;
-  }
+  /* The old drag handle is gone from the markup — nothing to hide. */
   /* Editor surface owns the available height (CodeMirror needs a real box to
      size its gutter + code area). */
   .writer-editor-pane {

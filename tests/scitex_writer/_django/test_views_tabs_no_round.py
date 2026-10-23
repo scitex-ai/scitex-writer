@@ -87,12 +87,27 @@ def test_insert_bar_active_has_no_fill_background():
     assert "background: transparent;" in block
 
 
-def test_insert_bar_active_is_a_straight_underline():
-    # Arrange (stylesheet on disk)
+def test_insert_bar_active_is_a_vertical_bar():
+    # Arrange (stylesheet on disk): operator 2026-10-23 — the selected
+    # rail button carries a left-edge vertical bar, not an underline.
     block = _rule_block(".insert-bar-btn.active")
     # Act
     # Assert
-    assert "border-bottom-color: var(--accent);" in block
+    assert ("border-left-color: var(--accent);" in block) and (
+        "border-bottom-color" not in block
+    )
+
+
+def test_dead_split_resizer_is_gone(project_dir):
+    # Arrange: operator 2026-10-23 — the editor|rail resizer had no JS
+    # behind it and rendered as a stray accent line. Markup + CSS gone.
+    body = _editor_html(project_dir)
+    css = _EDITOR_CSS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert ("writer-split-resizer" not in body) and (
+        ".writer-split-resizer {" not in css
+    )
 
 
 def test_insert_bar_active_has_square_corners():
