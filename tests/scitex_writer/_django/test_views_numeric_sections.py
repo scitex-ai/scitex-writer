@@ -442,10 +442,11 @@ def test_rendered_writer_brand_assets_resolve_after_wheel_install_returns_page_s
 
 
 @pytest.mark.parametrize('mounted', ['default'], indirect=True)
-def test_rendered_writer_brand_assets_resolve_after_wheel_install_declares_svg_icon(mounted):
-    # Arrange: pytest fixtures and local setup.
+def test_rendered_brand_mark_is_the_sdk_official_svg(mounted):
+    # Arrange: pytest fixtures and local setup. Operator 2026-10-23: the tab
+    # icon is the SDK official mark (white snake on navy) in every mode — no
+    # leaf-local icons, no per-environment variant.
     from html.parser import HTMLParser
-    from django.contrib.staticfiles import finders
 
     class Icons(HTMLParser):
 
@@ -457,14 +458,13 @@ def test_rendered_writer_brand_assets_resolve_after_wheel_install_declares_svg_i
             attrs = dict(attrs)
             # Act: exercise the real scenario.
             if tag == 'link' and attrs.get('rel') in {'icon', 'apple-touch-icon'}:
-                href = attrs['href']
-                if href.startswith('/static/writer/'):
-                    self.paths.append(href.removeprefix('/static/'))
+                self.paths.append(attrs['href'])
     response = mounted.client.get(mounted.prefix + '?project=17', HTTP_SYNTHETIC_ACTOR='owner')
     icons = Icons()
     icons.feed(response.content.decode())
     # Assert
-    assert 'writer/favicon.svg' in icons.paths
+    assert '/static/scitex_sdk/ui/img/scitex-favicon.svg' in icons.paths
+    assert not [p for p in icons.paths if p.startswith('/static/writer/favicon')]
 
 
 @pytest.mark.parametrize('mounted', ['default'], indirect=True)
@@ -483,19 +483,18 @@ def test_rendered_writer_brand_assets_resolve_after_wheel_install_declares_touch
             attrs = dict(attrs)
             # Act: exercise the real scenario.
             if tag == 'link' and attrs.get('rel') in {'icon', 'apple-touch-icon'}:
-                href = attrs['href']
-                if href.startswith('/static/writer/'):
-                    self.paths.append(href.removeprefix('/static/'))
+                self.paths.append(attrs['href'])
     response = mounted.client.get(mounted.prefix + '?project=17', HTTP_SYNTHETIC_ACTOR='owner')
     icons = Icons()
     icons.feed(response.content.decode())
     # Assert
-    assert 'writer/favicon-180x180.png' in icons.paths
+    assert '/static/scitex_sdk/ui/img/favicon-180.png' in icons.paths
 
 
 @pytest.mark.parametrize('mounted', ['default'], indirect=True)
-def test_rendered_writer_brand_assets_resolve_after_wheel_install_resolves_declared_icons(mounted):
-    # Arrange: pytest fixtures and local setup.
+def test_rendered_sdk_brand_assets_resolve_after_wheel_install(mounted):
+    # Arrange: pytest fixtures and local setup. Every icon link the page
+    # declares must resolve to a packaged file — the SDK official set.
     from html.parser import HTMLParser
     from django.contrib.staticfiles import finders
 
@@ -509,15 +508,15 @@ def test_rendered_writer_brand_assets_resolve_after_wheel_install_resolves_decla
             attrs = dict(attrs)
             # Act: exercise the real scenario.
             if tag == 'link' and attrs.get('rel') in {'icon', 'apple-touch-icon'}:
-                href = attrs['href']
-                if href.startswith('/static/writer/'):
-                    self.paths.append(href.removeprefix('/static/'))
+                self.paths.append(attrs['href'])
     response = mounted.client.get(mounted.prefix + '?project=17', HTTP_SYNTHETIC_ACTOR='owner')
     icons = Icons()
     icons.feed(response.content.decode())
-    for asset_path in icons.paths:
+    assert icons.paths != []
+    for href in icons.paths:
         # Assert
-        assert finders.find(asset_path) is not None, asset_path
+        assert href.startswith('/static/scitex_sdk/ui/img/'), href
+        assert finders.find(href.removeprefix('/static/')) is not None, href
 
 
 def test_empty_existing_section_is_distinct_from_missing_content_reports_existing_empty_content(mounted):

@@ -3,28 +3,9 @@
 {% block extra_css %}
     <meta name="stx-app-scope" content="{{ app_scope }}">
     <meta name="writer-csrf-token" content="{{ csrf_token }}">
-    {% comment %}
-    The bare SVG icon link is NOT here: the scitex-ui shell emits it from
-    `favicon_href`, which views.py sets to writer/favicon.svg. Declaring it
-    here too would produce two identical rel="icon" links (scitex-ui 0.7.0
-    made the shell's link unconditional). Only the variants the shell cannot
-    express -- sizes= and apple-touch-icon -- belong in this block.
-    {% endcomment %}
-    <link rel="icon"
-          type="image/png"
-          sizes="16x16"
-          href="{% static 'writer/favicon-16x16.png' %}">
-    <link rel="icon"
-          type="image/png"
-          sizes="32x32"
-          href="{% static 'writer/favicon-32x32.png' %}">
-    <link rel="icon"
-          type="image/png"
-          sizes="192x192"
-          href="{% static 'writer/favicon-192x192.png' %}">
-    <link rel="apple-touch-icon"
-          sizes="180x180"
-          href="{% static 'writer/favicon-180x180.png' %}">
+    {% comment %}Tab icon: the scitex-sdk shell emits the official mark
+    via _branding_head.html (operator 2026-10-23 — no leaf-local icons,
+    no per-environment variant).{% endcomment %}
     <link rel="stylesheet" href="{% static 'writer/assets/index.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/editor.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/app-header.css' %}">

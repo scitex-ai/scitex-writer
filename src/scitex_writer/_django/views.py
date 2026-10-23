@@ -139,27 +139,6 @@ def _app_label(base: str) -> str:
     return f"{base} (standalone)" if mode == "standalone" else base
 
 
-def _favicon_href() -> str:
-    """Writer's own brand mark, for the scitex-ui shell's icon link.
-
-    scitex-ui 0.7.0 made the shell's ``<link rel="icon">`` UNCONDITIONAL,
-    falling back to the shared SciTeX mark when a view supplies no
-    ``favicon_href`` (scitex_ui/templates/scitex_ui/_branding_head.html).
-    Writer supplied none, so every page emitted the shared mark ON TOP OF
-    writer's own links -- untidy rather than broken, since the shell's link
-    precedes ``extra_css`` and ours won.
-
-    Passing this makes the shell emit WRITER's mark, so there is exactly one
-    bare ``rel="icon"``. The sized PNG variants and the apple-touch-icon stay
-    in each template's ``extra_css``: the shell has no way to express
-    ``sizes=`` or ``apple-touch-icon``, and a single shared SVG is not a
-    substitute for a 180x180 home-screen icon.
-    """
-    from django.templatetags.static import static
-
-    return static("writer/favicon.svg")
-
-
 #: Writer fills exactly one pane of the scitex-ui shell — the module pane, where
 #: `.writer-app` mounts. The other three are declared unused so the shell
 #: collapses them and the editor gets the full viewport.
@@ -201,9 +180,10 @@ def _shell_context(base_title: str) -> dict:
     """
     from scitex_sdk.ui import branding
 
+    # No favicon_href: the shell falls back to the SDK official mark
+    # (operator 2026-10-23 — no leaf-local icons, no per-environment variant).
     context = branding.shell_context(
         "Writer",
-        favicon_href=_favicon_href(),
         panes=_SHELL_PANES,
     )
     context["app_label"] = _app_label(base_title)
