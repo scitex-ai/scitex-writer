@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.16] - 2026-10-23
+
+### Fixed
+
+- Monaco dark surface matches the app's bluish-gray chrome: writer-dark
+  editor/gutter background `#0d1117` -> `#161b22` (the
+  `--bg-secondary`/`--toolbar-bg` token), so the editor sits flat against
+  the toolbar + preview pane instead of a black box (operator 2026-10-23)
+  (#475).
+
+### Changed
+
+- Editor toolbar condenses into the overflow hamburger with aligned 32px
+  row heights; Draft/Full compile labels read the live section title
+  (`Abstract`) and `Manuscript`; Monaco gains writer-dark/writer-light
+  themes + Ctrl+wheel font step; annotation tools move into a hamburger
+  with shortcuts; the dead Bibliography tab is dropped; the rail switches
+  the large preview pane across PDF/fig/table/collab/history + Claims
+  (operator 2026-10-23) (#474).
+
 ## [2.43.15] - 2026-10-23
 
 ### Fixed
