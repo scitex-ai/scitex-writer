@@ -44,6 +44,16 @@
   justify-content: center;
   min-width: 0;
 }
+/* Operator 2026-10-23: same-row toolbar controls share one height on
+ * desktop so the 44px-touch selects do not tower over the buttons.
+ * The 44px floor stays untouched for phones (min-width gate below). */
+@media (min-width: 769px) {
+  .writer-toolbar .writer-select,
+  .writer-toolbar .btn {
+    height: 32px;
+    min-height: 32px;
+  }
+}
 .writer-logo {
   font-weight: 600;
 }
