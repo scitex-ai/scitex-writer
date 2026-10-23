@@ -168,6 +168,33 @@ def test_mobile_wires_no_action_bar_forwarding():
     assert leaked == []
 
 
+def test_ctrl_wheel_steps_editor_font_through_the_select():
+    # Arrange: operator 2026-10-23 — ctrl+wheel is desktop IDE behavior;
+    # it reuses the toolbar select so control and editor stay in sync.
+    source = _INDEX_TS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert (
+        ("ctrlKey" in source)
+        and ('new Event("change")' in source)
+        and ("font-size-select" in source)
+    )
+
+
+def test_monaco_uses_writer_scoped_chrome_matching_themes():
+    # Arrange: operator 2026-10-23 — writer-dark/writer-light extend the
+    # shared scitex-* themes with shell-matching surfaces only.
+    source = _INDEX_TS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert (
+        ('"writer-dark"' in source)
+        and ('"writer-light"' in source)
+        and ('"editor.background": "#0d1117"' in source)
+        and ("new MutationObserver(applyWriterTheme)" in source)
+    )
+
+
 def test_editor_pane_is_the_one_marked_active_in_the_markup(project_dir):
     # Arrange
     editor_button = r'data-mobile-pane="editor"[^>]*aria-current="true"'

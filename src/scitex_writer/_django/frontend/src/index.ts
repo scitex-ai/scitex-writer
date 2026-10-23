@@ -78,6 +78,97 @@ async function bootstrap(): Promise<void> {
     editor.getEditor()?.layout();
   });
 
+  // Operator 2026-10-23: writer-scoped Monaco themes matching the shell
+  // chrome (cool GitHub-dark neutrals; paper-white light). Token rules
+  // mirror the shared scitex-* LaTeX rules so highlighting stays
+  // identical — only the editor/gutter surfaces move. (The SDK module
+  // does not export its rule lists, hence the local copy; if the SDK
+  // lane adopts these surfaces fleet-wide, this block goes away.)
+  // Registered after the SDK observer, so this wins each data-theme
+  // toggle deterministically.
+  const monacoNs = editor.getMonaco?.();
+  if (monacoNs) {
+    monacoNs.editor.defineTheme("writer-dark", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [
+        { token: "comment.latex", foreground: "6A9955", fontStyle: "italic" },
+        { token: "keyword.latex", foreground: "569CD6" },
+        { token: "keyword.control.latex", foreground: "C586C0" },
+        { token: "keyword.section.latex", foreground: "DCDCAA", fontStyle: "bold" },
+        { token: "keyword.math.latex", foreground: "9CDCFE" },
+        { token: "string.math.latex", foreground: "CE9178" },
+        { token: "type.identifier.latex", foreground: "4EC9B0" },
+        { token: "delimiter.curly.latex", foreground: "FFD700" },
+        { token: "delimiter.square.latex", foreground: "DA70D6" },
+        { token: "number.latex", foreground: "B5CEA8" },
+        { token: "operator.latex", foreground: "D4D4D4" },
+      ],
+      colors: {
+        "editor.background": "#0d1117",
+        "editorGutter.background": "#0d1117",
+      },
+    });
+    monacoNs.editor.defineTheme("writer-light", {
+      base: "vs",
+      inherit: true,
+      rules: [
+        { token: "comment.latex", foreground: "008000", fontStyle: "italic" },
+        { token: "keyword.latex", foreground: "3366aa" },
+        { token: "keyword.control.latex", foreground: "7744aa" },
+        { token: "keyword.section.latex", foreground: "795E26", fontStyle: "bold" },
+        { token: "keyword.math.latex", foreground: "001080" },
+        { token: "string.math.latex", foreground: "A31515" },
+        { token: "type.identifier.latex", foreground: "267F99" },
+        { token: "delimiter.curly.latex", foreground: "B8860B" },
+        { token: "delimiter.square.latex", foreground: "800080" },
+        { token: "number.latex", foreground: "098658" },
+        { token: "operator.latex", foreground: "333333" },
+      ],
+      colors: {
+        "editor.background": "#ffffff",
+        "editorGutter.background": "#f8f7f5",
+      },
+    });
+    const applyWriterTheme = (): void => {
+      const dark =
+        document.documentElement.getAttribute("data-theme") === "dark";
+      editor.getEditor()?.updateOptions({
+        theme: dark ? "writer-dark" : "writer-light",
+      });
+    };
+    applyWriterTheme();
+    new MutationObserver(applyWriterTheme).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+  }
+
+  // Operator 2026-10-23: ctrl+wheel steps the editor font through the
+  // toolbar select's own sizes (desktop IDE behavior). Reusing the
+  // select keeps the control and the editor in sync with no new state.
+  const fontSizeEl = root.querySelector<HTMLSelectElement>(
+    "#font-size-select",
+  );
+  editorContainer.addEventListener(
+    "wheel",
+    (event: WheelEvent) => {
+      if (!event.ctrlKey || !fontSizeEl || fontSizeEl.options.length === 0)
+        return;
+      event.preventDefault();
+      const step = event.deltaY < 0 ? 1 : -1;
+      const next = Math.min(
+        fontSizeEl.options.length - 1,
+        Math.max(0, fontSizeEl.selectedIndex + step),
+      );
+      if (next !== fontSizeEl.selectedIndex) {
+        fontSizeEl.selectedIndex = next;
+        fontSizeEl.dispatchEvent(new Event("change"));
+      }
+    },
+    { passive: false },
+  );
+
   // Toolbar wiring
   const tabsEl = root.querySelector<HTMLElement>("#section-tabs");
   const mobileListEl = root.querySelector<HTMLElement>(
