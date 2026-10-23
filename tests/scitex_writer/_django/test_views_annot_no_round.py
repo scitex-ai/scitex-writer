@@ -21,6 +21,7 @@ from pathlib import Path
 
 _DJANGO_DIR = Path(__file__).resolve().parents[3] / "src" / "scitex_writer" / "_django"
 _ANNOT_CSS = _DJANGO_DIR / "static" / "writer" / "css" / "annotations.css"
+_ANNOT_UI_TS = _DJANGO_DIR / "frontend" / "src" / "annotation-ui.ts"
 
 
 def _rule_block(selector: str) -> str:
@@ -70,3 +71,27 @@ def test_annot_button_base_layout_does_not_shift_on_activate():
     # Act
     # Assert
     assert "border-bottom: 2px solid transparent;" in block
+
+
+def test_annot_menu_list_is_a_positioned_popup():
+    # Arrange (stylesheet on disk): operator 2026-10-23 — the annot
+    # hamburger opens a popup menu, not an inline row.
+    block = _rule_block(".annot-menu-list")
+    # Act
+    # Assert
+    assert ("position: absolute;" in block) and ("z-index: 60;" in block)
+
+
+def test_annot_toolbar_builds_hamburger_menu_with_shortcuts():
+    # Arrange: operator 2026-10-23 — modes (Alt+1-3) and tools (Alt+4-8)
+    # live in the hamburger menu; shortcuts delegate to the buttons.
+    source = _ANNOT_UI_TS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert (
+        ('id = "btn-annot-menu"' in source)
+        and ('id = "annot-menu-list"' in source)
+        and ('"1": modeButtons.get("read")' in source)
+        and ('"4": toolButtons.get("highlight")' in source)
+        and ("target.click()" in source)
+    )
