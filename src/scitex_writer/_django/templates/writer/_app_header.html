@@ -38,7 +38,7 @@
 {# wrapper keeps the `.writer-app-header` scope for leaf CSS hooks. #}
 <div class="writer-app-header">
   <div data-stx-app-header
-       data-app-title="{{ writer_label|default:'SciTeX Writer' }}"
+       data-app-title="{{ writer_label|default:'Writer' }}"
        {% if writer_version %}data-app-version="{{ writer_version }}"{% endif %}></div>
   <script type="module" src="{% static 'scitex_sdk/ui/js/app/app-header.js' %}"></script>
   {% if project_picker_available %}{% include "writer/_project_picker.html" %}{% endif %}
