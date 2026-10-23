@@ -15,10 +15,33 @@ STX-TQ007: one assertion per test (see 3af127ed).
 from __future__ import annotations
 
 import re
+import tempfile
 from pathlib import Path
+
+import pytest
+from django.test import RequestFactory
+
+from scitex_writer._django import views
 
 _DJANGO_DIR = Path(__file__).resolve().parents[3] / "src" / "scitex_writer" / "_django"
 _EDITOR_CSS = _DJANGO_DIR / "static" / "writer" / "css" / "editor.css"
+
+
+@pytest.fixture
+def project_dir():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "01_manuscript" / "contents").mkdir(parents=True)
+        (root / "01_manuscript" / "contents" / "abstract.tex").write_text(
+            "\\begin{abstract}x\\end{abstract}\n", encoding="utf-8"
+        )
+        (root / "00_shared").mkdir()
+        yield root
+
+
+def _editor_html(project_dir) -> str:
+    request = RequestFactory().get(f"/?working_dir={project_dir}")
+    return views.editor_page(request).content.decode()
 
 
 def _rule_block(selector: str) -> str:
@@ -76,3 +99,13 @@ def test_insert_bar_active_has_square_corners():
     # Act
     # Assert
     assert "border-radius: 0;" in block
+
+
+def test_preview_tabs_are_pdf_and_claims_only(project_dir):
+    # Arrange: operator 2026-10-23 — the dead Bibliography tab is gone
+    # (never populated, never wired); the pane switches PDF vs Claims.
+    # Act
+    body = _editor_html(project_dir)
+    tabs = re.findall(r'class="preview-tab[^"]*" data-view="(\w+)"', body)
+    # Assert
+    assert tabs == ["pdf", "claims"] and "bib-view" not in body
