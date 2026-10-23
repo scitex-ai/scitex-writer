@@ -12,13 +12,13 @@ import {
 
 import { PROJECT_DIR, getFile, saveFile, projectInfo, resourceUrl } from "./api";
 import type { SectionEntry } from "./api";
-import { SectionTabs } from "./sections";
+import { SectionTabs, humanize } from "./sections";
 import { countWords, mountToolbar } from "./toolbar";
 import { MobileLayout, isMobileViewport } from "./mobile";
 import { PDFViewer } from "./pdf-viewer";
 import { type AnnotationUIHandle, mountAnnotationUI } from "./annotation-ui";
 import { CompileController } from "./compile";
-import { InsertPanel } from "./insert-panel";
+import { InsertPanel, type InsertPaneId } from "./insert-panel";
 import { DetailsPanel } from "./details-panel";
 import { controlsTranslate } from "./controls-i18n";
 import { registerCiteProviders } from "./cite-completion";
@@ -77,6 +77,97 @@ async function bootstrap(): Promise<void> {
   requestAnimationFrame(() => {
     editor.getEditor()?.layout();
   });
+
+  // Operator 2026-10-23: writer-scoped Monaco themes matching the shell
+  // chrome (cool GitHub-dark neutrals; paper-white light). Token rules
+  // mirror the shared scitex-* LaTeX rules so highlighting stays
+  // identical — only the editor/gutter surfaces move. (The SDK module
+  // does not export its rule lists, hence the local copy; if the SDK
+  // lane adopts these surfaces fleet-wide, this block goes away.)
+  // Registered after the SDK observer, so this wins each data-theme
+  // toggle deterministically.
+  const monacoNs = editor.getMonaco?.();
+  if (monacoNs) {
+    monacoNs.editor.defineTheme("writer-dark", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [
+        { token: "comment.latex", foreground: "6A9955", fontStyle: "italic" },
+        { token: "keyword.latex", foreground: "569CD6" },
+        { token: "keyword.control.latex", foreground: "C586C0" },
+        { token: "keyword.section.latex", foreground: "DCDCAA", fontStyle: "bold" },
+        { token: "keyword.math.latex", foreground: "9CDCFE" },
+        { token: "string.math.latex", foreground: "CE9178" },
+        { token: "type.identifier.latex", foreground: "4EC9B0" },
+        { token: "delimiter.curly.latex", foreground: "FFD700" },
+        { token: "delimiter.square.latex", foreground: "DA70D6" },
+        { token: "number.latex", foreground: "B5CEA8" },
+        { token: "operator.latex", foreground: "D4D4D4" },
+      ],
+      colors: {
+        "editor.background": "#0d1117",
+        "editorGutter.background": "#0d1117",
+      },
+    });
+    monacoNs.editor.defineTheme("writer-light", {
+      base: "vs",
+      inherit: true,
+      rules: [
+        { token: "comment.latex", foreground: "008000", fontStyle: "italic" },
+        { token: "keyword.latex", foreground: "3366aa" },
+        { token: "keyword.control.latex", foreground: "7744aa" },
+        { token: "keyword.section.latex", foreground: "795E26", fontStyle: "bold" },
+        { token: "keyword.math.latex", foreground: "001080" },
+        { token: "string.math.latex", foreground: "A31515" },
+        { token: "type.identifier.latex", foreground: "267F99" },
+        { token: "delimiter.curly.latex", foreground: "B8860B" },
+        { token: "delimiter.square.latex", foreground: "800080" },
+        { token: "number.latex", foreground: "098658" },
+        { token: "operator.latex", foreground: "333333" },
+      ],
+      colors: {
+        "editor.background": "#ffffff",
+        "editorGutter.background": "#f8f7f5",
+      },
+    });
+    const applyWriterTheme = (): void => {
+      const dark =
+        document.documentElement.getAttribute("data-theme") === "dark";
+      editor.getEditor()?.updateOptions({
+        theme: dark ? "writer-dark" : "writer-light",
+      });
+    };
+    applyWriterTheme();
+    new MutationObserver(applyWriterTheme).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+  }
+
+  // Operator 2026-10-23: ctrl+wheel steps the editor font through the
+  // toolbar select's own sizes (desktop IDE behavior). Reusing the
+  // select keeps the control and the editor in sync with no new state.
+  const fontSizeEl = root.querySelector<HTMLSelectElement>(
+    "#font-size-select",
+  );
+  editorContainer.addEventListener(
+    "wheel",
+    (event: WheelEvent) => {
+      if (!event.ctrlKey || !fontSizeEl || fontSizeEl.options.length === 0)
+        return;
+      event.preventDefault();
+      const step = event.deltaY < 0 ? 1 : -1;
+      const next = Math.min(
+        fontSizeEl.options.length - 1,
+        Math.max(0, fontSizeEl.selectedIndex + step),
+      );
+      if (next !== fontSizeEl.selectedIndex) {
+        fontSizeEl.selectedIndex = next;
+        fontSizeEl.dispatchEvent(new Event("change"));
+      }
+    },
+    { passive: false },
+  );
 
   // Toolbar wiring
   const tabsEl = root.querySelector<HTMLElement>("#section-tabs");
@@ -273,9 +364,43 @@ async function bootstrap(): Promise<void> {
   // Insert panel (cite/fig/table/history icon bar)
   const insertBar = root.querySelector<HTMLElement>("#insert-bar");
   const insertPanel = root.querySelector<HTMLElement>("#insert-panel");
-  const insert =
-    insertBar && insertPanel
-      ? new InsertPanel({
+
+  // Operator 2026-10-23: one switched large pane. The rail and the
+  // preview-header tabs share showPreviewView — rail picks cite/fig/
+  // table/collab/history (rendered into #insert-view, no expand beside
+  // the editor), header tabs pick PDF/Claims. Re-clicking the active
+  // rail icon returns to PDF.
+  type PreviewView = "pdf" | "claims" | InsertPaneId;
+  let previewView: PreviewView = "pdf";
+  const previewViewId: Record<PreviewView, string> = {
+    pdf: "pdf-view",
+    claims: "claims-view",
+    cite: "insert-view",
+    fig: "insert-view",
+    table: "insert-view",
+    collab: "insert-view",
+    history: "insert-view",
+  };
+  function showPreviewView(view: PreviewView): void {
+    previewView = view;
+    root
+      ?.querySelectorAll<HTMLElement>(".preview-view")
+      .forEach((v) =>
+        v.classList.toggle("active", v.id === previewViewId[view]),
+      );
+    root
+      ?.querySelectorAll<HTMLElement>(".preview-tab")
+      .forEach((t) =>
+        t.classList.toggle(
+          "active",
+          (t as HTMLElement).dataset.view === view,
+        ),
+      );
+    if (view === "pdf" || view === "claims") insert?.close();
+  }
+  let insert: InsertPanel | null = null;
+  if (insertBar && insertPanel) {
+    const panel = new InsertPanel({
           bar: insertBar,
           panel: insertPanel,
           getDocType: () =>
@@ -294,8 +419,28 @@ async function bootstrap(): Promise<void> {
             ]);
             mEditor.focus();
           },
-        })
-      : null;
+          onSelect: (pane) => {
+            if (previewView === pane) {
+              insert?.close();
+              showPreviewView("pdf");
+            } else {
+              insert?.open(pane);
+              showPreviewView(pane);
+            }
+          },
+        });
+    insert = panel;
+  }
+  root
+    ?.querySelectorAll<HTMLElement>('.preview-tab[data-view="pdf"]')
+    .forEach((t) =>
+      t.addEventListener("click", () => showPreviewView("pdf")),
+    );
+  root
+    ?.querySelectorAll<HTMLElement>('.preview-tab[data-view="claims"]')
+    .forEach((t) =>
+      t.addEventListener("click", () => showPreviewView("claims")),
+    );
 
   // Citation drop: drag a card into the Monaco host → insert at drop position.
   // Only accept our own custom MIME type so arbitrary text drops (e.g. a
@@ -415,7 +560,30 @@ async function bootstrap(): Promise<void> {
   await pdf?.load(initialDocType);
   }
 
+  /* Operator 2026-10-23: the Draft option names the open section
+   * (e.g. "Abstract") and Full names the document (e.g. "Manuscript")
+   * instead of the generic static labels. Runs on every section load,
+   * so tab switches, hint jumps and doc-type reloads all stay current. */
+  function updateCompileModeLabels(section: SectionEntry): void {
+    const modeSelect = root?.querySelector<HTMLSelectElement>(
+      "#compile-mode-select",
+    );
+    const docLabel =
+      root
+        ?.querySelector<HTMLSelectElement>("#doc-type-select")
+        ?.selectedOptions[0]?.textContent?.trim() || "Manuscript";
+    const preview = modeSelect?.querySelector<HTMLOptionElement>(
+      'option[value="preview"]',
+    );
+    const full = modeSelect?.querySelector<HTMLOptionElement>(
+      'option[value="full"]',
+    );
+    if (preview) preview.textContent = humanize(section.name);
+    if (full) full.textContent = docLabel;
+  }
+
   async function loadSection(section: SectionEntry): Promise<void> {
+    updateCompileModeLabels(section);
     try {
       const file = await getFile(section.path);
       currentPath = section.path;

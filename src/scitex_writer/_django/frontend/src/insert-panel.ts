@@ -15,6 +15,10 @@ interface PanelOptions {
   panel: HTMLElement;
   getDocType: () => string;
   insertAtCursor: (snippet: string) => void;
+  /** Operator 2026-10-23: the rail switches the large preview pane
+   * instead of expanding beside it. When set, rail clicks delegate to
+   * the host switcher; otherwise the legacy expand/collapse runs. */
+  onSelect?: (pane: InsertPaneId) => void;
 }
 
 export class InsertPanel {
@@ -36,6 +40,10 @@ export class InsertPanel {
       .forEach((btn) => {
         btn.addEventListener("click", () => {
           const pane = btn.dataset.pane as InsertPaneId;
+          if (this.opts.onSelect) {
+            this.opts.onSelect(pane);
+            return;
+          }
           if (this.active === pane) this.close();
           else this.open(pane);
         });

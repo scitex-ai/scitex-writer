@@ -138,7 +138,7 @@ export class SectionTabs {
 }
 
 /** "01_introduction" → "Introduction"; "abstract" → "Abstract". */
-function humanize(raw: string): string {
+export function humanize(raw: string): string {
   const stripped = raw.replace(/^\d+[_-]?/, "");
   return stripped
     .split(/[_-]/)

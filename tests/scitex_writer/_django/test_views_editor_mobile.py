@@ -117,6 +117,43 @@ def test_no_action_bar_stylesheet_is_linked(project_dir):
     assert "scitex_sdk/ui/css/app/action-bar.css" not in body
 
 
+def test_toolbar_overflow_uses_hamburger_icon(project_dir):
+    # Arrange: operator 2026-10-23 — the overflow disclosure is a hamburger
+    # again, matching the PDF pane menu (no three-dots anywhere).
+    # Act
+    body = _editor_html(project_dir)
+    # Assert
+    assert "fa-ellipsis-h" not in body and "fa-bars" in body
+
+
+def test_desktop_toolbar_controls_share_one_height():
+    # Arrange: operator 2026-10-23 — same-row selects and buttons align at
+    # 32px on desktop (44px touch floor stays for phones, next test).
+    css = (_DJANGO_DIR / "static" / "writer" / "css" / "editor.css").read_text(
+        encoding="utf-8"
+    )
+    # Act
+    aligned = re.search(
+        r"\.writer-toolbar \.writer-select,\s*\.writer-toolbar \.btn\s*"
+        r"\{\s*height:\s*32px;\s*min-height:\s*32px;",
+        css,
+    )
+    # Assert
+    assert aligned is not None
+
+
+def test_phone_selects_keep_the_44px_floor():
+    # Arrange: the desktop 32px alignment must not leak onto phones — the
+    # global select floor stays 44px for touch targets.
+    css = (_DJANGO_DIR / "static" / "writer" / "css" / "editor.css").read_text(
+        encoding="utf-8"
+    )
+    # Act
+    floor = re.search(r"\.writer-select\s*\{[^}]*min-height:\s*44px", css)
+    # Assert
+    assert floor is not None
+
+
 def test_mobile_wires_no_action_bar_forwarding():
     # Arrange: with the bar gone, nothing forwards to it — the retired
     # mount call, button id, and save/log hooks must be absent from both
@@ -129,6 +166,33 @@ def test_mobile_wires_no_action_bar_forwarding():
     leaked = [(n, i) for i, s in enumerate(sources) for n in retired if n in s]
     # Assert
     assert leaked == []
+
+
+def test_ctrl_wheel_steps_editor_font_through_the_select():
+    # Arrange: operator 2026-10-23 — ctrl+wheel is desktop IDE behavior;
+    # it reuses the toolbar select so control and editor stay in sync.
+    source = _INDEX_TS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert (
+        ("ctrlKey" in source)
+        and ('new Event("change")' in source)
+        and ("font-size-select" in source)
+    )
+
+
+def test_monaco_uses_writer_scoped_chrome_matching_themes():
+    # Arrange: operator 2026-10-23 — writer-dark/writer-light extend the
+    # shared scitex-* themes with shell-matching surfaces only.
+    source = _INDEX_TS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert (
+        ('"writer-dark"' in source)
+        and ('"writer-light"' in source)
+        and ('"editor.background": "#0d1117"' in source)
+        and ("new MutationObserver(applyWriterTheme)" in source)
+    )
 
 
 def test_editor_pane_is_the_one_marked_active_in_the_markup(project_dir):
