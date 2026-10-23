@@ -604,7 +604,7 @@ def test_editor_tab_title_marks_standalone_mode(project_dir):
     # Act
     body = resp.content.decode()
     # Assert
-    assert "SciTeX Writer (standalone)" in body
+    assert "Writer (standalone)" in body
 
 
 def test_app_label_omits_marker_in_hub_mode():
@@ -613,9 +613,9 @@ def test_app_label_omits_marker_in_hub_mode():
 
     # Act
     with override_settings(SCITEX_APP_MODE="hub"):
-        label = views._app_label("SciTeX Writer")
+        label = views._app_label("Writer")
     # Assert
-    assert label == "SciTeX Writer"
+    assert label == "Writer"
 
 
 # =========================================================================
@@ -626,10 +626,11 @@ def test_app_label_omits_marker_in_hub_mode():
 # backwards. The tab is the one place a user sees every tool side by side, so
 # an inconsistent name there is the most visible inconsistency we ship.
 #
-# The fleet shape is "SciTeX <Tool>". The "(standalone)" marker STAYS — it is
-# deliberate (scitex-hub reads the same SCITEX_APP_MODE setting so the tab
-# alone distinguishes hub-embedded from standalone); it is the word order that
-# was wrong, not the marker.
+# The fleet shape is the SHORT tile label ("Writer"). The "(standalone)"
+# marker STAYS — it is deliberate (scitex-hub reads the same
+# SCITEX_APP_MODE setting so the tab alone distinguishes hub-embedded
+# from standalone); the brand prefix is what went, not the marker
+# (operator 2026-10-23: the favicon carries the brand).
 # =========================================================================
 
 import inspect  # noqa: E402
@@ -648,13 +649,15 @@ from scitex_writer._django import views as _views  # noqa: E402
 _TAB_TITLE_CALL = re.compile(r'_(?:app_label|shell_context)\("([^"]+)"\)')
 
 
-def test_tab_titles_lead_with_the_scitex_brand():
-    # Arrange
+def test_tab_titles_use_the_short_tile_form():
+    # Arrange — operator 2026-10-23: the tab carries no brand text (the
+    # favicon IS the brand). Every declared tab title is the short name.
     source = inspect.getsource(_views)
     # Act
     labels = _TAB_TITLE_CALL.findall(source)
-    # Assert
-    assert [label for label in labels if not label.startswith("SciTeX ")] == []
+    # Assert — one assert per test (STX-TQ007); declared-ness is pinned
+    # by test_tab_titles_are_declared_at_all.
+    assert [label for label in labels if label.startswith("SciTeX ")] == []
 
 
 def test_tab_titles_are_declared_at_all():
