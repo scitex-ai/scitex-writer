@@ -105,51 +105,166 @@ export function mountAnnotationUI(opts: AnnotationUIOptions): AnnotationUIHandle
     },
   });
 
-  // --- toolbar ---
+  // --- toolbar: one hamburger, menu holds modes / categories / tools.
+  // Operator 2026-10-23: seventeen small buttons in a row are unreadable —
+  // they live in a hamburger menu (like the PDF ops menu) with shortcuts.
+  // The SAME button elements move into the menu, so existing wiring, IDs
+  // and .active states keep working with exactly one action path each.
   toolbar.classList.add("annot-toolbar");
   toolbar.replaceChildren();
 
-  const modeGroup = document.createElement("div");
-  modeGroup.className = "annot-group annot-modes";
+  const menuBtn = iconButton("fa-bars", "Annotation tools");
+  menuBtn.id = "btn-annot-menu";
+  menuBtn.setAttribute("aria-haspopup", "menu");
+  menuBtn.setAttribute("aria-expanded", "false");
+  menuBtn.setAttribute("aria-controls", "annot-menu-list");
+  const menuList = document.createElement("div");
+  menuList.id = "annot-menu-list";
+  menuList.className = "annot-menu-list u-hidden";
+  menuList.setAttribute("role", "menu");
+
+  const setMenuOpen = (open: boolean): void => {
+    menuList.classList.toggle("u-hidden", !open);
+    menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  };
+  const isMenuOpen = (): boolean => !menuList.classList.contains("u-hidden");
+  menuBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setMenuOpen(!isMenuOpen());
+  });
+  document.addEventListener("click", (event) => {
+    if (!isMenuOpen()) return;
+    const target = event.target as HTMLElement | null;
+    if (target && menuList.contains(target)) return;
+    setMenuOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && isMenuOpen()) {
+      setMenuOpen(false);
+      menuBtn.focus();
+    }
+  });
+
+  // Menu sections keep the row groups' structure (and their .active
+  // underline cues) with a heading + shortcut hints per item.
+  function menuSection(label: string): HTMLElement {
+    const section = document.createElement("div");
+    section.className = "annot-menu-section";
+    section.setAttribute("role", "group");
+    section.setAttribute("aria-label", label);
+    const heading = document.createElement("span");
+    heading.className = "annot-menu-heading";
+    heading.textContent = label;
+    section.appendChild(heading);
+    const row = document.createElement("div");
+    row.className = "annot-menu-row";
+    section.appendChild(row);
+    menuList.appendChild(section);
+    return row;
+  }
+  function menuify(button: HTMLButtonElement, shortcut?: string): void {
+    button.setAttribute("role", "menuitem");
+    if (shortcut) {
+      const kbd = document.createElement("kbd");
+      kbd.textContent = shortcut;
+      button.appendChild(document.createTextNode(" "));
+      button.appendChild(kbd);
+    }
+    button.addEventListener("click", () => setMenuOpen(false));
+  }
+
+  const modeRow = menuSection("Modes");
   const modeButtons = new Map<EditorMode, HTMLButtonElement>();
+  const modeShortcuts: Record<EditorMode, string> = {
+    read: "Alt+1",
+    markup: "Alt+2",
+    review: "Alt+3",
+  };
   for (const spec of MODES) {
     const b = iconButton(spec.icon, `${spec.label} mode`);
     b.append(document.createTextNode(` ${spec.label}`));
     b.addEventListener("click", () => setMode(spec.mode));
     modeButtons.set(spec.mode, b);
-    modeGroup.appendChild(b);
+    menuify(b, modeShortcuts[spec.mode]);
+    modeRow.appendChild(b);
   }
 
-  const catGroup = document.createElement("div");
-  catGroup.className = "annot-group annot-cats";
+  const catRow = menuSection("Categories");
   const catButtons = new Map<AnnotationCategory, HTMLButtonElement>();
   for (const category of ANNOTATION_CATEGORIES) {
     const b = iconButton(CATEGORY_ICONS[category], CATEGORY_LABELS[category]);
     b.dataset.category = category;
+    b.append(document.createTextNode(` ${CATEGORY_LABELS[category]}`));
     b.addEventListener("click", () => setCategory(category));
     catButtons.set(category, b);
-    catGroup.appendChild(b);
+    menuify(b);
+    catRow.appendChild(b);
   }
 
-  const toolGroup = document.createElement("div");
-  toolGroup.className = "annot-group annot-tools";
+  const toolRow = menuSection("Tools");
   const toolButtons = new Map<AnnotationTool, HTMLButtonElement>();
-  for (const spec of PEN_TOOLS) {
+  // Alt+1/2/3 are modes; tools take Alt+4..8 in row order (Alt+T and Alt+D
+  // already belong to the PDF menu; Alt+F opens the browser menu).
+  const toolShortcutKeys = ["4", "5", "6", "7", "8"];
+  PEN_TOOLS.forEach((spec, index) => {
     const b = iconButton(spec.icon, spec.label);
+    b.append(document.createTextNode(` ${spec.label}`));
     b.addEventListener("click", () => setTool(spec.tool));
     toolButtons.set(spec.tool, b);
-    toolGroup.appendChild(b);
-  }
+    const shortcut = `Alt+${toolShortcutKeys[index]}`;
+    menuify(b, shortcut);
+    toolRow.appendChild(b);
+  });
 
+  const actionRow = menuSection("Comments");
   const clearBtn = iconButton("fa-trash", "Delete all comments");
+  clearBtn.append(document.createTextNode(" Delete all"));
   clearBtn.classList.add("annot-clear");
   clearBtn.addEventListener("click", clearAll);
 
   const exportBtn = iconButton("fa-file-arrow-down", "Export comments as Markdown");
+  exportBtn.append(document.createTextNode(" Export"));
   exportBtn.classList.add("annot-export");
   exportBtn.addEventListener("click", exportMarkdown);
 
-  toolbar.append(modeGroup, catGroup, toolGroup, clearBtn, exportBtn);
+  for (const b of [clearBtn, exportBtn]) {
+    menuify(b);
+    actionRow.appendChild(b);
+  }
+
+  toolbar.append(menuBtn, menuList);
+
+  // Shortcuts fire globally (menu open or closed) by delegating to the
+  // menu buttons' own click handlers — one action path, like pdf-menu.
+  function isEditableTarget(target: EventTarget | null): boolean {
+    const el = target as HTMLElement | null;
+    if (!el || typeof (el as HTMLElement).closest !== "function") return false;
+    return Boolean(
+      (el as HTMLElement).closest(
+        "input, textarea, select, [contenteditable='true'], [contenteditable='']",
+      ),
+    );
+  }
+  document.addEventListener("keydown", (event) => {
+    if (!event.altKey || event.ctrlKey || event.metaKey) return;
+    if (isEditableTarget(event.target)) return;
+    const key = event.key.toLowerCase();
+    const byKey: Record<string, HTMLButtonElement | undefined> = {
+      "1": modeButtons.get("read"),
+      "2": modeButtons.get("markup"),
+      "3": modeButtons.get("review"),
+      "4": toolButtons.get("highlight"),
+      "5": toolButtons.get("box"),
+      "6": toolButtons.get("circle"),
+      "7": toolButtons.get("arrow"),
+      "8": toolButtons.get("freehand"),
+    };
+    const target = byKey[key];
+    if (target) {
+      event.preventDefault();
+      target.click();
+    }
+  });
 
   // --- panel ---
   panel.classList.add("annot-panel");

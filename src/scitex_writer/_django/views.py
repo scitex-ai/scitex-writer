@@ -55,15 +55,15 @@ def _leaf_identity() -> dict:
     header showed `v0.20.0-alpha` for a writer build) and not a hand-written
     string in a source comment: both are claims about someone else's package.
 
-    The title is the manifest `label` (`SciTeX Writer`, operator mandate
-    2026-10-16) — the full product name, matching the Scholar / FigRecipe
-    shape, never the bare `Writer`.
+    The title is the full product header ``SciTeX Writer`` — deliberately NOT
+    the manifest `label`: the tile label (short form, operator 2026-10-23)
+    and the in-app header title are independent strings, and only the tile
+    reads from the manifest.
     """
     config = _app_config()
-    manifest = config.manifest
     return {
         "writer_version": config.app_version,
-        "writer_label": manifest.get("label", "SciTeX Writer"),
+        "writer_label": "Writer",
     }
 
 
@@ -139,27 +139,6 @@ def _app_label(base: str) -> str:
     return f"{base} (standalone)" if mode == "standalone" else base
 
 
-def _favicon_href() -> str:
-    """Writer's own brand mark, for the scitex-ui shell's icon link.
-
-    scitex-ui 0.7.0 made the shell's ``<link rel="icon">`` UNCONDITIONAL,
-    falling back to the shared SciTeX mark when a view supplies no
-    ``favicon_href`` (scitex_ui/templates/scitex_ui/_branding_head.html).
-    Writer supplied none, so every page emitted the shared mark ON TOP OF
-    writer's own links -- untidy rather than broken, since the shell's link
-    precedes ``extra_css`` and ours won.
-
-    Passing this makes the shell emit WRITER's mark, so there is exactly one
-    bare ``rel="icon"``. The sized PNG variants and the apple-touch-icon stay
-    in each template's ``extra_css``: the shell has no way to express
-    ``sizes=`` or ``apple-touch-icon``, and a single shared SVG is not a
-    substitute for a 180x180 home-screen icon.
-    """
-    from django.templatetags.static import static
-
-    return static("writer/favicon.svg")
-
-
 #: Writer fills exactly one pane of the scitex-ui shell — the module pane, where
 #: `.writer-app` mounts. The other three are declared unused so the shell
 #: collapses them and the editor gets the full viewport.
@@ -192,7 +171,7 @@ def _shell_context(base_title: str) -> dict:
     Parameters
     ----------
     base_title : str
-        Tab title before the mode marker, e.g. ``"SciTeX Writer"``.
+        Tab title before the mode marker, e.g. ``"Writer"``.
 
     Returns
     -------
@@ -201,9 +180,10 @@ def _shell_context(base_title: str) -> dict:
     """
     from scitex_sdk.ui import branding
 
+    # No favicon_href: the shell falls back to the SDK official mark
+    # (operator 2026-10-23 — no leaf-local icons, no per-environment variant).
     context = branding.shell_context(
         "Writer",
-        favicon_href=_favicon_href(),
         panes=_SHELL_PANES,
     )
     context["app_label"] = _app_label(base_title)
@@ -257,11 +237,25 @@ def _editor_context(request, project):
 def editor_page(request, *, view_path="", api_base=None):
     """Serve the editor shell page."""
     project = _get_project(request)
+    project_dir = str(project.project_dir) if project else ""
     html = render_to_string(
         "writer/editor.html",
         {
-            **_editor_context(request, project),
-            **_shell_context("SciTeX Writer"),
+            "app_name": "writer",
+            "project_dir": project_dir,
+            "project_id": getattr(
+                getattr(request, "writer_project_access", None), "id", ""
+            ),
+            "dark_mode": project.dark_mode if project else False,
+            # The leaf header: our title + OUR version, and the picker slot only
+            # when the host registered its tag library.
+            **_leaf_identity(),
+            "project_picker_available": _project_picker_available(),
+            # A host embedding this page renders its own header and includes
+            # writer/_app_header.html; that host sets this True so the page
+            # keeps exactly one header. Standalone renders the leaf one.
+            "app_header_rendered": False,
+            **_shell_context("Writer"),
             **_page_mount(request, view_path, api_base),
         },
         request=request,
@@ -372,7 +366,7 @@ def viewer_page(request, *, view_path="viewer/", api_base=None):
             "project_id": getattr(
                 getattr(request, "writer_project_access", None), "id", ""
             ),
-            **_shell_context("SciTeX Writer — Viewer"),
+            **_shell_context("Writer — Viewer"),
             **_page_mount(request, view_path, api_base),
         },
         request=request,
