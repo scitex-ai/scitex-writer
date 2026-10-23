@@ -235,9 +235,9 @@ The flag will not be saved for the future.
         <div class="citations-controls">
           <input class="citations-search" type="search"
                  placeholder="Filter by title / key / DOI…" />
-          <button class="btn btn-secondary btn-sm citations-enrich"
+          <button class="btn btn-primary btn-sm citations-enrich"
                   title="Enrich bibliography with scitex-scholar">
-            <i class="fas fa-magic"></i> Enrich
+            <i class="fas fa-magic"></i><span>Enrich</span>
           </button>
         </div>
         <div class="citations-enrich-hint u-hidden"></div>
@@ -278,18 +278,23 @@ The flag will not be saved for the future.
       <div class="insert-panel-body">
         <p class="insert-panel-empty">Git history integration lands in a later PR.</p>
       </div>
-    `}renderCollab(){this.opts.panel.innerHTML=`
+    `}renderCollab(){var t;const e=((t=document.querySelector(".writer-app"))==null?void 0:t.dataset.appMode)==="hub";this.opts.panel.innerHTML=`
       <div class="insert-panel-header">Collaboration</div>
       <div class="insert-panel-body insert-panel-info">
-        <p>
-          This project is not on a shared host yet. Push it to SciTeX Hub
-          and open it from there to review and merge changes together —
-          Hub is where collaboration lives (2026-10-23).
-        </p>
-        <p>
-          Real-time co-editing (presence, inline comments) needs the Hub
-          session backend, which is not wired to this view yet.
-        </p>
+        ${e?`<p>
+            You are on SciTeX Hub — review and merge changes together from
+            the project. Presence and inline comments live in Hub; the
+            realtime co-editing session for this pane is not wired yet
+            (2026-10-23).
+          </p>`:`<p>
+            This project is opened standalone, not through SciTeX Hub.
+            Open it from Hub to review and merge changes together — Hub is
+            where collaboration lives (2026-10-23).
+          </p>
+          <p>
+            Real-time co-editing (presence, inline comments) needs the Hub
+            session backend, which is not wired to this view yet.
+          </p>`}
       </div>
     `}setLoading(e){this.opts.panel.innerHTML=`
       <div class="insert-panel-header">${e}</div>
