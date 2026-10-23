@@ -149,16 +149,32 @@ async function bootstrap(): Promise<void> {
     });
   }
 
-  // Operator 2026-10-23: ctrl+wheel steps the editor font through the
-  // toolbar select's own sizes (desktop IDE behavior). Reusing the
-  // select keeps the control and the editor in sync with no new state.
+  // Operator 2026-10-23: ctrl+wheel (or the middle button held while
+  // wheeling) steps the editor font through the toolbar select's own
+  // sizes (desktop IDE behavior). Reusing the select keeps the control
+  // and the editor in sync with no new state. Middle-drag scrolling (no
+  // button held) is untouched — only an explicit hold zooms.
   const fontSizeEl = root.querySelector<HTMLSelectElement>(
     "#font-size-select",
   );
+  let middleZoomHeld = false;
+  editorContainer.addEventListener("mousedown", (event: MouseEvent) => {
+    if (event.button === 1) {
+      middleZoomHeld = true;
+      event.preventDefault();
+    }
+  });
+  window.addEventListener("mouseup", (event: MouseEvent) => {
+    if (event.button === 1) middleZoomHeld = false;
+  });
   editorContainer.addEventListener(
     "wheel",
     (event: WheelEvent) => {
-      if (!event.ctrlKey || !fontSizeEl || fontSizeEl.options.length === 0)
+      if (
+        (!event.ctrlKey && !middleZoomHeld) ||
+        !fontSizeEl ||
+        fontSizeEl.options.length === 0
+      )
         return;
       event.preventDefault();
       const step = event.deltaY < 0 ? 1 : -1;
@@ -370,11 +386,12 @@ async function bootstrap(): Promise<void> {
   const insertBar = root.querySelector<HTMLElement>("#insert-bar");
   const insertPanel = root.querySelector<HTMLElement>("#insert-panel");
 
-  // Operator 2026-10-23: one switched large pane. The rail and the
-  // preview-header tabs share showPreviewView — rail picks cite/fig/
-  // table/collab/history (rendered into #insert-view, no expand beside
-  // the editor), header tabs pick PDF/Claims. Re-clicking the active
-  // rail icon returns to PDF.
+  // Operator 2026-10-23: one switched large pane. The rail is the ONE
+  // selector — PDF/Cite/Fig/Table/Collab/History all switch through
+  // showPreviewView (PDF renders in #pdf-view, the rest in #insert-view;
+  // no expand beside the editor). Claims stays as a secondary tab until
+  // the live-paper example project lands. Re-clicking any active rail
+  // icon returns to PDF.
   type PreviewView = "pdf" | "claims" | InsertPaneId;
   let previewView: PreviewView = "pdf";
   const previewViewId: Record<PreviewView, string> = {
@@ -386,8 +403,20 @@ async function bootstrap(): Promise<void> {
     collab: "insert-view",
     history: "insert-view",
   };
+  // Claims lazy-load state, assigned next to the ClaimsTab construction
+  // below (single `let` pair — showPreviewView only *runs* on user clicks,
+  // after full bootstrap, so no TDZ issue at runtime).
+  let claimsLoaded = false;
+  let claimsTab: ClaimsTab | null = null;
   function showPreviewView(view: PreviewView): void {
     previewView = view;
+    // Claims lazy-load lives on the single choke point, not on a tab
+    // element — the rail is the selector now. First open of the claims
+    // view renders; later opens refresh only after a compile.
+    if (view === "claims" && !claimsLoaded && claimsTab) {
+      claimsLoaded = true;
+      void claimsTab.render();
+    }
     root
       ?.querySelectorAll<HTMLElement>(".preview-view")
       .forEach((v) =>
@@ -400,6 +429,11 @@ async function bootstrap(): Promise<void> {
           "active",
           (t as HTMLElement).dataset.view === view,
         ),
+      );
+    root
+      ?.querySelectorAll<HTMLElement>(".insert-bar-btn")
+      .forEach((b) =>
+        b.classList.toggle("active", (b as HTMLElement).dataset.pane === view),
       );
     if (view === "pdf" || view === "claims") insert?.close();
   }
@@ -436,11 +470,6 @@ async function bootstrap(): Promise<void> {
         });
     insert = panel;
   }
-  root
-    ?.querySelectorAll<HTMLElement>('.preview-tab[data-view="pdf"]')
-    .forEach((t) =>
-      t.addEventListener("click", () => showPreviewView("pdf")),
-    );
   root
     ?.querySelectorAll<HTMLElement>('.preview-tab[data-view="claims"]')
     .forEach((t) =>
@@ -489,9 +518,10 @@ async function bootstrap(): Promise<void> {
 
   // Claims tab (Living Paper #133): render claim cards with verification
   // badges + DAG; clicking "Find in source" searches the current file for
-  // \vclaim{<id>} and reveals that Monaco line.
+  // \vclaim{<id>} and reveals that Monaco line. Assigned into the pair
+  // declared next to showPreviewView above (single choke point).
   const claimsMount = root.querySelector<HTMLElement>("#claims-list");
-  const claimsTab = claimsMount
+  claimsTab = claimsMount
     ? new ClaimsTab({
         mount: claimsMount,
         onJumpToClaim: (claimId) => {
@@ -520,19 +550,7 @@ async function bootstrap(): Promise<void> {
       })
     : null;
 
-  // Populate when the Claims tab is first opened (lazy — avoids blocking
-  // editor boot on the claims-metadata + clew-verify round-trip).
-  let claimsLoaded = false;
-  root
-    .querySelector<HTMLElement>('.preview-tab[data-view="claims"]')
-    ?.addEventListener("click", () => {
-      if (!claimsLoaded && claimsTab) {
-        claimsLoaded = true;
-        void claimsTab.render();
-      }
-    });
-
-  // After compile, invalidate so the next Claims-tab open re-fetches, and
+  // After compile, invalidate so the next claims-view open re-fetches, and
   // refresh the manuscript-hints feed (the compile just rewrote it).
   compile?.onAfterCompile?.(() => {
     if (claimsLoaded) void claimsTab?.refresh();
