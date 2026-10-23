@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.17] - 2026-10-23
+
+### Fixed
+
+- Cite pane sits on the app surface: cards use the secondary face + token
+  borders, badges are quiet outline chips, the selected manuscript/library
+  tab is primary text + accent underline (was invisible light literals).
+- Enrich is the scitex CTA (navy/gold fill) with icon-label gap.
+- Collab pane branches on `appMode`: Hub shows review-based copy instead
+  of the false "not on a shared host"; standalone keeps the pointer.
+  No fake presence.
+- Rail selection is a left-edge vertical accent bar, not an underline;
+  hover is text-only.
+- Removed the dead editor|rail drag resizer (no JS behind it; rendered
+  as a stray full-height accent line).
+- Compile carries the scitex CTA accent (navy light / gold dark) with
+  contrast-safe text (supersedes mono-unification).
+
 ## [2.43.16] - 2026-10-23
 
 ### Fixed

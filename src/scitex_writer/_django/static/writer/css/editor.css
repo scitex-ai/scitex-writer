@@ -72,14 +72,9 @@
   flex: 1;
   background: var(--bg-editor);
 }
-.writer-split-resizer {
-  flex: 0 0 4px;
-  background: var(--border-color);
-  cursor: col-resize;
-}
-.writer-split-resizer:hover {
-  background: var(--accent);
-}
+/* The editor|rail split is fixed — the old drag resizer div is gone from
+ * the markup (operator 2026-10-23: it rendered as a stray accent line).
+ * Kept as documentation; no rule needed. */
 
 [data-theme="light"] .writer-app,
 .writer-app[data-theme="light"] {
@@ -440,18 +435,20 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
-/* Compile button (#btn-compile): monochrome primary action (operator
-   2026-10-17, mono-unification direction). ID selector outranks .btn-primary,
-   so Compile is decoupled from the gold/navy accent while every other
-   primary button keeps it. */
+/* Compile button (#btn-compile): the scitex CTA (operator 2026-10-17
+ * mono-unification superseded 2026-10-23 — Compile carries the navy/gold
+ * accent like every other primary button). ID selector outranks
+ * .btn-primary only as documentation; the tokens are the same accent. */
 #btn-compile {
-  background: var(--compile-bg);
-  border-color: var(--compile-bg);
+  background: var(--accent);
+  border-color: var(--accent);
+  /* --compile-text is white in light mode (on navy) and near-black in
+   * dark mode (on gold) — contrast-safe on both CTA faces. */
   color: var(--compile-text);
 }
 #btn-compile:hover {
-  background: var(--compile-hover);
-  border-color: var(--compile-hover);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 /* Light-theme danger zone: --compile-bg is #1a1a1a with #fff text while
  * .btn (the base every button shares) paints a flat --bg-secondary face on
@@ -1348,7 +1345,11 @@ select:focus {
   max-width: 100%;
 }
 
-/* PR5: insert icon-bar + side panel (Cite/Fig/Table/History) */
+/* PR5: insert icon-bar + side panel (Cite/Fig/Table/History).
+ * Operator 2026-10-23: the column itself carries NO accent — no full-height
+ * gold line on its left edge, plain token borders only (the old accent
+ * bled from the resizer/slider era). Only the selected BUTTON shows the
+ * vertical accent bar (see .insert-bar-btn.active). */
 .insert-bar {
   display: flex;
   flex-direction: column;
@@ -1365,11 +1366,11 @@ select:focus {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 2px;
+  padding: 6px 2px 6px 4px;
   background: transparent;
   color: var(--text-secondary);
   border: none;
-  border-bottom: 2px solid transparent;
+  border-left: 2px solid transparent;
   border-radius: 0;
   font-size: 10px;
   cursor: pointer;
@@ -1377,14 +1378,16 @@ select:focus {
 .insert-bar-btn i {
   font-size: 14px;
 }
+/* Operator 2026-10-23: the selected rail button reads as a vertical bar
+ * on its left edge — not a bottom underline. Hover is text-only (the
+ * earlier no-fill direction stands); only the active state carries ink. */
 .insert-bar-btn:hover {
-  background: var(--hover-bg);
   color: var(--text-primary);
 }
 .insert-bar-btn.active {
   background: transparent;
   color: var(--text-primary);
-  border-bottom-color: var(--accent);
+  border-left-color: var(--accent);
   border-radius: 0;
 }
 .insert-panel {
@@ -1544,9 +1547,13 @@ select:focus {
   cursor: pointer;
   border-bottom: 2px solid transparent;
 }
+/* Operator 2026-10-23: the selected tab must read selected in dark mode.
+ * The old --text/--accent fallbacks (#111, #2a6bc9) are light-mode
+ * literals — invisible/low-contrast text on the dark surface. Use the
+ * app tokens so the active tab is primary text + gold/navy underline. */
 .citations-tab.active {
-  color: var(--text, #111);
-  border-bottom-color: var(--accent, #2a6bc9);
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
 }
 .citations-controls {
   display: flex;
@@ -1587,11 +1594,16 @@ select:focus {
   flex-direction: column;
   gap: 6px;
 }
+/* Operator 2026-10-23: card contrast is too strong — the old rules used
+ * light-mode literals (#ddd border, #fff face, #2a6bc9 accents) that read
+ * as harsh white cards on the dark surface. Cards now sit on the app
+ * tokens (subtle border, secondary face), with the gold/navy accent only
+ * on hover/selected/key. */
 .citation-card {
-  border: 1px solid var(--border, #ddd);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 8px 10px;
-  background: var(--bg, #fff);
+  background: var(--bg-secondary);
   cursor: grab;
   user-select: none;
   transition:
@@ -1599,12 +1611,12 @@ select:focus {
     box-shadow 0.1s;
 }
 .citation-card:hover {
-  border-color: var(--accent, #2a6bc9);
+  border-color: var(--accent);
 }
 .citation-card.selected {
-  border-color: var(--accent, #2a6bc9);
-  box-shadow: 0 0 0 2px rgba(42, 107, 201, 0.2);
-  background: var(--bg-accent, #f1f7ff);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+  background: var(--bg-tertiary);
 }
 .citation-card.dragging {
   opacity: 0.5;
@@ -1618,7 +1630,7 @@ select:focus {
 }
 .citation-key code {
   font-size: 11px;
-  color: var(--accent, #2a6bc9);
+  color: var(--accent);
 }
 .citation-badges {
   display: flex;
@@ -1629,26 +1641,23 @@ select:focus {
   font-size: 10px;
   padding: 1px 5px;
   border-radius: 3px;
-  background: var(--bg-2, #eee);
-  color: var(--text, #333);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
 }
-.badge-oa {
-  background: #d4edda;
-  color: #155724;
-}
-.badge-if {
-  background: #fff3cd;
-  color: #856404;
-}
+/* Badges were loud filled pills (green/yellow/blue) — now quiet outline
+ * chips on the tertiary surface; meaning carried by the label, not color. */
+.badge-oa,
+.badge-if,
 .badge-cites {
-  background: #e7f1ff;
-  color: #084298;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
 }
 .citation-title {
   font-size: 13px;
   font-weight: 500;
   line-height: 1.3;
-  color: var(--text, #111);
+  color: var(--text-primary);
 }
 .citation-sub {
   font-size: 11px;
@@ -1667,6 +1676,18 @@ select:focus {
 }
 .citation-card--library .citation-add-btn {
   flex-shrink: 0;
+}
+
+/* Operator 2026-10-23: Enrich is the CTA — icon + label with breathing
+ * room. The .btn-primary fill is the scitex CTA (navy light / gold dark);
+ * only #btn-compile is decoupled to monochrome, Enrich keeps the brand. */
+.citations-enrich {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.citations-enrich .fa-magic {
+  margin-right: 2px;
 }
 
 /* PR6: viewer mode (claims list + PDF + DAG) */
@@ -2247,10 +2268,7 @@ select:focus {
   .writer-split {
     flex-direction: column;
   }
-  /* The horizontal drag handle is meaningless once stacked — hide it. */
-  .writer-split-resizer {
-    display: none;
-  }
+  /* The old drag handle is gone from the markup — nothing to hide. */
   /* Editor surface owns the available height (CodeMirror needs a real box to
      size its gutter + code area). */
   .writer-editor-pane {

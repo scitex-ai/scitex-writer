@@ -8,7 +8,13 @@ import { listFigures, listTables, resourceUrl } from "./api";
 import type { MediaEntry } from "./api";
 import { CitationsPanel } from "./citations-panel";
 
-export type InsertPaneId = "cite" | "fig" | "table" | "collab" | "history";
+export type InsertPaneId =
+  | "pdf"
+  | "cite"
+  | "fig"
+  | "table"
+  | "collab"
+  | "history";
 
 interface PanelOptions {
   bar: HTMLElement;
@@ -65,6 +71,10 @@ export class InsertPanel {
       .querySelectorAll<HTMLElement>("[data-pane]")
       .forEach((b) => b.classList.toggle("active", b.dataset.pane === pane));
     switch (pane) {
+      case "pdf":
+        // The PDF lives in #pdf-view, not the insert panel — the rail
+        // just switches the large pane; nothing to render here.
+        return;
       case "cite":
         void this.renderCite();
         break;
@@ -159,33 +169,35 @@ export class InsertPanel {
   }
 
   private renderCollab(): void {
+    // Operator 2026-10-23: the old copy claimed "not on a shared host"
+    // even when served from Hub (compute-03-net) — the appMode dataset
+    // knows. On Hub, collaboration is review-based (Hub owns presence/
+    // comments); realtime co-editing in this pane is not wired yet.
+    // Standalone keeps the push-to-Hub pointer. No fake presence.
+    const onHub =
+      document.querySelector<HTMLElement>(".writer-app")?.dataset.appMode ===
+      "hub";
     this.opts.panel.innerHTML = `
-      <div class="insert-panel-header">Real-time collaboration</div>
+      <div class="insert-panel-header">Collaboration</div>
       <div class="insert-panel-body insert-panel-info">
-        <p><strong>Not supported in this local instance.</strong></p>
-        <p>
-          Collaboration (operational transforms, presence, inline comments)
-          requires a cloud backend with auth, WebSocket consumers, and a
-          shared project store.
-        </p>
-        <p>
-          Two ways to use it:
-        </p>
-        <ul>
-          <li>
-            Public hosted instance &mdash;
-            <a href="https://scitex.ai/apps/writer/" target="_blank" rel="noreferrer">
-              scitex.ai/apps/writer/
-            </a>
-          </li>
-          <li>
-            Self-host &mdash; the
-            <a href="https://github.com/ywatanabe1989/scitex-cloud" target="_blank" rel="noreferrer">
-              scitex-cloud
-            </a>
-            backend is AGPL-3.0 and runnable on your own infrastructure.
-          </li>
-        </ul>
+        ${
+          onHub
+            ? `<p>
+            You are on SciTeX Hub — review and merge changes together from
+            the project. Presence and inline comments live in Hub; the
+            realtime co-editing session for this pane is not wired yet
+            (2026-10-23).
+          </p>`
+            : `<p>
+            This project is opened standalone, not through SciTeX Hub.
+            Open it from Hub to review and merge changes together — Hub is
+            where collaboration lives (2026-10-23).
+          </p>
+          <p>
+            Real-time co-editing (presence, inline comments) needs the Hub
+            session backend, which is not wired to this view yet.
+          </p>`
+        }
       </div>
     `;
   }

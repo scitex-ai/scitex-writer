@@ -2,17 +2,12 @@
 # -*- coding: utf-8 -*-
 # File: tests/scitex_writer/_django/test_views_tabs_no_round.py
 
-"""Tab active states are straight underlines, never filled pills.
+"""Right-pane selector: the rail is the ONE switch, never a separate PDF tab.
 
-Same direction as the CCT4700 annot-button fix and FigRecipe #442:
-`.preview-tab.active` (PDF/Claims) and `.insert-bar-btn.active`
-(Cite/Fig/Table/Collab/History) draw their indicator with `border-bottom` —
-no accent-fill background, no `box-shadow`, or `border-radius`.
-
-Operator 2026-10-23: the rail switches the large preview pane instead of
-expanding beside it — cite/fig/table/collab/history render into the
-#insert-view pane; the header tabs switch PDF/Claims through the same
-showPreviewView path.
+Operator 2026-10-23: the rail carries PDF/Cite/Fig/Table/Collab/History;
+PDF renders in #pdf-view, the rest in #insert-view — no expand beside
+the editor, no PDF tab in the preview header. Claims stays as a
+secondary view until the live-paper example project lands.
 
 STX-TQ007: one assertion per test (see 3af127ed).
 """
@@ -92,12 +87,27 @@ def test_insert_bar_active_has_no_fill_background():
     assert "background: transparent;" in block
 
 
-def test_insert_bar_active_is_a_straight_underline():
-    # Arrange (stylesheet on disk)
+def test_insert_bar_active_is_a_vertical_bar():
+    # Arrange (stylesheet on disk): operator 2026-10-23 — the selected
+    # rail button carries a left-edge vertical bar, not an underline.
     block = _rule_block(".insert-bar-btn.active")
     # Act
     # Assert
-    assert "border-bottom-color: var(--accent);" in block
+    assert ("border-left-color: var(--accent);" in block) and (
+        "border-bottom-color" not in block
+    )
+
+
+def test_dead_split_resizer_is_gone(project_dir):
+    # Arrange: operator 2026-10-23 — the editor|rail resizer had no JS
+    # behind it and rendered as a stray accent line. Markup + CSS gone.
+    body = _editor_html(project_dir)
+    css = _EDITOR_CSS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert ("writer-split-resizer" not in body) and (
+        ".writer-split-resizer {" not in css
+    )
 
 
 def test_insert_bar_active_has_square_corners():
@@ -108,14 +118,59 @@ def test_insert_bar_active_has_square_corners():
     assert "border-radius: 0;" in block
 
 
+def test_insert_bar_hover_has_no_fill_background():
+    # Arrange (stylesheet on disk): operator 2026-10-23 — no left-side
+    # highlight on the rail; hover is text-only, active is the underline.
+    block = _rule_block(".insert-bar-btn:hover")
+    # Act
+    # Assert
+    assert "background" not in block
+
+
+def test_citation_cards_sit_on_the_app_surface():
+    # Arrange (stylesheet on disk): operator 2026-10-23 — cards were
+    # harsh white (#fff face, #ddd border); now secondary face + tokens.
+    css = _EDITOR_CSS.read_text(encoding="utf-8")
+    card = _rule_block(".citation-card")
+    # Act
+    # Assert
+    assert ("background: var(--bg-secondary);" in card) and (
+        "#fff" not in css[css.index(".citation-card {") : css.index(".citation-card:hover {")]
+    )
+
+
+def test_enrich_button_is_the_cta():
+    # Arrange: operator 2026-10-23 — Enrich carries the scitex CTA fill
+    # (navy light / gold dark) with icon-label gap.
+    panel = _DJANGO_DIR / "frontend" / "src" / "citations-panel.ts"
+    source = panel.read_text(encoding="utf-8")
+    css = _EDITOR_CSS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert ('btn-primary btn-sm citations-enrich' in source) and (
+        ".citations-enrich {" in css
+    )
+
+
 def test_preview_tabs_are_pdf_and_claims_only(project_dir):
-    # Arrange: operator 2026-10-22 — the dead Bibliography tab is gone
-    # (never populated, never wired); the pane switches PDF vs Claims.
+    # Arrange: operator 2026-10-23 — PDF is NOT a separated tab; the rail
+    # (PDF/Cite/Fig/Table/Collab/History) is the one selector. No
+    # preview-tab buttons remain in the editor header.
     # Act
     body = _editor_html(project_dir)
     tabs = re.findall(r'class="preview-tab[^"]*" data-view="(\w+)"', body)
     # Assert
-    assert tabs == ["pdf", "claims"] and "bib-view" not in body
+    assert tabs == [] and "bib-view" not in body
+
+
+def test_rail_carries_pdf_first_then_tools(project_dir):
+    # Arrange: operator 2026-10-23 — PDF/Cite/Fig/Table/Collab/History in
+    # that order, PDF first (it is the default view).
+    # Act
+    body = _editor_html(project_dir)
+    panes = re.findall(r'data-pane="(\w+)"', body)
+    # Assert
+    assert panes == ["pdf", "cite", "fig", "table", "collab", "history"]
 
 
 def test_insert_panel_lives_in_the_switched_preview_pane(project_dir):
@@ -132,8 +187,8 @@ def test_insert_panel_lives_in_the_switched_preview_pane(project_dir):
 
 
 def test_rail_and_header_tabs_share_one_preview_switcher():
-    # Arrange: operator 2026-10-23 — one showPreviewView path drives both
-    # the rail (cite/fig/table/collab/history) and the header tabs.
+    # Arrange: operator 2026-10-23 — one showPreviewView path drives the
+    # rail (PDF/cite/fig/table/collab/history) and the claims trigger.
     source = _INDEX_TS.read_text(encoding="utf-8")
     panel = _INSERT_TS.read_text(encoding="utf-8")
     # Act
