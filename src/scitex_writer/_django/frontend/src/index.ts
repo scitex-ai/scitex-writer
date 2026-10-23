@@ -105,8 +105,13 @@ async function bootstrap(): Promise<void> {
         { token: "operator.latex", foreground: "D4D4D4" },
       ],
       colors: {
-        "editor.background": "#0d1117",
-        "editorGutter.background": "#0d1117",
+        // Operator 2026-10-23: match the app's bluish-gray surface
+        // (--bg-secondary / --toolbar-bg, #161b22) instead of the
+        // neutral-black #0d1117, so the editor sits flat against the
+        // toolbar + preview chrome with no black-box seam. Monaco
+        // needs a literal hex — keep in sync with editor.css.
+        "editor.background": "#161b22",
+        "editorGutter.background": "#161b22",
       },
     });
     monacoNs.editor.defineTheme("writer-light", {

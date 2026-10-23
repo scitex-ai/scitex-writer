@@ -183,14 +183,16 @@ def test_ctrl_wheel_steps_editor_font_through_the_select():
 
 def test_monaco_uses_writer_scoped_chrome_matching_themes():
     # Arrange: operator 2026-10-23 — writer-dark/writer-light extend the
-    # shared scitex-* themes with shell-matching surfaces only.
+    # shared scitex-* themes with shell-matching surfaces only. The dark
+    # surface is the app's bluish-gray (--bg-secondary/--toolbar-bg),
+    # not neutral-black, so the editor sits flat against the chrome.
     source = _INDEX_TS.read_text(encoding="utf-8")
     # Act
     # Assert
     assert (
         ('"writer-dark"' in source)
         and ('"writer-light"' in source)
-        and ('"editor.background": "#0d1117"' in source)
+        and ('"editor.background": "#161b22"' in source)
         and ("new MutationObserver(applyWriterTheme)" in source)
     )
 
