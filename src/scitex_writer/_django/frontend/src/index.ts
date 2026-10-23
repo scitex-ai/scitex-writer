@@ -12,7 +12,7 @@ import {
 
 import { PROJECT_DIR, getFile, saveFile, projectInfo, resourceUrl } from "./api";
 import type { SectionEntry } from "./api";
-import { SectionTabs } from "./sections";
+import { SectionTabs, humanize } from "./sections";
 import { countWords, mountToolbar } from "./toolbar";
 import { MobileLayout, isMobileViewport } from "./mobile";
 import { PDFViewer } from "./pdf-viewer";
@@ -415,7 +415,30 @@ async function bootstrap(): Promise<void> {
   await pdf?.load(initialDocType);
   }
 
+  /* Operator 2026-10-23: the Draft option names the open section
+   * (e.g. "Abstract") and Full names the document (e.g. "Manuscript")
+   * instead of the generic static labels. Runs on every section load,
+   * so tab switches, hint jumps and doc-type reloads all stay current. */
+  function updateCompileModeLabels(section: SectionEntry): void {
+    const modeSelect = root?.querySelector<HTMLSelectElement>(
+      "#compile-mode-select",
+    );
+    const docLabel =
+      root
+        ?.querySelector<HTMLSelectElement>("#doc-type-select")
+        ?.selectedOptions[0]?.textContent?.trim() || "Manuscript";
+    const preview = modeSelect?.querySelector<HTMLOptionElement>(
+      'option[value="preview"]',
+    );
+    const full = modeSelect?.querySelector<HTMLOptionElement>(
+      'option[value="full"]',
+    );
+    if (preview) preview.textContent = humanize(section.name);
+    if (full) full.textContent = docLabel;
+  }
+
   async function loadSection(section: SectionEntry): Promise<void> {
+    updateCompileModeLabels(section);
     try {
       const file = await getFile(section.path);
       currentPath = section.path;

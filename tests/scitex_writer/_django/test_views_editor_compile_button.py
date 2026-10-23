@@ -14,6 +14,7 @@ from pathlib import Path
 
 _DJANGO_DIR = Path(__file__).resolve().parents[3] / "src" / "scitex_writer" / "_django"
 _EDITOR_CSS = _DJANGO_DIR / "static" / "writer" / "css" / "editor.css"
+_INDEX_TS = _DJANGO_DIR / "frontend" / "src" / "index.ts"
 
 
 def _css() -> str:
@@ -71,4 +72,19 @@ def test_compile_token_values_are_monochrome():
     # Assert
     assert (len(grays) == 4) and all(
         (len(set((h[0:2], h[2:4], h[4:6]))) == 1) for h in grays
+    )
+
+
+def test_compile_mode_options_follow_the_open_section():
+    # Arrange: operator 2026-10-23 — Draft names the open section (e.g.
+    # "Abstract"), Full names the document (e.g. "Manuscript"). The option
+    # text is set at runtime on every section load; pinned here at the wire.
+    source = _INDEX_TS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert (
+        ("updateCompileModeLabels(section)" in source)
+        and ("humanize(section.name)" in source)
+        and ('option[value="preview"]' in source)
+        and ('option[value="full"]' in source)
     )
