@@ -1473,29 +1473,40 @@ select:focus {
   gap: 8px;
   padding: 8px;
 }
+/* Operator 2026-10-23/24: fig/table cards sit on the app surface (same
+ * quiet language as citation cards) — thumbnails render on the tertiary
+ * face with token borders; drag affordance only, no click-fill. */
 .insert-item--thumb {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 6px;
-  background: var(--bg-2, #f8f8f8);
-  border: 1px solid var(--border, #ddd);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  cursor: pointer;
+  cursor: grab;
   transition:
     border-color 0.1s,
     box-shadow 0.1s;
 }
 .insert-item--thumb:hover {
-  border-color: var(--accent, #2a6bc9);
-  box-shadow: 0 0 0 2px rgba(42, 107, 201, 0.15);
+  border-color: var(--accent);
+}
+.insert-item--thumb.dragging {
+  opacity: 0.5;
 }
 .insert-item-thumb {
   width: 100%;
   aspect-ratio: 1;
   object-fit: contain;
-  background: #fff;
+  background: var(--bg-tertiary);
   border-radius: 4px;
+}
+/* One-line affordance under the header: drag, don't click. */
+.insert-panel-drag-hint {
+  padding: 4px 12px 0;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 .insert-item-thumb--empty {
   display: flex;
