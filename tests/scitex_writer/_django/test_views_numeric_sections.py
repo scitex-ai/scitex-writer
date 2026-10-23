@@ -462,8 +462,31 @@ def test_rendered_brand_mark_is_the_sdk_official_svg(mounted):
     response = mounted.client.get(mounted.prefix + '?project=17', HTTP_SYNTHETIC_ACTOR='owner')
     icons = Icons()
     icons.feed(response.content.decode())
-    # Assert
+    # Assert — one assert per test (STX-TQ007); absence of leaf-local
+    # icons is pinned by test_rendered_page_declares_no_leaf_local_icons.
     assert '/static/scitex_sdk/ui/img/scitex-favicon.svg' in icons.paths
+
+
+@pytest.mark.parametrize('mounted', ['default'], indirect=True)
+def test_rendered_page_declares_no_leaf_local_icons(mounted):
+    # Arrange: pytest fixtures and local setup.
+    from html.parser import HTMLParser
+
+    class Icons(HTMLParser):
+
+        def __init__(self):
+            super().__init__()
+            self.paths = []
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            # Act: exercise the real scenario.
+            if tag == 'link' and attrs.get('rel') in {'icon', 'apple-touch-icon'}:
+                self.paths.append(attrs['href'])
+    response = mounted.client.get(mounted.prefix + '?project=17', HTTP_SYNTHETIC_ACTOR='owner')
+    icons = Icons()
+    icons.feed(response.content.decode())
+    # Assert
     assert not [p for p in icons.paths if p.startswith('/static/writer/favicon')]
 
 
@@ -492,6 +515,31 @@ def test_rendered_writer_brand_assets_resolve_after_wheel_install_declares_touch
 
 
 @pytest.mark.parametrize('mounted', ['default'], indirect=True)
+def test_rendered_brand_icons_come_from_the_sdk(mounted):
+    # Arrange: pytest fixtures and local setup. Every icon link the page
+    # declares comes from the SDK official set — no leaf-local icons.
+    from html.parser import HTMLParser
+
+    class Icons(HTMLParser):
+
+        def __init__(self):
+            super().__init__()
+            self.paths = []
+
+        def handle_starttag(self, tag, attrs):
+            attrs = dict(attrs)
+            # Act: exercise the real scenario.
+            if tag == 'link' and attrs.get('rel') in {'icon', 'apple-touch-icon'}:
+                self.paths.append(attrs['href'])
+    response = mounted.client.get(mounted.prefix + '?project=17', HTTP_SYNTHETIC_ACTOR='owner')
+    icons = Icons()
+    icons.feed(response.content.decode())
+    # Assert — one assert per test (STX-TQ007). Non-emptiness is pinned by
+    # the touch-icon test below (a present icon implies a non-empty list).
+    assert all(h.startswith('/static/scitex_sdk/ui/img/') for h in icons.paths)
+
+
+@pytest.mark.parametrize('mounted', ['default'], indirect=True)
 def test_rendered_sdk_brand_assets_resolve_after_wheel_install(mounted):
     # Arrange: pytest fixtures and local setup. Every icon link the page
     # declares must resolve to a packaged file — the SDK official set.
@@ -512,11 +560,12 @@ def test_rendered_sdk_brand_assets_resolve_after_wheel_install(mounted):
     response = mounted.client.get(mounted.prefix + '?project=17', HTTP_SYNTHETIC_ACTOR='owner')
     icons = Icons()
     icons.feed(response.content.decode())
-    assert icons.paths != []
-    for href in icons.paths:
-        # Assert
-        assert href.startswith('/static/scitex_sdk/ui/img/'), href
-        assert finders.find(href.removeprefix('/static/')) is not None, href
+    missing = [
+        href for href in icons.paths
+        if finders.find(href.removeprefix('/static/')) is None
+    ]
+    # Assert
+    assert missing == []
 
 
 def test_empty_existing_section_is_distinct_from_missing_content_reports_existing_empty_content(mounted):

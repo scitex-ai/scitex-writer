@@ -655,8 +655,8 @@ def test_tab_titles_use_the_short_tile_form():
     source = inspect.getsource(_views)
     # Act
     labels = _TAB_TITLE_CALL.findall(source)
-    # Assert
-    assert labels != []
+    # Assert — one assert per test (STX-TQ007); declared-ness is pinned
+    # by test_tab_titles_are_declared_at_all.
     assert [label for label in labels if label.startswith("SciTeX ")] == []
 
 
