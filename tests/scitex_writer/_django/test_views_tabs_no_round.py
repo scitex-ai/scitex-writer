@@ -87,12 +87,27 @@ def test_insert_bar_active_has_no_fill_background():
     assert "background: transparent;" in block
 
 
-def test_insert_bar_active_is_a_straight_underline():
-    # Arrange (stylesheet on disk)
+def test_insert_bar_active_is_a_vertical_bar():
+    # Arrange (stylesheet on disk): operator 2026-10-23 — the selected
+    # rail button carries a left-edge vertical bar, not an underline.
     block = _rule_block(".insert-bar-btn.active")
     # Act
     # Assert
-    assert "border-bottom-color: var(--accent);" in block
+    assert ("border-left-color: var(--accent);" in block) and (
+        "border-bottom-color" not in block
+    )
+
+
+def test_dead_split_resizer_is_gone(project_dir):
+    # Arrange: operator 2026-10-23 — the editor|rail resizer had no JS
+    # behind it and rendered as a stray accent line. Markup + CSS gone.
+    body = _editor_html(project_dir)
+    css = _EDITOR_CSS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert ("writer-split-resizer" not in body) and (
+        ".writer-split-resizer {" not in css
+    )
 
 
 def test_insert_bar_active_has_square_corners():
@@ -101,6 +116,40 @@ def test_insert_bar_active_has_square_corners():
     # Act
     # Assert
     assert "border-radius: 0;" in block
+
+
+def test_insert_bar_hover_has_no_fill_background():
+    # Arrange (stylesheet on disk): operator 2026-10-23 — no left-side
+    # highlight on the rail; hover is text-only, active is the underline.
+    block = _rule_block(".insert-bar-btn:hover")
+    # Act
+    # Assert
+    assert "background" not in block
+
+
+def test_citation_cards_sit_on_the_app_surface():
+    # Arrange (stylesheet on disk): operator 2026-10-23 — cards were
+    # harsh white (#fff face, #ddd border); now secondary face + tokens.
+    css = _EDITOR_CSS.read_text(encoding="utf-8")
+    card = _rule_block(".citation-card")
+    # Act
+    # Assert
+    assert ("background: var(--bg-secondary);" in card) and (
+        "#fff" not in css[css.index(".citation-card {") : css.index(".citation-card:hover {")]
+    )
+
+
+def test_enrich_button_is_the_cta():
+    # Arrange: operator 2026-10-23 — Enrich carries the scitex CTA fill
+    # (navy light / gold dark) with icon-label gap.
+    panel = _DJANGO_DIR / "frontend" / "src" / "citations-panel.ts"
+    source = panel.read_text(encoding="utf-8")
+    css = _EDITOR_CSS.read_text(encoding="utf-8")
+    # Act
+    # Assert
+    assert ('btn-primary btn-sm citations-enrich' in source) and (
+        ".citations-enrich {" in css
+    )
 
 
 def test_preview_tabs_are_pdf_and_claims_only(project_dir):
