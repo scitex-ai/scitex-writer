@@ -40,11 +40,14 @@ classifiers = [
 ]
 dependencies = [
     # Plugin discovery imports SDK metadata even in a base install.
-    # FLOOR IS 0.3.9: carries the underline-only selected tab (SDK #60,
-    # scholar-led polish 2026-10-20) — the converged selected-tab language
-    # Writer's own tabs already match (CCT4700, tabs-underline-only #458).
-    # 0.3.5+ remains import-compatible; the floor names the tab contract.
-    "scitex-sdk>=0.3.9",
+    # FLOOR IS 0.3.12: verified compat 2026-10-24 (full _django suite +
+    # audit-python-apis clean; the single failure is the stale-editable env
+    # artifact). 0.3.14 exists but its project-picker tag fails loud without
+    # a registered provider URL and writer wires none — adopting it needs a
+    # provider-URL lane first (see card writer-sdk-floor-0312), so the floor
+    # stays at the newest COMPATIBLE release, not the newest release.
+    # 0.3.5+ remains import-compatible.
+    "scitex-sdk>=0.3.12",
     "click>=8.0",
     "fastmcp>=2.0.0",
     # FLOOR IS 0.48.0: compile diagnostics (_compile/_diagnostics/_report.py)
