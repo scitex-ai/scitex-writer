@@ -480,20 +480,35 @@ async function bootstrap(): Promise<void> {
       t.addEventListener("click", () => showPreviewView("claims")),
     );
 
-  // Citation drop: drag a card into the Monaco host → insert at drop position.
-  // Only accept our own custom MIME type so arbitrary text drops (e.g. a
-  // paragraph from another tab) don't go through this path.
-  const CITE_MIME = "application/x-scitex-cite";
+  // Insert drop: drag a card/item into the Monaco host → insert at drop
+  // position. Only accept our own custom MIME type so arbitrary text
+  // drops (e.g. a paragraph from another tab) don't go through this path.
+  // Cite cards carry \cite{...}; figure/table items carry \ref{...}.
+  const INSERT_MIME = "application/x-scitex-insert";
+  const CITE_MIME = "application/x-scitex-cite"; // legacy, kept reading
   host.addEventListener("dragover", (e) => {
-    if (e.dataTransfer?.types.includes(CITE_MIME)) {
+    if (
+      e.dataTransfer?.types.includes(INSERT_MIME) ||
+      e.dataTransfer?.types.includes(CITE_MIME)
+    ) {
       e.preventDefault();
       e.dataTransfer.dropEffect = "copy";
     }
   });
   host.addEventListener("drop", (e) => {
-    if (!e.dataTransfer?.types.includes(CITE_MIME)) return;
-    const payload = e.dataTransfer.getData(CITE_MIME);
-    if (!payload || !payload.startsWith("\\cite")) return;
+    const types = e.dataTransfer?.types ?? [];
+    const mime = types.includes(INSERT_MIME)
+      ? INSERT_MIME
+      : types.includes(CITE_MIME)
+        ? CITE_MIME
+        : null;
+    if (!mime) return;
+    const payload = e.dataTransfer!.getData(mime);
+    if (
+      !payload ||
+      !(payload.startsWith("\\cite") || payload.startsWith("\\ref"))
+    )
+      return;
     e.preventDefault();
     const mEditor = editor.getEditor();
     if (!mEditor) return;

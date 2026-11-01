@@ -21,6 +21,9 @@ export type InsertPaneId =
   | "collab"
   | "history";
 
+export const INSERT_MIME = "application/x-scitex-insert";
+export const CITE_MIME = "application/x-scitex-cite"; // legacy, kept reading
+
 interface PanelOptions {
   bar: HTMLElement;
   panel: HTMLElement;
@@ -243,8 +246,10 @@ export class InsertPanel {
             : "";
         return `
         <div class="insert-item ${anyThumbnail ? "insert-item--thumb" : ""}"
+             draggable="true"
              data-index="${index}"
-             data-insert="${escapeAttr(item.insert)}">
+             data-insert="${escapeAttr(item.insert)}"
+             title="Drag into the editor to insert">
           ${thumb}
           <div class="insert-item-meta">
             <div class="insert-item-label">${escapeHtml(item.label)}</div>
@@ -256,15 +261,26 @@ export class InsertPanel {
       .join("");
     // Operator 2026-10-24: no in-panel title or count heading — the rail
     // selector already names the view, so a second heading is redundant.
+    // The drag hint stays: it is functional guidance, not a title.
     this.opts.panel.innerHTML = `
+      <div class="insert-panel-drag-hint">Drag an item into the editor to insert its reference.</div>
       <div class="insert-panel-body insert-panel-body--${anyThumbnail ? "grid" : "list"}">${listHtml}</div>
     `;
+    // Operator 2026-10-24: no surprise insertion — clicking an item does
+    // nothing; drag carries the \ref payload (shared MIME with cite).
     this.opts.panel
       .querySelectorAll<HTMLElement>(".insert-item")
       .forEach((el) => {
-        el.addEventListener("click", () => {
+        el.addEventListener("dragstart", (e) => {
           const snippet = el.dataset.insert || "";
-          if (snippet) this.opts.insertAtCursor(snippet);
+          if (!snippet || !e.dataTransfer) return;
+          e.dataTransfer.setData(INSERT_MIME, snippet);
+          e.dataTransfer.setData("text/plain", snippet);
+          e.dataTransfer.effectAllowed = "copy";
+          el.classList.add("dragging");
+        });
+        el.addEventListener("dragend", () => {
+          el.classList.remove("dragging");
         });
       });
   }
