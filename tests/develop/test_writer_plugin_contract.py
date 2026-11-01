@@ -29,10 +29,10 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import json
-import tomllib
 from pathlib import Path
 
 import django.apps
+import tomllib
 
 _ROOT = Path(__file__).resolve().parents[2]
 _PYPROJECT = _ROOT / "pyproject.toml"
@@ -136,18 +136,18 @@ def test_the_entry_point_target_is_a_django_app_config():
 
 def test_base_install_provides_sdk_and_runtime_valid_plugin_metadata_requires_sdk_dependency():
     # Arrange: pytest fixtures and local setup.
-    from scitex_sdk import app
     # Act: exercise the real scenario.
     project = tomllib.loads(_PYPROJECT.read_text())['project']
     # Assert
-    assert 'scitex-sdk>=0.3.9' in project['dependencies']
+    from packaging.requirements import Requirement
+    sdk = next(Requirement(item) for item in project['dependencies'] if Requirement(item).name == 'scitex-sdk')
+    assert ('0.3.17' in sdk.specifier, '0.3.16' in sdk.specifier) == (True, False)
 
 
 def test_base_install_provides_sdk_and_runtime_valid_plugin_metadata_uses_sdk_app_config():
     # Arrange: pytest fixtures and local setup.
     from scitex_sdk import app
     # Act: exercise the real scenario.
-    project = tomllib.loads(_PYPROJECT.read_text())['project']
     module_path, _, attr = EXPECTED_TARGET.partition(':')
     config_cls = getattr(importlib.import_module(module_path), attr)
     # Assert
@@ -158,7 +158,6 @@ def test_base_install_provides_sdk_and_runtime_valid_plugin_metadata_omits_manif
     # Arrange: pytest fixtures and local setup.
     from scitex_sdk import app
     # Act: exercise the real scenario.
-    project = tomllib.loads(_PYPROJECT.read_text())['project']
     module_path, _, attr = EXPECTED_TARGET.partition(':')
     config_cls = getattr(importlib.import_module(module_path), attr)
     issubclass(config_cls, app.embed.ScitexAppConfig)
@@ -171,7 +170,6 @@ def test_base_install_provides_sdk_and_runtime_valid_plugin_metadata_validates_m
     # Arrange: pytest fixtures and local setup.
     from scitex_sdk import app
     # Act: exercise the real scenario.
-    project = tomllib.loads(_PYPROJECT.read_text())['project']
     module_path, _, attr = EXPECTED_TARGET.partition(':')
     config_cls = getattr(importlib.import_module(module_path), attr)
     issubclass(config_cls, app.embed.ScitexAppConfig)
