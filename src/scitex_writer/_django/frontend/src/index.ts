@@ -482,6 +482,7 @@ async function bootstrap(): Promise<void> {
           },
         });
     insert = panel;
+    showPreviewView("pdf");
   }
   root
     ?.querySelectorAll<HTMLElement>('.preview-tab[data-view="claims"]')

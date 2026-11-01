@@ -11,6 +11,8 @@
  * from a previous collab visit can never paint over the new view.
  */
 
+import { csrfHeaders } from "./api";
+
 const HEARTBEAT_MS = 25000;
 const HEARTBEAT_PATH = "/apps/writer/collaboration/presence/heartbeat/";
 const ACTIVE_PATH = "/apps/writer/collaboration/presence/active/";
@@ -28,14 +30,6 @@ export function projectRefFromLocation(): string | null {
   if (selected) return selected;
   const ref = new URLSearchParams(location.search).get("project");
   return ref && (ref.includes("/") || /^\d+$/.test(ref)) ? ref : null;
-}
-
-function csrfFromCookie(): string {
-  const hit = document.cookie
-    .split(";")
-    .map((c) => c.trim())
-    .find((c) => c.startsWith("csrftoken="));
-  return hit ? decodeURIComponent(hit.slice("csrftoken=".length)) : "";
 }
 
 interface ActiveUser {
@@ -79,13 +73,13 @@ export function startPresence(
   const beat = async (): Promise<void> => {
     if (my !== epoch) return;
     try {
-      const token = csrfFromCookie();
+      const headers = csrfHeaders();
       const hb = await fetch(HEARTBEAT_PATH, {
         method: "POST",
         credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { "X-CSRFToken": token } : {}),
+          ...headers,
         },
         body: JSON.stringify({ project: projectRef, section }),
       });
@@ -103,9 +97,11 @@ export function startPresence(
     } catch {
       if (my !== epoch) return;
       const list = panel.querySelector<HTMLElement>("[data-presence-list]");
-      if (list && !list.hasChildNodes()) {
-        list.innerHTML = `<li class="insert-panel-empty">Presence unavailable — Hub session backend unreachable.</li>`;
+      if (list) {
+        list.innerHTML = `<li class="insert-panel-empty">Presence unavailable. Reload to retry.</li>`;
       }
+      const count = panel.querySelector<HTMLElement>("[data-presence-count]");
+      if (count) count.textContent = "";
     }
     if (my === epoch) window.setTimeout(beat, HEARTBEAT_MS);
   };
