@@ -17,7 +17,9 @@ Ctrl+wheel over Monaco changes Writer's font-size setting through a capture
 listener, and the shared theme toggle updates the editor immediately. The
 initial preview rail selection is PDF. Figure and table entries expose
 thumbnails when supported by their media and insert references only through
-drag and drop.
+drag and drop or the explicit Insert reference action. Clicking a thumbnail
+does not edit the manuscript. PDF and annotation actions share one menu,
+and Monaco has semantic borders on both gutter edges.
 
 The rich LivePaper provider and its consumer payload translator are separate
 from this mounted editor's own `PDFViewer`. Provider availability does not

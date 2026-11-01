@@ -43,6 +43,8 @@ export interface AnnotationUIOptions {
   toolbar: HTMLElement;
   panel: HTMLElement;
   controller: AnnotationController;
+  /** Existing PDF menu owns open/close behavior when supplied. */
+  menu?: { button: HTMLButtonElement; list: HTMLElement };
 }
 
 export interface AnnotationUIHandle {
@@ -113,37 +115,41 @@ export function mountAnnotationUI(opts: AnnotationUIOptions): AnnotationUIHandle
   toolbar.classList.add("annot-toolbar");
   toolbar.replaceChildren();
 
-  const menuBtn = iconButton("fa-bars", "Annotation tools");
-  menuBtn.id = "btn-annot-menu";
-  menuBtn.setAttribute("aria-haspopup", "menu");
-  menuBtn.setAttribute("aria-expanded", "false");
-  menuBtn.setAttribute("aria-controls", "annot-menu-list");
-  const menuList = document.createElement("div");
-  menuList.id = "annot-menu-list";
-  menuList.className = "annot-menu-list u-hidden";
-  menuList.setAttribute("role", "menu");
+  const menuBtn = opts.menu?.button ?? iconButton("fa-bars", "Annotation tools");
+  const menuList = opts.menu?.list ?? document.createElement("div");
+  if (!opts.menu) {
+    menuBtn.id = "btn-annot-menu";
+    menuBtn.setAttribute("aria-haspopup", "menu");
+    menuBtn.setAttribute("aria-expanded", "false");
+    menuBtn.setAttribute("aria-controls", "annot-menu-list");
+    menuList.id = "annot-menu-list";
+    menuList.className = "annot-menu-list u-hidden";
+    menuList.setAttribute("role", "menu");
+  }
 
   const setMenuOpen = (open: boolean): void => {
     menuList.classList.toggle("u-hidden", !open);
     menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
   };
   const isMenuOpen = (): boolean => !menuList.classList.contains("u-hidden");
-  menuBtn.addEventListener("click", (event) => {
-    event.stopPropagation();
-    setMenuOpen(!isMenuOpen());
-  });
-  document.addEventListener("click", (event) => {
-    if (!isMenuOpen()) return;
-    const target = event.target as HTMLElement | null;
-    if (target && menuList.contains(target)) return;
-    setMenuOpen(false);
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && isMenuOpen()) {
+  if (!opts.menu) {
+    menuBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setMenuOpen(!isMenuOpen());
+    });
+    document.addEventListener("click", (event) => {
+      if (!isMenuOpen()) return;
+      const target = event.target as HTMLElement | null;
+      if (target && menuList.contains(target)) return;
       setMenuOpen(false);
-      menuBtn.focus();
-    }
-  });
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && isMenuOpen()) {
+        setMenuOpen(false);
+        menuBtn.focus();
+      }
+    });
+  }
 
   // Menu sections keep the row groups' structure (and their .active
   // underline cues) with a heading + shortcut hints per item.
@@ -232,7 +238,7 @@ export function mountAnnotationUI(opts: AnnotationUIOptions): AnnotationUIHandle
     actionRow.appendChild(b);
   }
 
-  toolbar.append(menuBtn, menuList);
+  if (!opts.menu) toolbar.append(menuBtn, menuList);
 
   // Shortcuts fire globally (menu open or closed) by delegating to the
   // menu buttons' own click handlers — one action path, like pdf-menu.

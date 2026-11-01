@@ -238,6 +238,10 @@ async function bootstrap(): Promise<void> {
       toolbar: annotToolbar,
       panel: annotPanel,
       controller: pdf,
+      menu: {
+        button: root.querySelector<HTMLButtonElement>("#btn-pdf-menu")!,
+        list: root.querySelector<HTMLElement>("#pdf-menu-list")!,
+      },
     });
   }
 
@@ -480,6 +484,7 @@ async function bootstrap(): Promise<void> {
           },
         });
     insert = panel;
+    showPreviewView("pdf");
   }
   root
     ?.querySelectorAll<HTMLElement>('.preview-tab[data-view="claims"]')
