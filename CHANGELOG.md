@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.18] - 2026-11-01
+
+- Use the server-authorized session project for collaboration presence when the picker selection is absent from the URL.
+### Fixed
+
+- Handle Ctrl+wheel font changes in the capture phase before Monaco consumes the event.
+- Mark the initial PDF rail button active at first paint.
+- Rebuild frontend assets with the merged immediate theme-toggle fix.
+
+
 ## [2.43.17] - 2026-10-23
 
 ### Fixed

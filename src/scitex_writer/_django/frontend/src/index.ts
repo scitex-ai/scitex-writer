@@ -183,6 +183,7 @@ async function bootstrap(): Promise<void> {
       )
         return;
       event.preventDefault();
+      event.stopPropagation();
       const step = event.deltaY < 0 ? 1 : -1;
       const next = Math.min(
         fontSizeEl.options.length - 1,
@@ -193,7 +194,9 @@ async function bootstrap(): Promise<void> {
         fontSizeEl.dispatchEvent(new Event("change"));
       }
     },
-    { passive: false },
+    // Monaco consumes bubbling wheel events; capture the explicit font
+    // gesture before its scroll layer so the select and editor stay in sync.
+    { passive: false, capture: true },
   );
 
   // Toolbar wiring
