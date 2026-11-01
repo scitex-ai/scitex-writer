@@ -2,7 +2,7 @@
 name: scitex-writer
 description: |
   [WHAT] End-to-end LaTeX manuscript toolchain — 44 MCP tools — project (clone/info/get_pdf), compile (manuscript / supplementary / revision with tracked changes), BibTeX (add/list/get/remove/merge, dedup by DOI), figures + tables (add/list/remove/archive, csv_to_latex, pdf_to_images), claims (`\vclaim{}` linked to scitex-clew session hashes for verifiable assertions), checks (float order, references), export + Overleaf migration, per-journal guidelines, AI2 Asta prompts.
-  [WHEN] Use whenever the user asks to compile manuscript / build PDF / supplementary / revision with tracked changes, add figure/table/bibentry, merge or dedup .
+  [WHEN] Use whenever the user asks to compile manuscript / build PDF / supplementary / revision with tracked changes, add figure/table/bibentry, merge or dedup bibliography, or diagnose the mounted Writer editor.
   [HOW] `pip install scitex-writer` then `import scitex_writer`; see leaf skills for details.
 tags: [scitex-writer]
 allowed-tools: mcp__scitex__writer_*
@@ -51,6 +51,7 @@ CSV-to-LaTeX), and verifiable claims linked to session hashes.
 - [15_audit-paper.md](15_audit-paper.md) — pre-submission audit: cross-refs + tables
 - [16_audit-paper-figures-data.md](16_audit-paper-figures-data.md) — audit: figures, variables, data
 - [17_audit-paper-methods-output.md](17_audit-paper-methods-output.md) — audit: methods, structure, cross-doc, pitfalls
+- [18_mounted-editor.md](18_mounted-editor.md) — mounted GUI project context, presence, preview rail, and interaction checks
 
 ## Scientific writing standards
 
