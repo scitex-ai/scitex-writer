@@ -125,7 +125,6 @@ export class InsertPanel {
       }
     }
     this.renderList(
-      "Figures",
       this.figCache[docType].map((figure) => ({
         label: figure.name,
         sub: figure.label ? `\\ref{${figure.label}}` : "",
@@ -148,7 +147,6 @@ export class InsertPanel {
       }
     }
     this.renderList(
-      "Tables",
       this.tableCache[docType].map((table) => ({
         label: table.name,
         sub: table.label ? `\\ref{${table.label}}` : "",
@@ -160,8 +158,9 @@ export class InsertPanel {
   }
 
   private renderHistory(): void {
+    // Operator 2026-10-24: no in-panel title — the rail selector already
+    // says "History", so a second heading is redundant.
     this.opts.panel.innerHTML = `
-      <div class="insert-panel-header">Version history</div>
       <div class="insert-panel-body">
         <p class="insert-panel-empty">Git history integration lands in a later PR.</p>
       </div>
@@ -178,7 +177,6 @@ export class InsertPanel {
       document.querySelector<HTMLElement>(".writer-app")?.dataset.appMode ===
       "hub";
     this.opts.panel.innerHTML = `
-      <div class="insert-panel-header">Collaboration</div>
       <div class="insert-panel-body insert-panel-info">
         ${
           onHub
@@ -217,7 +215,6 @@ export class InsertPanel {
   }
 
   private renderList(
-    title: string,
     items: Array<{
       label: string;
       sub: string;
@@ -228,9 +225,8 @@ export class InsertPanel {
   ): void {
     if (items.length === 0) {
       this.opts.panel.innerHTML = `
-        <div class="insert-panel-header">${title}</div>
-        <div class="insert-panel-body"><p class="insert-panel-empty">(none)</p></div>
-      `;
+      <div class="insert-panel-body"><p class="insert-panel-empty">(none)</p></div>
+    `;
       return;
     }
     const anyThumbnail = items.some((i) => i.thumbnail_url);
@@ -254,8 +250,9 @@ export class InsertPanel {
         </div>`;
       })
       .join("");
+    // Operator 2026-10-24: no in-panel title or count heading — the rail
+    // selector already names the view, so a second heading is redundant.
     this.opts.panel.innerHTML = `
-      <div class="insert-panel-header">${title}<span class="insert-count">${items.length}</span></div>
       <div class="insert-panel-body insert-panel-body--${anyThumbnail ? "grid" : "list"}">${listHtml}</div>
     `;
     this.opts.panel
