@@ -418,6 +418,9 @@
     background 0.15s,
     border-color 0.15s;
 }
+.writer-toolbar-right > .btn {
+  column-gap: var(--spacing-xs, 4px);
+}
 .btn:hover {
   background: var(--hover-bg);
   border-color: var(--text-muted);

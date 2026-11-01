@@ -53,6 +53,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Compile and Log toolbar buttons use the shared extra-small spacing token
+  between their icon and label.
+- Version the editor stylesheet URL with the leaf version so reloads fetch the
+  current release's styles.
+
 - Editor toolbar condenses into the overflow hamburger with aligned 32px
   row heights; Draft/Full compile labels read the live section title
   (`Abstract`) and `Manuscript`; Monaco gains writer-dark/writer-light

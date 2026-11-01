@@ -7,7 +7,7 @@
     via _branding_head.html (operator 2026-10-23 — no leaf-local icons,
     no per-environment variant).{% endcomment %}
     <link rel="stylesheet" href="{% static 'writer/assets/index.css' %}">
-    <link rel="stylesheet" href="{% static 'writer/css/editor.css' %}">
+    <link rel="stylesheet" href="{% static 'writer/css/editor.css' %}?v={{ writer_version|urlencode }}">
     <link rel="stylesheet" href="{% static 'writer/css/app-header.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/editor-narrow-and-dock.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/editor-mobile.css' %}">
