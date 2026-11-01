@@ -158,3 +158,21 @@ SDK 0.3.17 and LivePaper 0.2.20 wheel frontend packages in the same sibling
 layout as the portable file dependencies. Rebuild with `npm ci && npm run build`;
 retain every file referenced by the Vite manifest, including hashed chunks,
 worker and CSS assets. Never replace a wheel package with a source alias.
+
+For a clean contributor build, install the qualified preview wheels plus
+`.[frontend-build]` (Node/npm required), then run:
+
+```sh
+python scripts/build_frontend.py --receipt /tmp/writer-frontend-build.json
+```
+
+The tracked command discovers SDK and LivePaper through their public
+`get_frontend_package_dir()` helpers, copies their installed frontend packages
+into a temporary portable sibling layout, runs normal `npm ci` / `npm run build`,
+and copies only generated output back. No sibling source checkout, source alias,
+manual dependency edit or untracked staging directory is required. `--offline`
+uses an existing npm cache. The receipt lists every generated asset SHA-256.
+
+`python tests/develop/check_frontend_build.py` executes that tracked command
+and checks every emitted hash plus unchanged committed dependency files. It
+requires the declared build extra and Node/npm; it uses no live project data.

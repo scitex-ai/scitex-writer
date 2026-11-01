@@ -102,7 +102,7 @@ dependencies = [
 #
 # The fleet rule (operator, 2026-07-13) is now: a user decides ALL or NOTHING.
 # `pip install scitex-writer` gives the compile engine; `[all]` gives every
-# feature. No menu of half-states to get wrong. `dev` / `docs` remain, because
+# feature. No menu of half-states to get wrong. `dev` / `docs` / `frontend-build` remain, because
 # those are for people building writer, not using it.
 all = [
     # PS-221 §3: every public extra must be a subset of `all`, so the
@@ -114,6 +114,7 @@ all = [
     # PS-210 §2 requires a PUBLIC `[dev]` that runs the full suite.)
     "scitex-writer[dev]",
     "scitex-writer[docs]",
+    "scitex-writer[frontend-build]",
     # Desktop window for `gui open --desktop`.
     "pywebview>=4.0.0",
     # The shared workspace shell is supplied by the base SDK dependency.
@@ -136,7 +137,11 @@ all = [
     "scitex-writer[dev]",
     "scitex-writer[docs]",
 ]
+frontend-build = [
+    "scitex-live-paper>=0.2.20",
+]
 dev = [
+    "scitex-writer[frontend-build]",
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-xdist>=3.0.0",
