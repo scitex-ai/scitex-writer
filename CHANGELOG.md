@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.20] - 2026-11-01
+
+### Fixed
+
+- Activate the PDF preview after InsertPanel initialization, which clears the initial HTML selection.
+- Use Writer's canonical DOM CSRF token for collaboration heartbeats, including HTTP-only cookie/session CSRF configurations; render a retry message instead of remaining on Connecting after failure.
+
 ## [2.43.19] - 2026-11-01
 
 ### Fixed
