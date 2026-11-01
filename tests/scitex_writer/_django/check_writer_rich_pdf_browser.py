@@ -179,7 +179,7 @@ def main():
                 page.evaluate("wrapper.downloadUrl").find("/writer/api/preview/pdf?")
                 != -1
             )
-            assert page.locator(".stx-pdf-text-layer").count() == 2
+            assert page.locator("[data-stx-pdf-layer=text]").count() == 2
             assert page.locator("#viewer").evaluate(
                 "(el)=>el.scrollWidth<=el.clientWidth+1"
             )
