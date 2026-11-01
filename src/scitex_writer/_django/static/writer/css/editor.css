@@ -44,6 +44,16 @@
   justify-content: center;
   min-width: 0;
 }
+/* Operator 2026-10-23: same-row toolbar controls share one height on
+ * desktop so the 44px-touch selects do not tower over the buttons.
+ * The 44px floor stays untouched for phones (min-width gate below). */
+@media (min-width: 769px) {
+  .writer-toolbar .writer-select,
+  .writer-toolbar .btn {
+    height: 32px;
+    min-height: 32px;
+  }
+}
 .writer-logo {
   font-weight: 600;
 }
@@ -62,44 +72,54 @@
   flex: 1;
   background: var(--bg-editor);
 }
-.writer-split-resizer {
-  flex: 0 0 4px;
-  background: var(--border-color);
-  cursor: col-resize;
-}
-.writer-split-resizer:hover {
-  background: var(--accent);
-}
+/* The editor|rail split is fixed — the old drag resizer div is gone from
+ * the markup (operator 2026-10-23: it rendered as a stray accent line).
+ * Kept as documentation; no rule needed. */
 
 [data-theme="light"] .writer-app,
 .writer-app[data-theme="light"] {
-  --bg-primary: #fdfcfa;
-  --bg-secondary: #f5f3f0;
-  --bg-tertiary: #eae7e2;
+  /* Surfaces follow the shell (scitex gold-on-navy brand, operator
+     2026-09-15 + stats reference): page/surface/muted + borders come
+     straight from the shared theme so chrome never drifts brown; fallbacks
+     are the shell's literal values for pages where the shared sheet is
+     absent. */
+  --bg-primary: var(--bg-page, #faf9f7);
+  --bg-secondary: var(--bg-surface, #f8f7f5);
+  --bg-tertiary: var(--bg-muted, #f3f2f0);
   --bg-editor: #ffffff;
-  --text-primary: #1a1a1a;
-  --text-secondary: #555555;
-  --text-muted: #888888;
-  --border-color: #d4d0cb;
-  --border-light: #e8e5e0;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-bg: #eff6ff;
+  --text-primary: var(--text-primary, #333333);
+  --text-secondary: var(--text-secondary, #4a4a4a);
+  --text-muted: var(--text-muted, #5f5f5f);
+  --border-color: var(--border-default, #999999);
+  --border-light: var(--border-muted, #c0c0c0);
+  /* SciTeX navy (operator 2026-09-15; stats palette reference): the odd blue
+     (#2563eb) is gone from here. Fallbacks are the raw literals so the
+     header accents survive even where the shared palette is not loaded. */
+  --accent: var(--color-primary, #1a2a40);
+  --accent-hover: var(--color-primary-hover, #243752);
+  --accent-bg: var(--color-primary-subtle, rgba(26, 42, 64, 0.08));
+  /* Compile is the primary action: monochrome (operator 2026-10-17), kept
+     out of the accent so the button never picks up a tint. */
+  --compile-bg: #1a1a1a;
+  --compile-hover: #333333;
+  --compile-text: #ffffff;
   --danger: #dc2626;
   --success: #16a34a;
   --warning: #d97706;
-  --toolbar-bg: #f5f3f0;
-  --sidebar-bg: #f5f3f0;
-  --hover-bg: #eae7e2;
-  --active-bg: #ddd9d3;
-  --tab-bg: #eae7e2;
+  --toolbar-bg: var(--bg-surface, #f8f7f5);
+  --sidebar-bg: var(--bg-surface, #f8f7f5);
+  --hover-bg: var(--workspace-bg-hover, rgba(0, 0, 0, 0.04));
+  --active-bg: var(--workspace-bg-active, rgba(0, 0, 0, 0.08));
+  --tab-bg: var(--bg-muted, #f3f2f0);
   --tab-active-bg: #ffffff;
-  --scrollbar-thumb: #c4c0bb;
+  --scrollbar-thumb: var(--workspace-border-hover, #999897);
   --log-bg: #1e1e1e;
   --log-text: #d4d4d4;
+  /* Monaco stays eye-friendly paper-white: editor comfort outranks chrome
+     purity here, per operator. */
   --cm-bg: #ffffff;
   --cm-text: #1a1a1a;
-  --cm-gutter-bg: #f5f3f0;
+  --cm-gutter-bg: var(--workspace-bg-secondary, #efeeed);
   --cm-gutter-text: #999999;
   --cm-cursor: #1a1a1a;
   --cm-selection: #add6ff;
@@ -116,37 +136,50 @@
 }
 [data-theme="dark"] .writer-app,
 .writer-app[data-theme="dark"] {
-  --bg-primary: #1e1e1e;
-  --bg-secondary: #252526;
-  --bg-tertiary: #2d2d2d;
-  --bg-editor: #1e1e1e;
-  --text-primary: #d4d4d4;
-  --text-secondary: #aaaaaa;
-  --text-muted: #666666;
-  --border-color: #3e3e3e;
-  --border-light: #333333;
-  --accent: #4a9eff;
-  --accent-hover: #2d8cf0;
-  --accent-bg: #1a3a5c;
+  /* Surfaces follow the shell's GitHub-dark neutrals: the old warm
+     #1e1e1e/#252526/#2d2d2d ramp read brownish next to the gold accent.
+     Cool grays keep chrome neutral; fallbacks are shell literals. */
+  --bg-primary: var(--bg-page, #0d1117);
+  --bg-secondary: var(--bg-surface, #161b22);
+  --bg-tertiary: var(--bg-muted, #21262d);
+  --bg-editor: var(--bg-page, #0d1117);
+  --text-primary: var(--text-primary, #e6edf3);
+  --text-secondary: var(--text-secondary, #c9d1d9);
+  --text-muted: var(--text-muted, #8b949e);
+  --border-color: var(--border-default, #30363d);
+  --border-light: var(--border-muted, #21262d);
+  /* Dark is black-based (operator mandate): surfaces stay near-black and the
+     accent is scitex gold (light #d4a87a on dark, navy text on it) — never
+     the odd blue (#4a9eff) that lived here before. */
+  --accent: var(--color-primary, #d4a87a);
+  --accent-hover: var(--color-primary-hover, #e0bb93);
+  --accent-bg: var(--color-primary-subtle, rgba(212, 168, 122, 0.14));
+  /* Compile stays monochrome in dark too (operator 2026-10-17): near-white
+     button, near-black text — never the gold accent. */
+  --compile-bg: #f0f0f0;
+  --compile-hover: #ffffff;
+  --compile-text: #1a1a1a;
   --danger: #f87171;
   --success: #4ade80;
   --warning: #fbbf24;
-  --toolbar-bg: #252526;
-  --sidebar-bg: #252526;
-  --hover-bg: #2d2d2d;
-  --active-bg: #37373d;
-  --tab-bg: #2d2d2d;
-  --tab-active-bg: #1e1e1e;
-  --scrollbar-thumb: #555555;
-  --log-bg: #1a1a1a;
-  --log-text: #d4d4d4;
-  --cm-bg: #1e1e1e;
-  --cm-text: #d4d4d4;
-  --cm-gutter-bg: #252526;
-  --cm-gutter-text: #858585;
-  --cm-cursor: #d4d4d4;
+  --toolbar-bg: var(--bg-surface, #161b22);
+  --sidebar-bg: var(--bg-surface, #161b22);
+  --hover-bg: var(--workspace-bg-hover, rgba(177, 186, 196, 0.08));
+  --active-bg: var(--workspace-bg-active, rgba(177, 186, 196, 0.12));
+  --tab-bg: var(--bg-muted, #21262d);
+  --tab-active-bg: var(--bg-page, #0d1117);
+  --scrollbar-thumb: var(--workspace-slider-hover, #6e7681);
+  --log-bg: #0d1117;
+  --log-text: #e6edf3;
+  /* Monaco + PDF stay eye-friendly dark: editor comfort outranks chrome
+     purity here, per operator. */
+  --cm-bg: var(--workspace-bg-monaco, #0d1117);
+  --cm-text: #e6edf3;
+  --cm-gutter-bg: var(--workspace-bg-secondary, #161b22);
+  --cm-gutter-text: #8b949e;
+  --cm-cursor: #e6edf3;
   --cm-selection: #264f78;
-  --cm-keyword: #569cd6;
+  --cm-keyword: #79c0ff;
   --cm-atom: #b5cea8;
   --cm-number: #b5cea8;
   --cm-def: #dcdcaa;
@@ -155,9 +188,8 @@
   --cm-comment: #6a9955;
   --cm-bracket: #ffd700;
   --cm-tag: #4ec9b0;
-  --cm-attribute: #9cdcfe;
+  --cm-attribute: #7ee787;
 }
-
 /* Toolbar */
 .toolbar {
   display: flex;
@@ -282,6 +314,30 @@
   background: var(--bg-tertiary);
   flex-shrink: 0;
 }
+/* CCT4433 (desktop): while the PDF view is showing, the tab header floats
+ * over the page instead of squeezing the scroll viewport, so the viewport
+ * fills the whole preview pane and matches the editor height. Bib/claims
+ * views keep the header in flow (no :has match, rule does not apply).
+ * Pair: the annotation-toolbar overlay in annotations.css, stacked directly
+ * below this header via the shared --writer-preview-header-h. */
+@media (min-width: 769px) {
+  .writer-preview-pane {
+    position: relative;
+    --writer-preview-header-h: 34px;
+  }
+  .writer-preview-pane:has(#pdf-view.active) .preview-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 6;
+    height: var(--writer-preview-header-h);
+    box-sizing: border-box;
+    background: var(--bg-tertiary);
+    background: color-mix(in srgb, var(--bg-tertiary) 88%, transparent);
+    backdrop-filter: blur(6px);
+  }
+}
 .preview-content {
   flex: 1;
   overflow: hidden;
@@ -378,6 +434,32 @@
 .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+/* Compile button (#btn-compile): the scitex CTA (operator 2026-10-17
+ * mono-unification superseded 2026-10-23 — Compile carries the navy/gold
+ * accent like every other primary button). ID selector outranks
+ * .btn-primary only as documentation; the tokens are the same accent. */
+#btn-compile {
+  background: var(--accent);
+  border-color: var(--accent);
+  /* --compile-text is white in light mode (on navy) and near-black in
+   * dark mode (on gold) — contrast-safe on both CTA faces. */
+  color: var(--compile-text);
+}
+#btn-compile:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+/* Light-theme danger zone: --compile-bg is #1a1a1a with #fff text while
+ * .btn (the base every button shares) paints a flat --bg-secondary face on
+ * ALL themes — in light mode that reads as a dark button, which is wrong for
+ * every button EXCEPT Compile. Opt every button EXCEPT #btn-compile back out
+ * to the light face + dark text on light theme. */
+[data-theme="light"] .btn:not(#btn-compile),
+.writer-app[data-theme="light"] .btn:not(#btn-compile) {
+  background: #ffffff;
+  color: var(--text-primary, #333333);
+  border-color: var(--border-default, #999999);
 }
 .btn-secondary {
   background: var(--bg-tertiary);
@@ -557,22 +639,86 @@ select:focus {
   display: flex;
   gap: 4px;
 }
+/* Preview Tabs — underline-only active state (same direction as the CCT4700
+   annot-button fix and FigRecipe #442): the active tab is a straight
+   underline, never a filled/accent pill. border-bottom transparent on the
+   base so activation shifts no layout; border-radius: 0 so the shared
+   .btn hover rounding cannot leak in. */
 .preview-tab {
   padding: 4px 12px;
   font-size: 12px;
   border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  border-radius: 4px;
 }
 .preview-tab:hover {
   background: var(--hover-bg);
+  color: var(--text-primary);
 }
 .preview-tab.active {
-  background: var(--accent-bg);
-  color: var(--accent);
+  background: transparent;
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+  border-radius: 0;
   font-weight: 600;
+}
+
+/* PDF options hamburger menu (CCT4485): the six small op icons collapse into
+   one hamburger; the menu lists each op with its shortcut. Anchored to the
+   preview header so it floats above the PDF pane in both themes. */
+.pdf-menu {
+  position: relative;
+}
+.pdf-menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.pdf-menu-item {
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+.pdf-menu-item:hover {
+  background: var(--hover-bg);
+}
+.pdf-menu-item i {
+  width: 16px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.pdf-menu-item span {
+  flex: 1;
+  text-align: left;
+}
+.pdf-menu-item kbd {
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
 }
 
 /* PDF */
@@ -1124,6 +1270,7 @@ select:focus {
   margin-bottom: -1px;
 }
 .writer-select {
+  min-height: 44px;
   background: var(--bg-tertiary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
@@ -1198,7 +1345,11 @@ select:focus {
   max-width: 100%;
 }
 
-/* PR5: insert icon-bar + side panel (Cite/Fig/Table/History) */
+/* PR5: insert icon-bar + side panel (Cite/Fig/Table/History).
+ * Operator 2026-10-23: the column itself carries NO accent — no full-height
+ * gold line on its left edge, plain token borders only (the old accent
+ * bled from the resizer/slider era). Only the selected BUTTON shows the
+ * vertical accent bar (see .insert-bar-btn.active). */
 .insert-bar {
   display: flex;
   flex-direction: column;
@@ -1215,25 +1366,29 @@ select:focus {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 2px;
+  padding: 6px 2px 6px 4px;
   background: transparent;
   color: var(--text-secondary);
-  border: 1px solid transparent;
-  border-radius: 4px;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: 0;
   font-size: 10px;
   cursor: pointer;
 }
 .insert-bar-btn i {
   font-size: 14px;
 }
+/* Operator 2026-10-23: the selected rail button reads as a vertical bar
+ * on its left edge — not a bottom underline. Hover is text-only (the
+ * earlier no-fill direction stands); only the active state carries ink. */
 .insert-bar-btn:hover {
-  background: var(--hover-bg);
   color: var(--text-primary);
 }
 .insert-bar-btn.active {
-  background: var(--accent-bg);
-  color: var(--accent);
-  border-color: var(--accent);
+  background: transparent;
+  color: var(--text-primary);
+  border-left-color: var(--accent);
+  border-radius: 0;
 }
 .insert-panel {
   width: 280px;
@@ -1244,6 +1399,15 @@ select:focus {
   border-right: 1px solid var(--border-color);
   flex-shrink: 0;
   overflow: hidden;
+}
+/* Operator 2026-10-23: the insert panel lives INSIDE the large preview
+ * pane as a switched view (PDF/fig/table/…) instead of expanding beside
+ * it. In-flow sizing above applies to the old split-row placement only. */
+#insert-view > .insert-panel {
+  width: auto;
+  min-width: 0;
+  height: 100%;
+  border-right: none;
 }
 .insert-panel-header {
   display: flex;
@@ -1383,9 +1547,13 @@ select:focus {
   cursor: pointer;
   border-bottom: 2px solid transparent;
 }
+/* Operator 2026-10-23: the selected tab must read selected in dark mode.
+ * The old --text/--accent fallbacks (#111, #2a6bc9) are light-mode
+ * literals — invisible/low-contrast text on the dark surface. Use the
+ * app tokens so the active tab is primary text + gold/navy underline. */
 .citations-tab.active {
-  color: var(--text, #111);
-  border-bottom-color: var(--accent, #2a6bc9);
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
 }
 .citations-controls {
   display: flex;
@@ -1426,11 +1594,16 @@ select:focus {
   flex-direction: column;
   gap: 6px;
 }
+/* Operator 2026-10-23: card contrast is too strong — the old rules used
+ * light-mode literals (#ddd border, #fff face, #2a6bc9 accents) that read
+ * as harsh white cards on the dark surface. Cards now sit on the app
+ * tokens (subtle border, secondary face), with the gold/navy accent only
+ * on hover/selected/key. */
 .citation-card {
-  border: 1px solid var(--border, #ddd);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 8px 10px;
-  background: var(--bg, #fff);
+  background: var(--bg-secondary);
   cursor: grab;
   user-select: none;
   transition:
@@ -1438,12 +1611,12 @@ select:focus {
     box-shadow 0.1s;
 }
 .citation-card:hover {
-  border-color: var(--accent, #2a6bc9);
+  border-color: var(--accent);
 }
 .citation-card.selected {
-  border-color: var(--accent, #2a6bc9);
-  box-shadow: 0 0 0 2px rgba(42, 107, 201, 0.2);
-  background: var(--bg-accent, #f1f7ff);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+  background: var(--bg-tertiary);
 }
 .citation-card.dragging {
   opacity: 0.5;
@@ -1457,7 +1630,7 @@ select:focus {
 }
 .citation-key code {
   font-size: 11px;
-  color: var(--accent, #2a6bc9);
+  color: var(--accent);
 }
 .citation-badges {
   display: flex;
@@ -1468,26 +1641,23 @@ select:focus {
   font-size: 10px;
   padding: 1px 5px;
   border-radius: 3px;
-  background: var(--bg-2, #eee);
-  color: var(--text, #333);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
 }
-.badge-oa {
-  background: #d4edda;
-  color: #155724;
-}
-.badge-if {
-  background: #fff3cd;
-  color: #856404;
-}
+/* Badges were loud filled pills (green/yellow/blue) — now quiet outline
+ * chips on the tertiary surface; meaning carried by the label, not color. */
+.badge-oa,
+.badge-if,
 .badge-cites {
-  background: #e7f1ff;
-  color: #084298;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
 }
 .citation-title {
   font-size: 13px;
   font-weight: 500;
   line-height: 1.3;
-  color: var(--text, #111);
+  color: var(--text-primary);
 }
 .citation-sub {
   font-size: 11px;
@@ -1506,6 +1676,18 @@ select:focus {
 }
 .citation-card--library .citation-add-btn {
   flex-shrink: 0;
+}
+
+/* Operator 2026-10-23: Enrich is the CTA — icon + label with breathing
+ * room. The .btn-primary fill is the scitex CTA (navy light / gold dark);
+ * only #btn-compile is decoupled to monochrome, Enrich keeps the brand. */
+.citations-enrich {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.citations-enrich .fa-magic {
+  margin-right: 2px;
 }
 
 /* PR6: viewer mode (claims list + PDF + DAG) */
@@ -1832,7 +2014,10 @@ select:focus {
   display: none !important;
 }
 
-/* Details right panel — matches scitex.ai sliders-icon Details column */
+/* Side panel (right column; collapsed by default — operator: drop the pane,
+ * keep its sections reachable from the manuscript/abstract toolbar row via
+ * #btn-toggle-panel). Renamed Panel (was Details) to disambiguate from the
+ * browser DevTools Elements/Details affordances. */
 .details-pane {
   width: 260px;
   min-width: 200px;
@@ -1842,6 +2027,11 @@ select:focus {
   border-left: 1px solid var(--border-color);
   flex-shrink: 0;
   overflow: hidden;
+}
+/* Collapsed by default: the editor/PDF own the width; the toolbar button
+ * toggles this class. Phones keep their own single-pane switching. */
+.writer-panel-hidden {
+  display: none !important;
 }
 .details-header {
   padding: 8px 12px;
@@ -1859,10 +2049,77 @@ select:focus {
   overflow: auto;
   padding: 4px 0;
 }
+
+.details-compilation {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.details-compilation > legend {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.details-compilation-children {
+  margin-inline-start: 10px;
+}
+.writer-compile-modes {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+.writer-compile-modes select {
+  min-height: 44px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+.writer-compile-modes select:disabled {
+  cursor: wait;
+}
+/* Declutter mandate 2026-10-16: the centre icon row (font size, theme,
+   shortcuts) collapses into one overflow disclosure. Native <details> keeps
+   it working with JS disabled; the popover positions under the trigger. */
+.writer-toolbar-overflow {
+  position: relative;
+}
+.writer-toolbar-overflow > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.writer-toolbar-overflow > summary::-webkit-details-marker {
+  display: none;
+}
+.writer-toolbar-overflow-body {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+.writer-toolbar-overflow-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
 .details-section {
   border-bottom: 1px solid var(--border-light);
 }
 .details-section-toggle {
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2011,10 +2268,7 @@ select:focus {
   .writer-split {
     flex-direction: column;
   }
-  /* The horizontal drag handle is meaningless once stacked — hide it. */
-  .writer-split-resizer {
-    display: none;
-  }
+  /* The old drag handle is gone from the markup — nothing to hide. */
   /* Editor surface owns the available height (CodeMirror needs a real box to
      size its gutter + code area). */
   .writer-editor-pane {

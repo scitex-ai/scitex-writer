@@ -1,4 +1,8 @@
-/* Writer's project picker bar (SDK scitex_project_picker), above the panes. */
+/* Writer's project picker bar (SDK scitex_project_picker), above the panes.
+   CCT4713: no underline — the bar carries no bottom border; separation from
+   the panes below comes from background contrast only, matching FigRecipe's
+   borderless header-to-content transition. (The bar self-hides when no host
+   picker is mounted, so standalone pages never see it at all.) */
 .writer-project-scope {
   box-sizing: border-box;
   display: flex;
@@ -6,8 +10,7 @@
   align-items: center;
   min-height: 48px;
   padding: 6px 12px;
-  border-bottom: 1px solid
-    var(--workspace-border-default, var(--border-default, #d0d7de));
+  border-bottom: none;
   background: var(--workspace-bg-secondary, var(--bg-secondary, #f6f8fa));
 }
 
@@ -17,6 +20,40 @@
 
 .writer-project-scope + .writer-workspace {
   min-height: 0;
+}
+
+/* Operator 2026-10-23: the picker trigger/panel must sit on the writer
+ * bluish-gray chrome, not the SDK light-mode defaults. The shared
+ * component reads var(--bg-surface)/var(--border-default); writer scopes
+ * those tokens to its --bg-secondary/--border-color so trigger, panel,
+ * search, and hover states all follow the app palette (dark and light).
+ * No fork: same component, same classes, leaf-owned tokens only. */
+.writer-app-header .stx-app-project-selector__trigger,
+.writer-project-scope .stx-app-project-selector__trigger {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+.writer-app-header .stx-app-project-selector__panel,
+.writer-project-scope .stx-app-project-selector__panel {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+.writer-app-header .stx-app-project-selector__search,
+.writer-project-scope .stx-app-project-selector__search {
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+.writer-app-header .stx-app-project-selector__option,
+.writer-project-scope .stx-app-project-selector__option {
+  color: var(--text-primary);
+}
+.writer-app-header .stx-app-project-selector__option:hover,
+.writer-project-scope .stx-app-project-selector__option:hover,
+.writer-app-header .stx-app-project-selector__option--current,
+.writer-project-scope .stx-app-project-selector__option--current {
+  background: var(--hover-bg);
 }
 
 @media (max-width: 767px) {

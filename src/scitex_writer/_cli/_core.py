@@ -127,7 +127,8 @@ def _mount_optional_subcommands():
     rename is a visible line rather than two absent verbs.
     """
     import importlib.util
-    import logging
+
+    from scitex_logging import getLogger
 
     if importlib.util.find_spec("scitex_dev") is None:
         return  # optional peer genuinely absent — nothing to mount, no noise
@@ -137,7 +138,7 @@ def _mount_optional_subcommands():
     for factory_name in ("docs_click_group", "skills_click_group"):
         factory = getattr(_dev_cli, factory_name, None)
         if factory is None:
-            logging.getLogger(__name__).warning(
+            getLogger(__name__).warning(
                 "[scitex-writer] scitex_dev is installed but does not expose "
                 "scitex_dev.cli.%s — the subcommand it provides will be "
                 "missing from `scitex-writer --help`. The symbol has moved; "

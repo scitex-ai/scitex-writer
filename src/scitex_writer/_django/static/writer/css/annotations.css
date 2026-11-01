@@ -25,6 +25,24 @@
   background: var(--toolbar-bg);
   border-bottom: 1px solid var(--border-color);
 }
+/* CCT4433 (desktop): the annotation toolbar floats over the PDF page —
+ * stacked below the floating tab header (editor.css) — instead of squeezing
+ * the scroll viewport. The viewport keeps full preview-pane height in every
+ * mode, matching the editor; the pen loop is untouched (same buttons, same
+ * DOM position, markup/review behavior unchanged). Solid background first
+ * for browsers without color-mix; translucency is progressive enhancement. */
+@media (min-width: 769px) {
+  #pdf-view.active > .annot-toolbar {
+    position: absolute;
+    top: var(--writer-preview-header-h, 34px);
+    left: 0;
+    right: 0;
+    z-index: 5;
+    background: var(--toolbar-bg);
+    background: color-mix(in srgb, var(--toolbar-bg) 92%, transparent);
+    backdrop-filter: blur(6px);
+  }
+}
 .annot-group {
   display: flex;
   align-items: center;
@@ -38,12 +56,33 @@
 .annot-modes .annot-btn {
   font-size: 12px;
 }
+/* Declutter mandate 2026-10-16: mode + pen buttons are ghost — borderless,
+   transparent, no accent fill. The active state is a quiet text/border cue,
+   never the filled accent pill. Compile keeps the ONE accent.
+   CCT4700 (HARD NO on rounded active highlights): the active indicator is a
+   straight underline drawn with border-bottom — box-shadow is forbidden here
+   because a shadowed box reads as a rounded pill, and border-radius is
+   forbidden on any active annot button for the same reason. */
+.annot-toolbar .annot-btn {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.annot-toolbar .annot-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
 .annot-btn.active {
-  background: var(--accent);
-  color: #fff;
+  background: transparent;
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+  border-radius: 0;
 }
 .annot-btn.active:hover {
-  color: #fff;
+  color: var(--text-primary);
+  background: var(--hover-bg);
 }
 .annot-clear {
   margin-left: auto;
@@ -104,6 +143,10 @@
 }
 .annot-row[data-category="highlight"] {
   --annot-accent: #eab308;
+  /* Operator CCT4372 (mono/square direction, same as Cards CCT4368):
+     highlight cards go straight/square while every other category keeps
+     the base rounding. */
+  border-radius: 0;
 }
 .annot-row-head {
   display: flex;
@@ -203,4 +246,57 @@
   height: 1px;
   margin: 4px 2px;
   background: var(--border-color);
+}
+
+/* Operator 2026-10-23: the seventeen annot buttons live in a hamburger
+ * menu (like the PDF ops menu) instead of a full-width row. The menu
+ * reuses the same buttons, so .active underlines and wiring are untouched.
+ * Anchor: the toolbar is the positioning context on every viewport. */
+.annot-toolbar {
+  position: relative;
+}
+.annot-menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 8px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.annot-menu-heading {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 2px 2px 4px;
+}
+.annot-menu-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.annot-menu-list .annot-btn {
+  justify-content: flex-start;
+  gap: 6px;
+  font-size: 12px;
+}
+.annot-menu-list .annot-btn kbd {
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  margin-left: auto;
 }

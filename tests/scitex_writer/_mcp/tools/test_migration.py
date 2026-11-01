@@ -4,6 +4,8 @@
 
 """Tests for the migration module (Overleaf import/export)."""
 
+import os
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -155,6 +157,98 @@ def imported_project(simple_overleaf_zip, tmp_path):
         clone_fn=_skeleton_clone,
     )
     return result, out
+
+
+@pytest.fixture
+def symlinked_tmpdir(tmp_path):
+    """Point TMPDIR at a symlink (CI-runner tmp layout), then restore it.
+
+    tempfile caches its directory choice, so the cache is cleared too;
+    both are restored afterwards (repo no-mocks pattern: plain
+    save/restore, no monkeypatch fixture).
+    """
+    real = tmp_path / "real_tmp"
+    real.mkdir()
+    link = tmp_path / "link_tmp"
+    link.symlink_to(real, target_is_directory=True)
+    saved_tmpdir = os.environ.get("TMPDIR")
+    saved_tempdir = tempfile.tempdir
+    try:
+        os.environ["TMPDIR"] = str(link)
+        tempfile.tempdir = None
+        yield link
+    finally:
+        if saved_tmpdir is None:
+            os.environ.pop("TMPDIR", None)
+        else:
+            os.environ["TMPDIR"] = saved_tmpdir
+        tempfile.tempdir = saved_tempdir
+
+
+@pytest.fixture
+def symlinked_import(simple_overleaf_zip, tmp_path, symlinked_tmpdir):
+    """Run from_overleaf once with a symlinked TMPDIR; return (result, out).
+
+    Shared across the symlinked-tmpdir assertions so each test exercises
+    one behaviour with a single assertion without re-running the import.
+    """
+    from scitex_writer.migration import from_overleaf
+
+    out = tmp_path / "imported_project"
+    result = from_overleaf(
+        str(simple_overleaf_zip),
+        output_dir=str(out),
+        clone_fn=_skeleton_clone,
+    )
+    return result, out
+
+
+class TestImportSymlinkedTmpdir:
+    """Import must survive TMPDIR behind a symlink (CI-runner layout).
+
+    Regression: parse_inputs() resolves \\input paths while the extraction
+    root was unresolved, so _build_report()'s relative_to() raised "not in
+    the subpath of ..." and every TestImport leg failed in CI (runs
+    38998772728 / 38999758690) while passing locally.
+    """
+
+    def test_symlinked_tmpdir_dry_run_reports_success(
+        self, simple_overleaf_zip, tmp_path, symlinked_tmpdir
+    ):
+        # Arrange
+        from scitex_writer.migration import from_overleaf
+
+        # Act
+        result = from_overleaf(
+            str(simple_overleaf_zip),
+            output_dir=str(tmp_path / "output"),
+            dry_run=True,
+        )
+        # Assert
+        assert result["success"] is True
+
+    def test_symlinked_tmpdir_import_reports_success(self, symlinked_import):
+        # Arrange
+        result, _out = symlinked_import
+        # Act
+        # Assert
+        assert result["success"] is True
+
+    def test_symlinked_tmpdir_writes_introduction(self, symlinked_import):
+        # Arrange
+        _result, out = symlinked_import
+        # Act
+        intro = out / "01_manuscript" / "contents" / "introduction.tex"
+        # Assert
+        assert intro.exists()
+
+    def test_symlinked_tmpdir_writes_title(self, symlinked_import):
+        # Arrange
+        _result, out = symlinked_import
+        # Act
+        title_file = out / "00_shared" / "title.tex"
+        # Assert
+        assert title_file.exists()
 
 
 # ---------------------------------------------------------------------------

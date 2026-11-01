@@ -106,6 +106,7 @@ def supplementary(
     draft: bool = False,
     quiet: bool = False,
     engine: str | None = None,
+    dark_mode: bool = False,
 ) -> dict:
     """Compile supplementary materials to PDF.
 
@@ -118,6 +119,7 @@ def supplementary(
         draft: Fast single-pass compilation.
         quiet: Suppress output.
         engine: LaTeX engine override ('tectonic', 'latexmk', '3pass').
+        dark_mode: Enable dark mode output.
 
     Returns:
         Dict with success status, pdf_path, and any errors.
@@ -131,6 +133,7 @@ def supplementary(
         draft=draft,
         quiet=quiet,
         engine=engine,
+        dark_mode=dark_mode,
     )
 
 
@@ -143,6 +146,7 @@ def revision(
     draft: bool = False,
     quiet: bool = False,
     engine: str | None = None,
+    dark_mode: bool = False,
 ) -> dict:
     """Compile revision document to PDF.
 
@@ -154,6 +158,7 @@ def revision(
         draft: Fast single-pass compilation.
         quiet: Suppress output.
         engine: LaTeX engine override ('tectonic', 'latexmk', '3pass').
+        dark_mode: Enable dark mode output.
 
     Returns:
         Dict with success status, pdf_path, and any errors.
@@ -166,6 +171,7 @@ def revision(
         draft=draft,
         quiet=quiet,
         engine=engine,
+        dark_mode=dark_mode,
     )
 
 

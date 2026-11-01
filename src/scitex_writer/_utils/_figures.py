@@ -8,11 +8,12 @@ Figure listing and conversion utilities.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-logger = logging.getLogger(__name__)
+from scitex_logging import getLogger
+
+logger = getLogger(__name__)
 
 
 def list_figures(

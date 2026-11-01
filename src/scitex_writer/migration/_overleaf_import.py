@@ -80,7 +80,14 @@ def from_overleaf(
         warnings = []
 
         try:
-            extracted = _extract_zip(zip_obj, Path(tmp_dir))
+            # Resolve once: TMPDIR (hence mkdtemp output) may contain a
+            # symlink (e.g. CI runners where tmp points at a scratch mount).
+            # parse_inputs() resolves every \input path, so an unresolved
+            # extraction root makes mapped paths lexically escape it and
+            # _build_report()'s relative_to() raises ("not in the subpath
+            # of ..."), failing the whole import. Normalising here keeps
+            # rglob-derived and resolved paths under one lexical root.
+            extracted = _extract_zip(zip_obj, Path(tmp_dir)).resolve()
             main_tex = detect_main_tex(extracted)
             if not main_tex:
                 return {

@@ -19,6 +19,9 @@ import pytest
 
 
 def test_audit_all_clean():
+    # PS-206b: import-smoke-allowed — the assertion lives inside the auditor
+    # (audit_all_for_package raises on any violation); this file only
+    # invokes it against the installed tree.
     # Ensure the project venv's scitex-dev is found first (overrides
     # older system-installed versions that can't locate the repo root).
     _venv_bin = os.path.join(sys.exec_prefix, "bin")

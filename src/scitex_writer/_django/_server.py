@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 """Standalone local-dev launcher for the writer editor.
 
-Delegates to `scitex_app._standalone.run_standalone`, which pre-wires
-scitex-ui static assets + the workspace shell so the same local server
-looks like scitex.ai/apps/writer.
+Delegates to `scitex_sdk.app.embed.run_standalone`, which pre-wires
+the SDK workspace shell (static assets + shell chrome) so the same local
+server looks like scitex.ai/apps/writer.
 
 Cloud deployments do NOT use this — they mount `scitex_writer._django.urls`
 into their own Django project.
@@ -17,10 +17,12 @@ import threading
 import webbrowser
 from pathlib import Path
 
+import scitex_logging as slogging
+
 from .._core._gui_runtime import DEFAULT_PORT
 from ._legacy_env import raise_on_legacy_env
 
-
+logger = slogging.getLogger(__name__)
 
 def contribute_allowed_host(host: str) -> list[str]:
     """Permit the address we are about to bind, and return the allow-list.
@@ -69,6 +71,26 @@ def warn_if_wildcard_bind(host: str, allowed: list[str]) -> str | None:
         "how callers will actually reach this machine."
     )
 
+def _print_startup(project_path: Path, host: str, port: int, allowed: list[str]) -> None:
+    """Keep launcher guidance separate from thresholded warnings."""
+    warning = warn_if_wildcard_bind(host, allowed)
+    if warning:
+        logger.warning(warning)
+    console = slogging.getConsole(f"{__name__}.console", level=slogging.get_level())
+    console.info(f"SciTeX Writer GUI: http://{host}:{port}")
+    console.info(f"Project: {project_path}")
+    console.info("Press Ctrl+C to stop")
+
+
+def _warn_missing_shell(reason: str, remedy: str) -> None:
+    """Announce the existing degraded mode through the diagnostic stream."""
+    logger.warning(
+        f"Note: {reason}, so the workspace shell is "
+        "unavailable; serving bare Django instead.\n"
+        f"      Get it with: {remedy}"
+    )
+
+
 def run(
     project_dir: str,
     port: int = DEFAULT_PORT,
@@ -79,9 +101,9 @@ def run(
 ) -> None:
     """Launch the Django editor server locally on exactly ``port``.
 
-    Uses `scitex_app.embed.run_standalone` (gets the full workspace shell
-    from scitex-ui). When that import fails, names WHICH failure it was —
-    scitex-app absent, or present but too old to expose `.embed` — and
+    Uses `scitex_sdk.app.embed.run_standalone` (gets the full workspace shell
+    from the SDK). When that import fails, names WHICH failure it was —
+    scitex-sdk absent, or present but too old to expose `.embed` — and
     serves bare Django instead; every other error propagates.
 
     The requested port is bound as given: when it is already in use the
@@ -102,33 +124,23 @@ def run(
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "scitex_writer._django.settings")
 
     _allowed = contribute_allowed_host(host)
-    _warning = warn_if_wildcard_bind(host, _allowed)
-    if _warning:
-        print(_warning)
-
-    print(f"SciTeX Writer GUI: http://{host}:{port}")
-    print(f"Project: {project_path}")
-    print("Press Ctrl+C to stop")
+    _print_startup(project_path, host, port, _allowed)
 
     try:
-        from scitex_app.embed import run_standalone
+        from scitex_sdk import app as _sdk_app
     except ImportError:
         from ._workspace_shell import REMEDY, probe_missing_shell
 
         run_standalone = None
-        print(
-            f"Note: {probe_missing_shell()}, so the workspace shell is "
-            "unavailable; serving bare Django instead.\n"
-            f"      Get it with: {REMEDY}"
-        )
+        _warn_missing_shell(probe_missing_shell(), REMEDY)
+    else:
+        run_standalone = _sdk_app.embed.run_standalone
 
     import django
 
     django.setup()
 
     from django.core.management import call_command
-
-    call_command("migrate", "--run-syncdb", verbosity=0)
 
     if run_standalone is not None:
         run_standalone(
@@ -146,4 +158,4 @@ def run(
         threading.Timer(1.0, webbrowser.open, args=[f"http://{host}:{port}"]).start()
 
     noreload = [] if hot_reload else ["--noreload"]
-    call_command("runserver", f"{host}:{port}", *noreload)
+    call_command("runserver", f"{host}:{port}", "--insecure", *noreload)

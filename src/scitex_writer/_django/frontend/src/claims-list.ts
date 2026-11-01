@@ -5,7 +5,7 @@
  * by both the editor's Claims tab and the read-only viewer. Keeps the two
  * views visually and behaviourally consistent.
  */
-import { API_BASE, PROJECT_DIR, apiGet } from "./api";
+import { resourceUrl, apiGet } from "./api";
 
 export interface ClaimRow {
   claim_id: string;
@@ -119,10 +119,9 @@ export async function renderDagFor(
 ): Promise<void> {
   container.innerHTML = `<p class="insert-panel-empty">Loading DAG…</p>`;
   const url =
-    `api/dag?claim=${encodeURIComponent(claim.claim_id)}` +
-    `&working_dir=${encodeURIComponent(PROJECT_DIR)}`;
+    resourceUrl(`api/dag?claim=${encodeURIComponent(claim.claim_id)}`);
   try {
-    const response = await fetch(API_BASE + url);
+    const response = await fetch(url);
     const data = (await response.json()) as DagResponse;
     if (!data.success || !data.mermaid) {
       container.innerHTML = `<p class="insert-panel-error">${escapeHtml(data.error || "No DAG available.")}</p>`;

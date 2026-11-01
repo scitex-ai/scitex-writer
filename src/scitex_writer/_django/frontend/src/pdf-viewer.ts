@@ -20,9 +20,9 @@ import {
   type PdfTool,
   type PdfViewerApi,
   type PenInput,
-} from "@scitex/ui/pdf-viewer";
+} from "@scitex/sdk/ui/pdf-viewer";
 
-import { API_BASE, postAnnotation, PROJECT_DIR } from "./api";
+import { resourceUrl, postAnnotation } from "./api";
 import {
   ANNOTATION_CATEGORIES,
   type Annotation,
@@ -92,9 +92,7 @@ export class PDFViewer {
   async load(docType: string): Promise<boolean> {
     this.currentDocType = docType;
     const url =
-      `${API_BASE}api/pdf?doc_type=${encodeURIComponent(docType)}` +
-      `&working_dir=${encodeURIComponent(PROJECT_DIR)}` +
-      `&t=${Date.now()}`;
+      resourceUrl(`api/pdf?doc_type=${encodeURIComponent(docType)}&t=${Date.now()}`);
     this.clearPlaceholder();
     try {
       await this.api.load(url);

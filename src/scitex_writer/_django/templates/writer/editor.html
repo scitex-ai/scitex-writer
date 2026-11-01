@@ -1,28 +1,11 @@
-{% extends "scitex_ui/standalone_shell.html" %}
+{% extends "scitex_sdk/ui/standalone_shell.html" %}
 {% load static %}
 {% block extra_css %}
-    {% comment %}
-    The bare SVG icon link is NOT here: the scitex-ui shell emits it from
-    `favicon_href`, which views.py sets to writer/favicon.svg. Declaring it
-    here too would produce two identical rel="icon" links (scitex-ui 0.7.0
-    made the shell's link unconditional). Only the variants the shell cannot
-    express -- sizes= and apple-touch-icon -- belong in this block.
-    {% endcomment %}
-    <link rel="icon"
-          type="image/png"
-          sizes="16x16"
-          href="{% static 'writer/favicon-16x16.png' %}">
-    <link rel="icon"
-          type="image/png"
-          sizes="32x32"
-          href="{% static 'writer/favicon-32x32.png' %}">
-    <link rel="icon"
-          type="image/png"
-          sizes="192x192"
-          href="{% static 'writer/favicon-192x192.png' %}">
-    <link rel="apple-touch-icon"
-          sizes="180x180"
-          href="{% static 'writer/favicon-180x180.png' %}">
+    <meta name="stx-app-scope" content="{{ app_scope }}">
+    <meta name="writer-csrf-token" content="{{ csrf_token }}">
+    {% comment %}Tab icon: the scitex-sdk shell emits the official mark
+    via _branding_head.html (operator 2026-10-23 — no leaf-local icons,
+    no per-environment variant).{% endcomment %}
     <link rel="stylesheet" href="{% static 'writer/assets/index.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/editor.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/app-header.css' %}">
@@ -42,7 +25,9 @@
 {% block worktree_data_attrs %}data-working-dir="{{ project_dir|default:'' }}"{% endblock %}
 {% block app_content %}
     <div class="writer-app"
+         data-app-mode="{{ writer_app_mode }}"
          data-api-base="{{ api_base|default:'/' }}"
+         data-project-id="{{ project_id|default:'' }}"
          data-project-dir="{{ project_dir|default:'' }}">
         {% if not app_header_rendered %}
             {% comment %}
@@ -67,6 +52,7 @@
                     data-mobile-pane="editor"
                     aria-current="true">Editor</button>
             <button type="button" class="writer-mobile-pane-btn" data-mobile-pane="preview">PDF</button>
+            <button type="button" class="writer-mobile-pane-btn" data-mobile-pane="details">Panel</button>
         </nav>
         <header class="writer-toolbar">
             <div class="writer-toolbar-left">
@@ -79,35 +65,57 @@
             </div>
             <div class="writer-toolbar-center">
                 <span id="word-count" class="word-count">0 words</span>
-                <select id="font-size-select"
-                        class="writer-select writer-select-sm"
-                        title="Font size">
-                    <option value="12">12px</option>
-                    <option value="13">13px</option>
-                    <option value="14" selected>14px</option>
-                    <option value="15">15px</option>
-                    <option value="16">16px</option>
-                    <option value="18">18px</option>
-                    <option value="20">20px</option>
-                </select>
-                <button id="btn-toggle-theme"
-                        class="btn btn-icon"
-                        title="Toggle dark/light mode">
-                    <i class="fas fa-moon"></i>
-                </button>
-                <button id="btn-show-shortcuts"
-                        class="btn btn-icon"
-                        title="Keyboard shortcuts">
-                    <i class="fas fa-keyboard"></i>
-                </button>
+                <details class="writer-toolbar-overflow">
+                    <summary class="btn btn-icon"
+                             title="More display controls"
+                             aria-label="More display controls">
+                        <i class="fas fa-bars"></i>
+                    </summary>
+                    <div class="writer-toolbar-overflow-body">
+                        <label class="writer-toolbar-overflow-row">
+                            <span>Font size</span>
+                            <select id="font-size-select"
+                                    class="writer-select writer-select-sm"
+                                    title="Font size">
+                                <option value="12">12px</option>
+                                <option value="13">13px</option>
+                                <option value="14" selected>14px</option>
+                                <option value="15">15px</option>
+                                <option value="16">16px</option>
+                                <option value="18">18px</option>
+                                <option value="20">20px</option>
+                            </select>
+                        </label>
+                        <button id="btn-toggle-theme"
+                                class="btn btn-icon"
+                                title="Toggle dark/light mode">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                        <button id="btn-toggle-panel"
+                                class="btn btn-icon"
+                                title="Toggle side panel (hints, compilation, import/export, project info)">
+                            <i class="fas fa-panel-right"></i>
+                        </button>
+                        <button id="btn-show-shortcuts"
+                                class="btn btn-icon"
+                                title="Keyboard shortcuts">
+                            <i class="fas fa-keyboard"></i>
+                        </button>
+                    </div>
+                </details>
                 <span id="current-file" class="current-file"></span>
                 <span id="save-status" class="save-status"></span>
             </div>
             <div class="writer-toolbar-right">
                 <span id="compile-lamp" class="writer-lamp lamp-idle" title="Idle"></span>
-                <button id="btn-compile-mode"
-                        class="btn btn-secondary"
-                        title="Compile mode: Preview (draft) or Full">Preview</button>
+                <div class="writer-compile-modes">
+                    <select id="compile-mode-select"
+                            class="writer-select writer-select-sm"
+                            aria-label="Compile mode">
+                        <option value="preview" selected>Draft (current section)</option>
+                        <option value="full">Full (whole manuscript)</option>
+                    </select>
+                </div>
                 <button id="btn-compile"
                         class="btn btn-primary"
                         title="Compile (Ctrl+Shift+B)">
@@ -134,8 +142,10 @@
                     </div>
                 </div>
             </div>
-            <div class="writer-split-resizer" id="writer-split-resizer"></div>
-            <nav class="insert-bar" id="insert-bar" aria-label="Insert panel">
+            <nav class="insert-bar" id="insert-bar" aria-label="Preview selector">
+                <button class="insert-bar-btn" data-pane="pdf" title="Manuscript PDF">
+                    <i class="fas fa-file-pdf"></i><span>PDF</span>
+                </button>
                 <button class="insert-bar-btn" data-pane="cite" title="Citations">
                     <i class="fas fa-quote-left"></i><span>Cite</span>
                 </button>
@@ -152,38 +162,42 @@
                     <i class="fas fa-history"></i><span>History</span>
                 </button>
             </nav>
-            <aside class="insert-panel u-hidden" id="insert-panel">
-            </aside>
             <div class="writer-preview-pane" id="preview-panel">
+                <!-- Operator 2026-10-23: PDF is NOT a separated tab — the rail
+                     (PDF/Cite/Fig/Table/Collab/History) is the one selector.
+                     Claims stays available as a secondary tab until the
+                     live-paper example project lands. -->
                 <div class="preview-header">
-                    <div class="preview-tabs">
-                        <button class="preview-tab active" data-view="pdf">PDF</button>
-                        <button class="preview-tab" data-view="bib">Bibliography</button>
-                        <button class="preview-tab" data-view="claims">Claims</button>
-                    </div>
                     <div class="preview-actions">
-                        <button id="btn-pdf-zoom-out" class="btn btn-icon btn-sm" title="Zoom out">
-                            <i class="fas fa-search-minus"></i>
-                        </button>
-                        <button id="btn-pdf-fit" class="btn btn-icon btn-sm" title="Fit width">
-                            <i class="fas fa-arrows-alt-h"></i>
-                        </button>
-                        <button id="btn-pdf-zoom-in" class="btn btn-icon btn-sm" title="Zoom in">
-                            <i class="fas fa-search-plus"></i>
-                        </button>
-                        <button id="btn-refresh-pdf" class="btn btn-icon btn-sm" title="Refresh PDF">
-                            <i class="fas fa-sync"></i>
-                        </button>
-                        <button id="btn-pdf-theme"
-                                class="btn btn-icon btn-sm"
-                                title="PDF theme (auto / light / dark)">
-                            <i class="fas fa-circle-half-stroke"></i>
-                        </button>
-                        <button id="btn-pdf-download"
-                                class="btn btn-icon btn-sm"
-                                title="Download PDF">
-                            <i class="fas fa-download"></i>
-                        </button>
+                        <div class="pdf-menu">
+                            <button id="btn-pdf-menu" class="btn btn-icon btn-sm" title="PDF options" aria-haspopup="menu" aria-expanded="false" aria-controls="pdf-menu-list">
+                                <i class="fas fa-bars"></i>
+                            </button>
+                            <div class="pdf-menu-list u-hidden" id="pdf-menu-list" role="menu">
+                                <button id="btn-pdf-zoom-out" class="btn btn-sm pdf-menu-item" role="menuitem" title="Zoom out (Ctrl+-)">
+                                    <i class="fas fa-search-minus"></i><span>Zoom out</span><kbd>Ctrl+-</kbd>
+                                </button>
+                                <button id="btn-pdf-fit" class="btn btn-sm pdf-menu-item" role="menuitem" title="Fit width (Ctrl+0)">
+                                    <i class="fas fa-arrows-alt-h"></i><span>Fit width</span><kbd>Ctrl+0</kbd>
+                                </button>
+                                <button id="btn-pdf-zoom-in" class="btn btn-sm pdf-menu-item" role="menuitem" title="Zoom in (Ctrl+=)">
+                                    <i class="fas fa-search-plus"></i><span>Zoom in</span><kbd>Ctrl+=</kbd>
+                                </button>
+                                <button id="btn-refresh-pdf" class="btn btn-sm pdf-menu-item" role="menuitem" title="Refresh PDF (Ctrl+Shift+R)">
+                                    <i class="fas fa-sync"></i><span>Refresh</span><kbd>Ctrl+Shift+R</kbd>
+                                </button>
+                                <button id="btn-pdf-theme"
+                                        class="btn btn-sm pdf-menu-item" role="menuitem"
+                                        title="PDF theme (Alt+T)">
+                                    <i class="fas fa-circle-half-stroke"></i><span>PDF theme</span><kbd>Alt+T</kbd>
+                                </button>
+                                <button id="btn-pdf-download"
+                                        class="btn btn-sm pdf-menu-item" role="menuitem"
+                                        title="Download PDF (Alt+D)">
+                                    <i class="fas fa-download"></i><span>Download</span><kbd>Alt+D</kbd>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="preview-content" id="preview-content">
@@ -199,19 +213,18 @@
                                id="annot-panel"
                                aria-label="Review comments"></aside>
                     </div>
-                    <div class="preview-view" id="bib-view">
-                        <div class="bib-list" id="bib-list">
-                            <div class="loading">Loading bibliography…</div>
-                        </div>
-                    </div>
                     <div class="preview-view" id="claims-view">
                         <div class="claims-list" id="claims-list">
                             <div class="loading">Loading claims…</div>
                         </div>
                     </div>
+                    <div class="preview-view" id="insert-view">
+                        <aside class="insert-panel u-hidden" id="insert-panel">
+                        </aside>
+                    </div>
                 </div>
             </div>
-            <aside class="details-pane" id="details-panel" aria-label="Details">
+            <aside class="details-pane writer-panel-hidden" id="details-panel" aria-label="Side panel">
             </aside>
         </div>
         <div class="log-panel u-hidden" id="log-panel">
@@ -234,26 +247,10 @@
                 <pre class="log-content" id="log-content"></pre>
             </div>
         </div>
-        <!-- Bottom action bar (<=768px). Compile forwards to #btn-compile, so
-             the one CompileController stays the only compile entry point; Save
-             goes through the same flushSave path Ctrl+S takes. -->
-        <div class="writer-mobile-actions" id="writer-mobile-actions">
-            <button id="btn-mobile-save"
-                    type="button"
-                    class="btn btn-secondary writer-mobile-action">
-                <i class="fas fa-floppy-disk"></i><span>Save</span>
-            </button>
-            <button id="btn-mobile-log"
-                    type="button"
-                    class="btn btn-secondary writer-mobile-action">
-                <i class="fas fa-terminal"></i><span>Log</span>
-            </button>
-            <button id="btn-mobile-compile"
-                    type="button"
-                    class="btn btn-primary writer-mobile-action">
-                <i class="fas fa-hammer"></i><span>Compile</span>
-            </button>
-        </div>
+        <!-- Bottom action bar REMOVED per operator 2026-10-22: the desktop
+             toolbar already carries Save/Log/Compile, so a second div row
+             duplicated the actions. Single source of actions wins. -->
+        
     </div>
 {% endblock %}
 {% block extra_js %}

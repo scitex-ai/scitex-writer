@@ -13,6 +13,18 @@ import click
 
 PKG = "scitex-writer"
 
+# Plugin-port override per PS-145: the default install base stays
+# ~/.scitex/dev/skills/ so behaviour is unchanged when unset.
+_SKILLS_BASE_ENV = "SCITEX_WRITER_SKILLS_BASE"
+
+
+def _skills_base() -> Path:
+    """Install base dir; overridable without touching the default."""
+    override = _os.environ.get(_SKILLS_BASE_ENV)
+    if override:
+        return Path(override).expanduser()
+    return Path.home() / ".scitex" / "dev" / "skills"
+
 
 def _skills_root() -> Path:
     """Resolve the bundled `_skills/scitex-writer/` directory."""
@@ -157,9 +169,7 @@ def skills_install(
         click.echo(f"no skills directory at {src}", err=True)
         raise SystemExit(1)
 
-    base = (
-        Path(dest).expanduser() if dest else Path.home() / ".scitex" / "dev" / "skills"
-    )
+    base = Path(dest).expanduser() if dest else _skills_base()
     target = base / PKG
 
     if dry_run:

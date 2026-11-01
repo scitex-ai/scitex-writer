@@ -13,9 +13,10 @@ from __future__ import annotations
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial, wraps
-from logging import getLogger
 from pathlib import Path
 from typing import Any, Callable
+
+from scitex_logging import getLogger
 
 from .._dataclasses import CompilationResult
 from .manuscript import compile_manuscript

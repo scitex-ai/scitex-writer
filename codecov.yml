@@ -5,13 +5,13 @@ coverage:
   status:
     project:
       default:
-        # Ramp-up target — switch to 90% once subprocess coverage wiring
-        # lifts the baseline (see _skills/general/05_development_06_subprocess-coverage.md).
-        target: auto
+        # Visible bar per PS-161 (was `auto` ramp-up; codecov reporting is
+        # not active on this repo, so this changes no gate today).
+        target: 90%
         threshold: 1%
     patch:
       default:
-        target: auto
+        target: 90%
         threshold: 1%
 
 comment: false

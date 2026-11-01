@@ -254,7 +254,6 @@ def record_event(
         # The compile's outcome stands; the missing record must not be silent.
         msg = f"[scitex_writer.compile] could not append event log {path}: {exc}"
         logger.error(msg)
-        print(msg, file=sys.stderr)
         record["log_write_error"] = str(exc)
     return record
 

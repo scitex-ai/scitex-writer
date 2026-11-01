@@ -6,6 +6,10 @@
 - **Affects:** scitex-hub, figrecipe, scitex-clew, scitex-ui, scitex-live-paper
 - **Supersedes/builds on:** card `live-paper-viewer-component` (operator decisions, Telegram 553–571)
 
+## Status
+
+Accepted (2026-07-14) — all co-owner inputs arrived; implementation in progress per the Decision below.
+
 ## Context
 
 The operator wants ONE interactive research-paper PDF viewer/editor, reused across the ecosystem (Writer authoring, hub project view, Journal reading, Live Paper published), not duplicated. Three capabilities:

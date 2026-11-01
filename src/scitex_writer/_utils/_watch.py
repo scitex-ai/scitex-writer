@@ -11,9 +11,11 @@ Monitors file changes and triggers automatic recompilation.
 from __future__ import annotations
 
 import subprocess
-from logging import getLogger
+import sys
 from pathlib import Path
 from typing import Callable, Optional
+
+from scitex_logging import getLogger
 
 logger = getLogger(__name__)
 
@@ -76,7 +78,7 @@ def watch_manuscript(
         # Stream output
         for line in iter(process.stdout.readline, ""):
             if line:
-                print(line.rstrip())
+                sys.stdout.write(line.rstrip() + "\n")
 
                 # Call callback on compilation events
                 if on_compile and "Compilation" in line:

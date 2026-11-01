@@ -48,6 +48,7 @@ def _post(project: str, body: dict):
         data=json.dumps(body),
         content_type="application/json",
     )
+    request._dont_enforce_csrf_checks = True  # Handler unit test; boundary tests enforce CSRF.
     return views.api_dispatch(request, "api/annotations")
 
 

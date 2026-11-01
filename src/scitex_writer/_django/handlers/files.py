@@ -21,9 +21,13 @@ _SKIP_DIRS = {
 _SKIP_EXTENSIONS = {".aux", ".log", ".out", ".fls", ".fdb_latexmk", ".synctex.gz"}
 
 
-def _build_file_tree(root: Path, rel_base: Path | None = None) -> list:
+def _build_file_tree(root: Path, rel_base: Path | None = None, ancestors=frozenset()) -> list:
     if rel_base is None:
         rel_base = root
+    resolved = root.resolve()
+    if not resolved.is_relative_to(rel_base.resolve()) or resolved in ancestors:
+        return []
+    ancestors = ancestors | {resolved}
 
     try:
         items = sorted(root.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
@@ -32,6 +36,12 @@ def _build_file_tree(root: Path, rel_base: Path | None = None) -> list:
 
     entries = []
     for item in items:
+        try:
+            inside = item.resolve().is_relative_to(rel_base.resolve())
+        except (OSError, RuntimeError):
+            continue
+        if not inside:
+            continue
         if item.name.startswith(".") and item.name != ".gitignore":
             continue
         if item.name in _SKIP_DIRS:
@@ -44,7 +54,7 @@ def _build_file_tree(root: Path, rel_base: Path | None = None) -> list:
                     "name": item.name,
                     "path": rel_path,
                     "type": "directory",
-                    "children": _build_file_tree(item, rel_base),
+                    "children": _build_file_tree(item, rel_base, ancestors),
                 }
             )
         else:

@@ -8,8 +8,9 @@ Leverages dataclass verify_structure() methods for validation."""
 
 from __future__ import annotations
 
-from logging import getLogger
 from pathlib import Path
+
+from scitex_logging import getLogger
 
 from .._dataclasses import (
     ConfigTree,

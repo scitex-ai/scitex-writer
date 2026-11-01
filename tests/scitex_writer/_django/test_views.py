@@ -32,7 +32,16 @@ import time
 from pathlib import Path
 
 import pytest
-from django.test import RequestFactory
+from django.test import RequestFactory as _RequestFactory
+
+class RequestFactory(_RequestFactory):
+    """Handler unit requests; real CSRF denial/success use Client separately."""
+
+    def request(self, **request):
+        result = super().request(**request)
+        result._dont_enforce_csrf_checks = True
+        return result
+
 
 from scitex_writer._compile._event_log import read_events
 from scitex_writer._django import services
@@ -595,7 +604,7 @@ def test_editor_tab_title_marks_standalone_mode(project_dir):
     # Act
     body = resp.content.decode()
     # Assert
-    assert "SciTeX Writer (standalone)" in body
+    assert "Writer (standalone)" in body
 
 
 def test_app_label_omits_marker_in_hub_mode():
@@ -604,9 +613,9 @@ def test_app_label_omits_marker_in_hub_mode():
 
     # Act
     with override_settings(SCITEX_APP_MODE="hub"):
-        label = views._app_label("SciTeX Writer")
+        label = views._app_label("Writer")
     # Assert
-    assert label == "SciTeX Writer"
+    assert label == "Writer"
 
 
 # =========================================================================
@@ -617,10 +626,11 @@ def test_app_label_omits_marker_in_hub_mode():
 # backwards. The tab is the one place a user sees every tool side by side, so
 # an inconsistent name there is the most visible inconsistency we ship.
 #
-# The fleet shape is "SciTeX <Tool>". The "(standalone)" marker STAYS — it is
-# deliberate (scitex-hub reads the same SCITEX_APP_MODE setting so the tab
-# alone distinguishes hub-embedded from standalone); it is the word order that
-# was wrong, not the marker.
+# The fleet shape is the SHORT tile label ("Writer"). The "(standalone)"
+# marker STAYS — it is deliberate (scitex-hub reads the same
+# SCITEX_APP_MODE setting so the tab alone distinguishes hub-embedded
+# from standalone); the brand prefix is what went, not the marker
+# (operator 2026-10-23: the favicon carries the brand).
 # =========================================================================
 
 import inspect  # noqa: E402
@@ -639,13 +649,15 @@ from scitex_writer._django import views as _views  # noqa: E402
 _TAB_TITLE_CALL = re.compile(r'_(?:app_label|shell_context)\("([^"]+)"\)')
 
 
-def test_tab_titles_lead_with_the_scitex_brand():
-    # Arrange
+def test_tab_titles_use_the_short_tile_form():
+    # Arrange — operator 2026-10-23: the tab carries no brand text (the
+    # favicon IS the brand). Every declared tab title is the short name.
     source = inspect.getsource(_views)
     # Act
     labels = _TAB_TITLE_CALL.findall(source)
-    # Assert
-    assert [label for label in labels if not label.startswith("SciTeX ")] == []
+    # Assert — one assert per test (STX-TQ007); declared-ness is pinned
+    # by test_tab_titles_are_declared_at_all.
+    assert [label for label in labels if label.startswith("SciTeX ")] == []
 
 
 def test_tab_titles_are_declared_at_all():
@@ -705,12 +717,12 @@ SHELL_INTERNALS = (
 def test_writer_declares_every_pane_scitex_ui_offers():
     """Leaving one out would silently leave that pane visible."""
     # Arrange
-    from scitex_ui.branding import PANE_NAMES
+    from scitex_sdk.ui import branding
 
     # Act
     declared = set(_SHELL_PANES)
     # Assert
-    assert declared == set(PANE_NAMES)
+    assert declared == set(branding.PANE_NAMES)
 
 
 @pytest.mark.parametrize("pane", sorted(_SHELL_PANES))
@@ -727,10 +739,10 @@ def test_every_declared_pane_is_unused(pane: str):
 def test_the_declaration_is_accepted_by_scitex_ui():
     """shell_context raises on an unknown pane name or state — so call it."""
     # Arrange
-    from scitex_ui.branding import shell_context
+    from scitex_sdk.ui import branding
 
     # Act
-    context = shell_context("Writer", panes=_SHELL_PANES)
+    context = branding.shell_context("Writer", panes=_SHELL_PANES)
     # Assert
     assert context["panes"] == _SHELL_PANES
 

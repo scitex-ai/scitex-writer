@@ -87,9 +87,9 @@ export class CitationsPanel {
         <div class="citations-controls">
           <input class="citations-search" type="search"
                  placeholder="Filter by title / key / DOI…" />
-          <button class="btn btn-secondary btn-sm citations-enrich"
+          <button class="btn btn-primary btn-sm citations-enrich"
                   title="Enrich bibliography with scitex-scholar">
-            <i class="fas fa-magic"></i> Enrich
+            <i class="fas fa-magic"></i><span>Enrich</span>
           </button>
         </div>
         <div class="citations-enrich-hint u-hidden"></div>

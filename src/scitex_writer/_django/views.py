@@ -10,12 +10,16 @@ to the HANDLERS registry (with a few parameterized fallbacks for
 
 from __future__ import annotations
 
-import logging
 import os
+
+from scitex_logging import getLogger
 
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import ensure_csrf_cookie
+from scitex_sdk import host
+
+from ._host_boundary import project_boundary, standalone
 
 from .handlers import (
     HANDLERS,
@@ -31,7 +35,7 @@ from .handlers import (
 from .services import get_or_create_project
 from ..workspace_layout import NotAWriterWorkspaceError
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 def _app_config():
@@ -50,12 +54,15 @@ def _leaf_identity() -> dict:
     pyproject by a test. It is deliberately NOT the host's version (the hub's
     header showed `v0.20.0-alpha` for a writer build) and not a hand-written
     string in a source comment: both are claims about someone else's package.
+
+    The title is the full product header ``SciTeX Writer`` — deliberately NOT
+    the manifest `label`: the tile label (short form, operator 2026-10-23)
+    and the in-app header title are independent strings, and only the tile
+    reads from the manifest.
     """
-    config = _app_config()
-    manifest = config.manifest
     return {
-        "writer_version": config.app_version,
-        "writer_label": manifest.get("label", "Writer"),
+        "writer_version": _app_config().app_version,
+        "writer_label": "SciTeX Writer",
     }
 
 
@@ -80,9 +87,22 @@ def _get_project(request):
     SCITEX_WRITER_<X>); ._legacy_env raises at startup rather than letting a
     stranded one be ignored here.
     """
-    working_dir = request.GET.get("working_dir") or os.environ.get(
-        "SCITEX_WRITER_WORKING_DIR", ""
-    )
+    if not standalone():
+        from ..workspace_layout import resolve_workspace
+
+        access = request.writer_project_access
+        try:
+            workspace = resolve_workspace(access.root).resolve()
+            relative = workspace.relative_to(access.root).as_posix()
+        except (FileNotFoundError, NotAWriterWorkspaceError):
+            raise host.AccessError("Writer workspace is not available", 404) from None
+        except ValueError:
+            raise host.AccessError("Writer workspace must be inside this project", 403) from None
+        # A workspace symlink may escape even though the project root is owned.
+        access.path(relative)
+        return get_or_create_project(str(workspace), link_scholar_library=False)
+
+    working_dir = request.GET.get("working_dir") or os.environ.get("SCITEX_WRITER_WORKING_DIR", "")
     if not working_dir:
         return None
     try:
@@ -118,27 +138,6 @@ def _app_label(base: str) -> str:
     return f"{base} (standalone)" if mode == "standalone" else base
 
 
-def _favicon_href() -> str:
-    """Writer's own brand mark, for the scitex-ui shell's icon link.
-
-    scitex-ui 0.7.0 made the shell's ``<link rel="icon">`` UNCONDITIONAL,
-    falling back to the shared SciTeX mark when a view supplies no
-    ``favicon_href`` (scitex_ui/templates/scitex_ui/_branding_head.html).
-    Writer supplied none, so every page emitted the shared mark ON TOP OF
-    writer's own links -- untidy rather than broken, since the shell's link
-    precedes ``extra_css`` and ours won.
-
-    Passing this makes the shell emit WRITER's mark, so there is exactly one
-    bare ``rel="icon"``. The sized PNG variants and the apple-touch-icon stay
-    in each template's ``extra_css``: the shell has no way to express
-    ``sizes=`` or ``apple-touch-icon``, and a single shared SVG is not a
-    substitute for a 180x180 home-screen icon.
-    """
-    from django.templatetags.static import static
-
-    return static("writer/favicon.svg")
-
-
 #: Writer fills exactly one pane of the scitex-ui shell — the module pane, where
 #: `.writer-app` mounts. The other three are declared unused so the shell
 #: collapses them and the editor gets the full viewport.
@@ -171,25 +170,48 @@ def _shell_context(base_title: str) -> dict:
     Parameters
     ----------
     base_title : str
-        Tab title before the mode marker, e.g. ``"SciTeX Writer"``.
+        Tab title before the mode marker, e.g. ``"Writer"``.
 
     Returns
     -------
     dict
         Shell context ready to merge into a template context.
     """
-    from scitex_ui.branding import shell_context
+    from scitex_sdk.ui import branding
 
-    context = shell_context(
+    # No favicon_href: the shell falls back to the SDK official mark
+    # (operator 2026-10-23 — no leaf-local icons, no per-environment variant).
+    context = branding.shell_context(
         "Writer",
-        favicon_href=_favicon_href(),
         panes=_SHELL_PANES,
     )
     context["app_label"] = _app_label(base_title)
+    context["app_scope"] = "project"
+    context["writer_app_mode"] = "standalone" if standalone() else "hub"
     return context
 
 
-def editor_page(request):
+def _page_mount(request, view_path, api_base=None):
+    """Own the standard leaf mount; allow trusted host URLconf aliases.
+
+    Existing host aliases supply API context through their processor. Keep
+    that compatibility until they pass these explicit view arguments or
+    mount our standard urlconf. Never take either value from query input.
+    """
+    from scitex_sdk.ui import mount
+
+    match = getattr(request, "resolver_match", None)
+    if match and match.url_name not in {"editor", "viewer"} and api_base is None:
+        return {}
+    return {
+        **mount.mount_context(request, view_path=view_path),
+        "api_base": api_base or mount.mount_prefix(request, view_path=view_path) + "/",
+    }
+
+
+@project_boundary(page=True)
+@ensure_csrf_cookie
+def editor_page(request, *, view_path="", api_base=None):
     """Serve the editor shell page."""
     project = _get_project(request)
     project_dir = str(project.project_dir) if project else ""
@@ -198,6 +220,9 @@ def editor_page(request):
         {
             "app_name": "writer",
             "project_dir": project_dir,
+            "project_id": getattr(
+                getattr(request, "writer_project_access", None), "id", ""
+            ),
             "dark_mode": project.dark_mode if project else False,
             # The leaf header: our title + OUR version, and the picker slot only
             # when the host registered its tag library.
@@ -207,14 +232,15 @@ def editor_page(request):
             # writer/_app_header.html; that host sets this True so the page
             # keeps exactly one header. Standalone renders the leaf one.
             "app_header_rendered": False,
-            **_shell_context("SciTeX Writer"),
+            **_shell_context("Writer"),
+            **_page_mount(request, view_path, api_base),
         },
         request=request,
     )
     return HttpResponse(html)
 
 
-@csrf_exempt
+@project_boundary()
 def api_dispatch(request, endpoint):
     """Dispatch API calls to handler functions.
 
@@ -260,6 +286,8 @@ def api_dispatch(request, endpoint):
         rest = endpoint[len("api/claims/") :].strip("/")
         parts = rest.split("/") if rest else []
         if len(parts) == 1:
+            if request.method not in {"GET", "DELETE"}:
+                return JsonResponse({"error": "GET or DELETE required"}, status=405)
             claim_id = parts[0]
             try:
                 if request.method == "DELETE":
@@ -269,6 +297,8 @@ def api_dispatch(request, endpoint):
                 logger.exception("[Writer] claim %s", claim_id)
                 return JsonResponse({"error": str(exc)}, status=500)
         if len(parts) == 2 and parts[1] == "chain":
+            if request.method != "GET":
+                return JsonResponse({"error": "GET required"}, status=405)
             try:
                 return handle_claim_chain(request, project, parts[0])
             except Exception as exc:
@@ -277,6 +307,8 @@ def api_dispatch(request, endpoint):
 
     # Parameterized: api/citation/<cite_key>
     if endpoint.startswith("api/citation/"):
+        if request.method != "GET":
+            return JsonResponse({"error": "GET required"}, status=405)
         cite_key = endpoint[len("api/citation/") :].strip("/")
         if cite_key:
             try:
@@ -288,7 +320,9 @@ def api_dispatch(request, endpoint):
     return JsonResponse({"error": f"Unknown endpoint: {endpoint}"}, status=404)
 
 
-def viewer_page(request):
+@project_boundary(page=True)
+@ensure_csrf_cookie
+def viewer_page(request, *, view_path="viewer/", api_base=None):
     """Serve the read-only viewer (PDF + claim overlays + DAG)."""
     project = _get_project(request)
     project_dir = str(project.project_dir) if project else ""
@@ -297,7 +331,11 @@ def viewer_page(request):
         {
             "app_name": "writer",
             "project_dir": project_dir,
-            **_shell_context("SciTeX Writer — Viewer"),
+            "project_id": getattr(
+                getattr(request, "writer_project_access", None), "id", ""
+            ),
+            **_shell_context("Writer — Viewer"),
+            **_page_mount(request, view_path, api_base),
         },
         request=request,
     )

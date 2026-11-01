@@ -2,8 +2,14 @@
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"],
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "vite/client"
+    ],
     "module": "ESNext",
     "skipLibCheck": true,
     "preserveSymlinks": true,
@@ -17,10 +23,9 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
-    "paths": {
-      "@scitex/ui/*": ["../../../../../../scitex-ui/src/scitex_ui/static/scitex_ui/ts/*"]
-    }
+    "baseUrl": "."
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

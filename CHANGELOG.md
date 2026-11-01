@@ -7,10 +7,132 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.17] - 2026-10-23
+
+### Fixed
+
+- Cite pane sits on the app surface: cards use the secondary face + token
+  borders, badges are quiet outline chips, the selected manuscript/library
+  tab is primary text + accent underline (was invisible light literals).
+- Enrich is the scitex CTA (navy/gold fill) with icon-label gap.
+- Collab pane branches on `appMode`: Hub shows review-based copy instead
+  of the false "not on a shared host"; standalone keeps the pointer.
+  No fake presence.
+- Rail selection is a left-edge vertical accent bar, not an underline;
+  hover is text-only.
+- Removed the dead editor|rail drag resizer (no JS behind it; rendered
+  as a stray full-height accent line).
+- Compile carries the scitex CTA accent (navy light / gold dark) with
+  contrast-safe text (supersedes mono-unification).
+
+## [2.43.16] - 2026-10-23
+
+### Fixed
+
+- Monaco dark surface matches the app's bluish-gray chrome: writer-dark
+  editor/gutter background `#0d1117` -> `#161b22` (the
+  `--bg-secondary`/`--toolbar-bg` token), so the editor sits flat against
+  the toolbar + preview pane instead of a black box (operator 2026-10-23)
+  (#475).
+
+### Changed
+
+- Editor toolbar condenses into the overflow hamburger with aligned 32px
+  row heights; Draft/Full compile labels read the live section title
+  (`Abstract`) and `Manuscript`; Monaco gains writer-dark/writer-light
+  themes + Ctrl+wheel font step; annotation tools move into a hamburger
+  with shortcuts; the dead Bibliography tab is dropped; the rail switches
+  the large preview pane across PDF/fig/table/collab/history + Claims
+  (operator 2026-10-23) (#474).
+
+## [2.43.15] - 2026-10-23
+
+### Fixed
+
+- Tab chrome follows the operator short-tile decision (2026-10-23): tab and
+  in-app header titles read `Writer` (tile label and header are one short
+  string; the favicon carries the brand). In-app `writer_label` decoupled
+  from the manifest label.
+- Brand mark is the SDK official white-on-navy mark in every mode: the
+  leaf-local `writer/favicon.*` set is deleted and the shell fallback
+  serves the SDK SSOT (`_branding_head.html`).
+
+## [2.43.14] - 2026-10-22
+
+### Fixed
+
+- PDF viewport fills the whole preview pane while the PDF view is showing:
+  the preview tab header and annotation toolbar float as overlays on
+  desktop, closing the 86px gap with the editor height (CCT4433) (#464).
+- Dark chrome goes cool: warm `#1e1e1e/#252526/#2d2d2d` surfaces become the
+  fleet shell's GitHub-dark neutrals, so the editor no longer reads
+  brownish next to the gold accent (operator 2026-10-22).
+
+### Changed
+
+- Chrome follows the SDK shell theme (scitex navy light / gold dark) via
+  shell variables with shell-literal fallbacks; Compile stays
+  monochrome-dark in both themes (#465).
+- Draft vs Full compile modes read `Draft (current section)` /
+  `Full (whole manuscript)` in the select, hints, and both locales (#465).
+- Right inspector starts dropped and toggles from the toolbar overflow row
+  (#465).
+- Bottom Save/Log/Compile action bar removed: the desktop toolbar already
+  carries all three actions, including its stylesheet link and TypeScript
+  wiring (#465).
+
+## [2.43.13] - 2026-10-19
+
+### Changed
+
+- Editor preview and viewer PDF toolbar buttons collapse into one hamburger
+  menu (`#btn-pdf-menu`) with per-item shortcuts; op button IDs unchanged
+  (CCT4485) (#454).
+
+## [2.43.12] - 2026-10-18
+
+### Fixed
+
+- Header shows the full `SciTeX Writer` title (manifest label), and the editor
+  accent is scitex navy in light mode / scitex gold in dark mode — the odd blue
+  is gone (operator mandate).
+- Editor declutter: Draft/Full is a quiet select, Markup and pen tools are
+  ghost buttons, the centre icon row collapses into an overflow disclosure,
+  and the details inspector starts collapsed on first visit. Compile keeps the
+  one accent.
+- Compile button goes monochrome, off the gold accent (#448).
+- Highlight annotation cards go square (CCT4372) (#449).
+- Overleaf extraction root resolves when TMPDIR is a symlink (#447).
+
 ### Changed
 
 - The editor header now speaks the shared scitex-ui app-header contract: the row is `.stx-app-header`, the title/version/actions slot carry the canonical class names, and the SDK's `css/app/app-header.css` is loaded by the header partial. Writer's own stylesheet keeps only what the shared sheet does not cover (the identity grouping and the picker control's phone sizing), so the row has one definition instead of two.
 - The vendored scripts read their project root from `SCITEX_WRITER_PROJECT_ROOT` (fleet convention) instead of the unprefixed `PROJECT_ROOT`, and the scitex-dev §6a exemption in `pyproject.toml` is gone with it. The old name is still honoured for one migration cycle — a workspace that exports it keeps compiling — but never silently: reading it prints a warning naming the replacement. `manage_builds --help` now names the new variable too.
+
+### Added
+
+- Vendored shell completion as a drop-in module (contract v1) (#435).
+
+## [2.43.9] - 2026-10-03
+
+### Fixed
+
+- Initialize the empty editor and Details panel without automatic project requests when no project directory is declared; declared projects retain normal loading.
+- Exclude only the three generated compilation logs from release artifacts while retaining the complete declared compiler-script payload.
+
+### Changed
+
+- Validate genuine core metadata 2.5 without accepting unqualified import declarations.
+- Run release tests and builds through the pinned shared workflow using the preflight-resolved source commit, then use the hosted interpreter for the existing verified OIDC publisher.
+
+## [2.43.8] - 2026-10-03
+
+### Fixed
+
+- Standalone Writer now uses the SDK settings and local project provider with database configuration normalized for Django.
+- Workspace rendering reads the SDK project selection without persisting it; explicit project changes retain normal persistence.
+- Require the published SciTeX SDK 0.3.1 with the standalone runtime and frontend fixes.
+- Restore the Compilation and Import/Export controls in the mobile Details panel.
 
 ## [2.43.6] - 2026-09-17
 

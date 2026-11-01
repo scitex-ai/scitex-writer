@@ -12,8 +12,9 @@ broken or over-limit manuscript is rejected before any pdflatex pass.
 from __future__ import annotations
 
 import sys
-from logging import getLogger
 from pathlib import Path
+
+from scitex_logging import getLogger
 
 from .._utils._verify_tree_structure import verify_tree_structure
 

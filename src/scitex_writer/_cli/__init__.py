@@ -44,11 +44,12 @@ def _is_bare_version_invocation(argv: list[str]) -> bool:
 
 # Fast-path a bare ``--version`` / ``-V`` BEFORE importing ``.commands``.
 #
-# Root cause this guards against (fixes the CI regression that appeared once
-# scitex-dev 0.27.0 was installed): importing ``.commands`` eagerly pulls in
-# ``scitex_dev.cli.attach_shell_completion`` to attach the shell-completion
-# leaves. That public name lazily re-exports from ``scitex_dev._cli._completion``,
-# so the same import chain still reaches ``scitex_dev._cli`` — and *that*
+# Root cause this guards against (fixed the CI regression that appeared once
+# scitex-dev 0.27.0 was installed): importing ``.commands`` used to eagerly
+# pull in ``scitex_dev.cli.attach_shell_completion`` to attach the
+# shell-completion leaves. That public name lazily re-exported from
+# ``scitex_dev._cli._completion``, so the same import chain still reached
+# ``scitex_dev._cli`` — and *that*
 # package's ``__init__`` has its own
 # module-level fast-path that, when ``sys.argv[1:]`` is a bare
 # ``--version``/``-V``, prints ``scitex-dev <ver>`` and ``raise
@@ -66,7 +67,7 @@ def _is_bare_version_invocation(argv: list[str]) -> bool:
 if _is_bare_version_invocation(_sys.argv[1:]):
     from .. import __version__ as _pkg_version
 
-    print(f"scitex-writer, version {_pkg_version}")
+    _sys.stdout.write(f"scitex-writer, version {_pkg_version}\n")
     raise SystemExit(0)
 
 

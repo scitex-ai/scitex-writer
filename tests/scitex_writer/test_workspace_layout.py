@@ -691,13 +691,91 @@ def test_the_sdist_does_not_ship_the_test_scripts_tree():
 
 
 def test_the_release_build_gates_on_the_shipped_scripts():
-    # Arrange: the artifact-level gate, where a missing file fails the pipeline
-    # before publish rather than in the field.
+    import ast
+    import importlib.util
+
+    # Arrange: use the actual release helper and its existing archive fixtures.
     script = REPO_ROOT / ".github" / "ci" / "build-in-sif.sh"
+    controls_path = script.with_name("test_release_identity.py")
+    spec = importlib.util.spec_from_file_location("writer_release_fixtures", controls_path)
+    controls = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(controls)
+    helper = controls.RELEASE
+    functions = {
+        node.name: node
+        for node in ast.parse(controls.HELPER.read_text(encoding="utf-8")).body
+        if isinstance(node, ast.FunctionDef)
+    }
+
     # Act
     body = script.read_text(encoding="utf-8")
-    # Assert
-    assert "scitex_writer/scripts/shell/modules/check_dependancy_commands.sh" in body
+    wheel = controls.wheel()
+    sdist = controls.sdist()
+    wheel_without_script = controls.wheel(files={controls.CONFIG: controls.CONFIG_BYTES})
+    sdist_without_script = controls.sdist(
+        omit=("scripts/shell/modules/check_dependancy_commands.sh",)
+    )
+
+    proof = next(
+        node
+        for node in functions["main"].body
+        if isinstance(node, ast.Assign)
+        and isinstance(node.value, ast.Call)
+        and isinstance(node.value.func, ast.Name)
+        and node.value.func.id == "artifact_proof"
+    )
+    write_proof = next(
+        node
+        for node in functions["main"].body
+        if isinstance(node, ast.If)
+        and isinstance(node.test, ast.Compare)
+        and any(
+            isinstance(value, ast.Constant) and value.value == "write-proof"
+            for value in node.test.comparators
+        )
+    )
+    artifact_calls = {
+        node.func.id
+        for node in ast.walk(functions["artifact_proof"])
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+
+    def refusal(operation, archive):
+        try:
+            operation(archive, controls.VERSION)
+        except ValueError as error:
+            return str(error)
+        return None
+
+    observed = {
+        "shell_fails_on_error": "set -euo pipefail" in body,
+        "build_requires_proof": bool(re.search(
+            r'^"\$PY" -I \.github/ci/release-identity\.py write-proof '
+            r'--tag "\$RELEASE_TAG" --commit "\$RELEASE_COMMIT"$',
+            body,
+            re.MULTILINE,
+        )),
+        "validates_before_writing_proof": proof.lineno < write_proof.lineno,
+        "proof_validates_both_artifacts": {"wheel_identity", "sdist_identity"}.issubset(
+            artifact_calls
+        ),
+        "valid_wheel": helper.wheel_identity(wheel, controls.VERSION)["members"] > 0,
+        "valid_sdist": helper.sdist_identity(sdist, controls.VERSION)["members"] > 0,
+        "wheel_missing_script": refusal(helper.wheel_identity, wheel_without_script),
+        "sdist_missing_script": refusal(helper.sdist_identity, sdist_without_script),
+    }
+
+    # Assert: preserve every link in the gate and both real archive refusals.
+    assert observed == {
+        "shell_fails_on_error": True,
+        "build_requires_proof": True,
+        "validates_before_writing_proof": True,
+        "proof_validates_both_artifacts": True,
+        "valid_wheel": True,
+        "valid_sdist": True,
+        "wheel_missing_script": "wheel lost required public payload",
+        "sdist_missing_script": "sdist lost required public payload",
+    }
 
 
 

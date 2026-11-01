@@ -79,6 +79,20 @@ fi
     exit 1
 }
 
+# Release jobs use a reviewed content-addressed image; no mutable alias is
+# executed after verification. Other existing SIF callers keep their contract.
+if [ -n "${SCITEX_CI_SIF_SHA256:-}" ]; then
+    [[ "$SCITEX_CI_SIF_SHA256" =~ ^[0-9a-f]{64}$ ]] || exit 1
+    SIF="$(realpath -- "$SIF")"
+    [ "$(basename -- "$SIF")" = "ci-cpu-sha256-$SCITEX_CI_SIF_SHA256.sif" ] || {
+        echo "::error::release requires the content-addressed CI SIF"; exit 1;
+    }
+    ACTUAL_SIF_SHA="$(sha256sum -- "$SIF")"
+    [ "${ACTUAL_SIF_SHA%% *}" = "$SCITEX_CI_SIF_SHA256" ] || {
+        echo "::error::release CI SIF byte identity differs"; exit 1;
+    }
+fi
+
 # Apptainer scratch. On Spartan the GPFS project scratch (shared FS) keeps HOME
 # clean; everywhere else that path does not exist, and `mkdir -p` under it would
 # be a hard failure, so fall back to host-local scratch under $HOME.

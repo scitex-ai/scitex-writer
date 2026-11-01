@@ -11,11 +11,12 @@ Backs the live-paper viewer (issue #82 / cloud #133):
 from __future__ import annotations
 
 import importlib.util
-import logging
+
+from scitex_logging import getLogger
 
 from django.http import JsonResponse
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 # Verification states mirrored from scitex-scholar's schema.
 _CITATION_VERIFIED = "VERIFIED"

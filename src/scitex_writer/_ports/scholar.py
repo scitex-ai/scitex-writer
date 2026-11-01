@@ -44,7 +44,7 @@ def scholar_library_root(project_dir: Path) -> Optional[Path]:
 
 
 def metadata_for_doi(root: Path, doi: str) -> Optional[dict]:
-    """Look up a paper by DOI via the MASTER metadata scan."""
+    """Look up a paper by DOI via the cached scholar-library metadata scan."""
     doi_lc = doi.lower()
     for md in _iter_all_metadata(root):
         entry_doi = (md.get("metadata", {}).get("id", {}) or {}).get("doi")
@@ -60,7 +60,7 @@ def metadata_for_paper_id(root: Path, paper_id: str) -> Optional[dict]:
 def iter_library_cards(root: Path) -> list[dict]:
     """Return a list of compact library records for a browse view.
 
-    One cached MASTER scan. Each record has ``paper_id``, ``doi``, ``title``,
+    One cached library scan. Each record has ``paper_id``, ``doi``, ``title``,
     ``year``, ``venue`` at minimum; consumers should ``.get()`` anything
     beyond that.
     """
@@ -99,7 +99,7 @@ def _hydrate_full_metadata(root: Path, paper_id: str) -> Optional[dict]:
 
 
 def _iter_all_metadata(root: Path) -> tuple[dict, ...]:
-    """Cached MASTER scan, invalidated when the MASTER dir mtime changes."""
+    """Cached library scan, invalidated when the library dir mtime changes."""
     master = root / "MASTER"
     mtime = master.stat().st_mtime if master.is_dir() else 0.0
     return _cached_master_scan(str(root), mtime)

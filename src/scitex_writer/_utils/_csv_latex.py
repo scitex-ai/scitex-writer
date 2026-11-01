@@ -8,12 +8,13 @@ CSV <-> LaTeX table conversion utilities.
 
 from __future__ import annotations
 
-import logging
 import re
 from pathlib import Path
 from typing import Optional, Union
 
-logger = logging.getLogger(__name__)
+from scitex_logging import getLogger
+
+logger = getLogger(__name__)
 
 
 def _fit_tabular(latex: str) -> str:

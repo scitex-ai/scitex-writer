@@ -15,6 +15,7 @@
   <a href="https://pypi.org/project/scitex-writer/"><img src="https://img.shields.io/pypi/v/scitex-writer?label=pypi" alt="pypi"></a>
   <a href="https://pypi.org/project/scitex-writer/"><img src="https://img.shields.io/pypi/pyversions/scitex-writer?label=python" alt="python"></a>
   <a href="https://github.com/ywatanabe1989/scitex-writer/actions/workflows/rtd-sphinx-build-on-ubuntu-latest.yml"><img src="https://img.shields.io/github/actions/workflow/status/ywatanabe1989/scitex-writer/rtd-sphinx-build-on-ubuntu-latest.yml?branch=develop&label=docs" alt="docs"></a>
+  <a href='https://scitex-writer.readthedocs.io/en/latest/'><img src='https://img.shields.io/readthedocs/scitex-writer?label=docs' alt='Read the Docs'></a>
 </p>
 <p align="center">
   <a href="https://github.com/ywatanabe1989/scitex-writer/actions/workflows/pytest-matrix-on-ubuntu-py3-11-3-12-3-13.yml"><img src="https://img.shields.io/github/actions/workflow/status/ywatanabe1989/scitex-writer/pytest-matrix-on-ubuntu-py3-11-3-12-3-13.yml?branch=develop&label=tests" alt="tests"></a>
@@ -41,13 +42,25 @@ Part of the [SciTeX](https://scitex.ai) ecosystem — empowers both human resear
 | 2 | **Figures drift from manuscript** -- author renumbers a figure; half the references go stale; `\ref{}` silently prints `??` | **Reference check + float-order audit** -- `writer_check_references` + `writer_check_float_order` catch dangling `\ref{}` before submission |
 | 3 | **Manuscript claims uncheckable** -- a paper asserts "t(58) = 2.34, p = .021"; reviewer has no way to verify | **Clew-backed claims** -- `writer_add_claim` binds each assertion to a source session + file hash; `writer_render_claims` exposes the verification DAG |
 
+## Quick Start
+
+```bash
+git clone https://github.com/ywatanabe1989/scitex-writer.git my-paper
+cd my-paper && make manuscript   # or: ./compile.sh manuscript
+```
+
 ## Demo
 
 <p align="center">
+<p align="center">
   <img src="docs/demo-manuscript-light.png" alt="Light Mode" width="380"/>
-  &nbsp;&nbsp;
+</p>
+<sub><b>Figure 1.</b> Compiled manuscript preview, light mode (default).</sub>
+
+<p align="center">
   <img src="docs/demo-manuscript-dark.png" alt="Dark Mode" width="380"/>
 </p>
+<sub><b>Figure 2.</b> Compiled manuscript preview, dark mode (<code>--dark-mode</code>).</sub>
 <p align="center">
   <em>Light mode (default) and dark mode (<code>--dark-mode</code>)</em>
 </p>
@@ -60,8 +73,27 @@ Part of the [SciTeX](https://scitex.ai) ecosystem — empowers both human resear
 <p align="center">
   <em>Demo video with AI agent</em>
 </p>
+<sub><b>Figure 3.</b> Demo video: an AI agent compiling a manuscript with scitex-writer.</sub>
 
 ## Installation
+
+```bash
+uv pip install "scitex-writer[all]"
+```
+
+<details>
+<summary><strong>Extras</strong></summary>
+
+| Extra | Contents |
+|-------|----------|
+| `all` | Everything: desktop GUI, workspace shell, scholar checks, plus `dev` + `docs` |
+| `dev` | Test suite: pytest, coverage, xdist, pre-commit |
+| `docs` | Sphinx docs build: sphinx, theme, myst-parser, copybutton |
+
+Bare `pip install scitex-writer` gives the compile engine only; `[all]` gives every feature.
+</details>
+
+System dependencies (LaTeX engine + image tools):
 
 ```bash
 # LaTeX dependencies (Ubuntu/Debian)
@@ -69,32 +101,8 @@ sudo apt-get install texlive-latex-extra latexdiff parallel imagemagick ghostscr
 
 # LaTeX dependencies (macOS)
 brew install texlive latexdiff parallel imagemagick ghostscript
-
-# Python package + MCP server
-pip install scitex-writer
 ```
 
-## Quick Start
-
-```bash
-git clone https://github.com/ywatanabe1989/scitex-writer.git my-paper
-cd my-paper && make manuscript   # or: ./compile.sh manuscript
-```
-
-## Part of SciTeX
-
-`scitex-writer` is part of [**SciTeX**](https://scitex.ai). Install via
-the umbrella with `pip install scitex[writer]` to use as
-`scitex.writer` (Python) or `scitex writer ...` (CLI).
-
->Four Freedoms for Research
->
->0. The freedom to **run** your research anywhere — your machine, your terms.
->1. The freedom to **study** how every step works — from raw data to final manuscript.
->2. The freedom to **redistribute** your workflows, not just your papers.
->3. The freedom to **modify** any module and share improvements with the community.
->
->AGPL-3.0 — because we believe research infrastructure deserves the same freedoms as the software it runs on.
 
 ## Problem
 
@@ -144,6 +152,8 @@ flowchart TB
     Ports -.optional.-> Figrecipe["figrecipe / clew / stats"]
 ```
 
+<sub><b>Figure 4.</b> Layered architecture: surfaces delegate to engines, engines read the project model.</sub>
+
 `scitex-writer` is layered in three concentric rings:
 
 | Ring | Modules | Role |
@@ -151,6 +161,8 @@ flowchart TB
 | **Project model** | `_dataclasses/`, `_project/`, `_utils/` | Immutable view of a manuscript's tree, config, and contents — the source of truth every other layer reads. |
 | **Engines** | `_compile/`, `bib.py`, `claim.py`, `export/`, `migration/` | Pure functions that operate on the project model — LaTeX compilation, BibTeX ops, claim rendering, arXiv export. No UI, no I/O assumptions beyond paths. |
 | **Surfaces** | `_cli/`, `_mcp/`, `_django/`, `_ports/` | Four user-facing interfaces (CLI, MCP tools for AI agents, Django web editor, optional bridges to scitex-scholar/figrecipe/clew). Each delegates to the engines; they never bypass them. |
+
+<sub><b>Table 1.</b> The three concentric rings of the codebase.</sub>
 
 The `_django` editor + viewer ship the same code that runs locally and on `scitex.ai/apps/writer/` (no separate cloud-side implementation). Optional sibling integrations (`_ports/scholar.py`, etc.) follow the `*_AVAILABLE` flag pattern from `scitex-python` — if the peer isn't installed, the bridge degrades silently.
 
@@ -164,6 +176,8 @@ See [`Four Interfaces`](#four-interfaces) below for usage details per surface.
 | **Command-Line Interface (CLI) Commands** | Terminal users | `scitex-writer compile`, `scitex-writer bib` |
 | **MCP Tools** | AI agents | 44 tools for Claude/GPT integration |
 | **Skills** | AI agent discovery | Workflow guides for capabilities and patterns |
+
+<sub><b>Table 2.</b> The four user-facing interfaces.</sub>
 
 <details open>
 <summary><strong>Python API</strong></summary>
@@ -313,6 +327,8 @@ Turn AI agents into autonomous manuscript compilers.
 | skills | 2 | List and retrieve skill pages |
 | update | 1 | Engine-file sync with drift detection |
 
+<sub><b>Table 3.</b> MCP tool categories exposed to AI agents.</sub>
+
 **Claude Desktop** (`~/.config/Claude/claude_desktop_config.json`):
 
 ```json
@@ -361,6 +377,8 @@ scitex-dev skills export --package scitex-writer  # Export to Claude Code
 | `writing-discussion` | Discussion template with 5-section structure |
 | `audit-paper` | Comprehensive pre-submission manuscript audit |
 
+<sub><b>Table 4.</b> Bundled agent-facing skill pages.</sub>
+
 </details>
 
 <details>
@@ -385,10 +403,15 @@ SCITEX_WRITER_DARK_MODE=true make manuscript
 **GUI Editor** — Standalone browser-based editor with file tree, PDF preview, and compilation controls.
 
 <p align="center">
+<p align="center">
   <img src="docs/demo-gui-light.png" alt="GUI Light Mode" width="380"/>
-  &nbsp;&nbsp;
+</p>
+<sub><b>Figure 5.</b> Browser-based GUI editor, light mode.</sub>
+
+<p align="center">
   <img src="docs/demo-gui-dark.png" alt="GUI Dark Mode" width="380"/>
 </p>
+<sub><b>Figure 6.</b> Browser-based GUI editor, dark mode.</sub>
 
 ```bash
 uv pip install 'scitex-writer[all]'
@@ -426,6 +449,21 @@ scitex-writer gui --port 8080        # Custom port
 
 </details>
 
+## Part of SciTeX
+
+`scitex-writer` is part of [**SciTeX**](https://scitex.ai). Install via
+the umbrella with `pip install scitex[writer]` to use as
+`scitex.writer` (Python) or `scitex writer ...` (CLI).
+
+>Four Freedoms for Research
+>
+>0. The freedom to **run** your research anywhere — your machine, your terms.
+>1. The freedom to **study** how every step works — from raw data to final manuscript.
+>2. The freedom to **redistribute** your workflows, not just your papers.
+>3. The freedom to **modify** any module and share improvements with the community.
+>
+>AGPL-3.0 — because we believe research infrastructure deserves the same freedoms as the software it runs on.
+
 ## Features
 
 <details>
@@ -442,6 +480,8 @@ scitex-writer gui --port 8080        # Custom port
 | **Section Limits**     | Word caps per IMRAD section + reference cap, checked before compile    |
 | **Multi-Engine**       | Auto-selects best engine (Tectonic 1-3s, latexmk 3-6s, 3-pass 12-18s) |
 | **Cross-Platform**     | Linux, macOS, WSL2, Docker, Singularity, HPC clusters                 |
+
+<sub><b>Table 5.</b> Feature summary.</sub>
 
 </details>
 
@@ -549,6 +589,8 @@ Change citation style in `config/config_manuscript.yaml`:
 | [Content Creation](docs/01_GUIDE_CONTENT_CREATION.md) | Writing manuscripts |
 | [Bibliography](docs/01_GUIDE_BIBLIOGRAPHY.md) | Reference management |
 | [Architecture](docs/02_ARCHITECTURE_IMPLEMENTATION.md) | Technical details |
+
+<sub><b>Table 6.</b> Documentation guide index.</sub>
 
 </details>
 

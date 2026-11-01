@@ -7,8 +7,9 @@
  * the pane as top-level vendor entries. Collapsed/expanded state stored in localStorage.
  */
 
-import { manuscriptHints, projectInfo } from "./api";
+import { PROJECT_DIR, manuscriptHints, projectInfo } from "./api";
 import type { Hint, HintsFeed, ProjectInfo } from "./api";
+import { controlsTranslate as t } from "./controls-i18n";
 
 type SectionId =
   | "hints"
@@ -56,10 +57,18 @@ export class DetailsPanel {
     this.container = container;
     this.onJumpToLocation = options.onJumpToLocation;
     this.onJumpToPage = options.onJumpToPage;
-    this.open = this.loadOpenState();
+    // Declutter mandate 2026-10-16: the right inspector starts collapsed
+    // (first visit) so the editor/PDF own the width. A stored preference
+    // still wins — collapsing by default is not resetting the user.
+    this.open = this.loadOpenState(true);
     this.render();
-    void this.loadProject();
-    void this.refreshHints();
+    // Automatic project-dependent loads run only with a declared project
+    // (api.ts PROJECT_DIR from the shell dataset). The pane itself always
+    // renders; handlers below are unaffected.
+    if (PROJECT_DIR) {
+      void this.loadProject();
+      void this.refreshHints();
+    }
   }
 
   setCompileStatus(mode: "preview" | "full", status: string): void {
@@ -112,35 +121,35 @@ export class DetailsPanel {
     return [
       {
         id: "hints",
-        title: "Hints",
+        title: t("hints"),
         icon: "fa-bell",
         render: () => this.renderHints(),
       },
       {
         id: "compile-preview",
-        title: "Compilation — Preview",
+        title: t("draft"),
         icon: "fa-circle-dot",
         render: () => `
           <div class="details-row">
-            <span>Status</span><span>${dot(this.compileState.preview)} ${this.compileState.preview}</span>
+            <span>${t("status")}</span><span>${dot(this.compileState.preview)} ${this.compileState.preview}</span>
           </div>
-          <p class="details-hint">Compiles the current section only. Fast iteration.</p>
+          <p class="details-hint">${t("draftHint")}</p>
         `,
       },
       {
         id: "compile-full",
-        title: "Compilation — Full",
+        title: t("full"),
         icon: "fa-file-pdf",
         render: () => `
           <div class="details-row">
-            <span>Status</span><span>${dot(this.compileState.full)} ${this.compileState.full}</span>
+            <span>${t("status")}</span><span>${dot(this.compileState.full)} ${this.compileState.full}</span>
           </div>
-          <p class="details-hint">Compiles the full manuscript (all sections + bibliography).</p>
+          <p class="details-hint">${t("fullHint")}</p>
         `,
       },
       {
         id: "import-export",
-        title: "Import / Export",
+        title: t("importExport"),
         icon: "fa-right-left",
         render: () => `
           <div class="details-iec">
@@ -158,10 +167,13 @@ export class DetailsPanel {
       },
       {
         id: "project",
-        title: "Project Info",
+        title: t("project"),
         icon: "fa-circle-info",
         render: () => {
-          if (!this.project) return `<p class="details-hint">Loading…</p>`;
+          // No catalog key exists for the undeclared-root state; plain text it is.
+          // A declared project keeps the genuine loading text while it loads.
+          if (!this.project)
+            return `<p class="details-hint">${PROJECT_DIR ? "Loading…" : "No project selected"}</p>`;
           return `
             <div class="details-row"><span>Name</span><span>${escapeHtml(this.project.project_name)}</span></div>
             <div class="details-row"><span>Path</span><span class="details-mono">${escapeHtml(this.project.project_dir)}</span></div>
@@ -172,12 +184,18 @@ export class DetailsPanel {
       },
       {
         id: "shortcuts",
-        title: "Shortcuts",
+        title: t("shortcuts"),
         icon: "fa-keyboard",
         render: () => `
           <div class="details-row"><kbd>Ctrl</kbd>+<kbd>S</kbd><span>Save current section</span></div>
           <div class="details-row"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd><span>Compile</span></div>
           <div class="details-row"><kbd>Esc</kbd><span>Close open panel</span></div>
+          <div class="details-row"><kbd>Ctrl</kbd>+<kbd>=</kbd><span>PDF zoom in</span></div>
+          <div class="details-row"><kbd>Ctrl</kbd>+<kbd>-</kbd><span>PDF zoom out</span></div>
+          <div class="details-row"><kbd>Ctrl</kbd>+<kbd>0</kbd><span>PDF fit width</span></div>
+          <div class="details-row"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd><span>Refresh PDF</span></div>
+          <div class="details-row"><kbd>Alt</kbd>+<kbd>T</kbd><span>Cycle PDF theme</span></div>
+          <div class="details-row"><kbd>Alt</kbd>+<kbd>D</kbd><span>Download PDF</span></div>
         `,
       },
     ];
@@ -268,25 +286,34 @@ export class DetailsPanel {
 
   private render(): void {
     const sections = this.sections();
+    const renderSection = (s: SectionDef) => `
+      <div class="details-section ${this.open.has(s.id) ? "open" : ""}" data-id="${s.id}">
+        <button type="button" class="details-section-toggle" data-toggle="${s.id}"
+                aria-expanded="${this.open.has(s.id)}" aria-controls="writer-details-${s.id}">
+          <i class="fas ${s.icon}"></i>
+          <span class="details-section-title">${s.title}</span>
+          ${s.wip ? `<span class="details-wip-badge">WIP</span>` : ""}
+          <i class="fas fa-chevron-right details-chevron"></i>
+        </button>
+        <div id="writer-details-${s.id}" class="details-section-body" ${this.open.has(s.id) ? "" : "hidden"}>
+          ${this.open.has(s.id) ? s.render() : ""}
+        </div>
+      </div>`;
+    const isCompile = (s: SectionDef) => s.id === "compile-preview" || s.id === "compile-full";
+    const content = sections.map((section) => {
+      if (section.id === "compile-preview") return `
+        <fieldset class="details-compilation">
+          <legend>${t("compilation")}</legend>
+          <div class="details-compilation-children">${sections.filter(isCompile).map(renderSection).join("")}</div>
+        </fieldset>`;
+      return section.id === "compile-full" ? "" : renderSection(section);
+    }).join("");
     this.container.innerHTML = `
       <div class="details-header">
-        <i class="fas fa-sliders"></i> Details
+        <i class="fas fa-sliders"></i> ${t("details")}
       </div>
       <div class="details-body">
-        ${sections
-          .map(
-            (s) => `
-          <div class="details-section ${this.open.has(s.id) ? "open" : ""}" data-id="${s.id}">
-            <button class="details-section-toggle" data-toggle="${s.id}">
-              <i class="fas ${s.icon}"></i>
-              <span class="details-section-title">${s.title}</span>
-              ${s.wip ? `<span class="details-wip-badge">WIP</span>` : ""}
-              <i class="fas fa-chevron-right details-chevron"></i>
-            </button>
-            ${this.open.has(s.id) ? `<div class="details-section-body">${s.render()}</div>` : ""}
-          </div>`,
-          )
-          .join("")}
+        ${content}
       </div>
     `;
     this.container
@@ -298,6 +325,7 @@ export class DetailsPanel {
           else this.open.add(id);
           this.saveOpenState();
           this.render();
+          this.container.querySelector<HTMLElement>(`[data-toggle="${id}"]`)?.focus({ preventScroll: true });
         });
       });
 
@@ -322,10 +350,14 @@ export class DetailsPanel {
       });
   }
 
-  private loadOpenState(): Set<SectionId> {
+  private loadOpenState(firstVisitCollapsed = false): Set<SectionId> {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return new Set(["compile-preview", "project"]);
+      if (!raw) {
+        // Declutter mandate 2026-10-16: first visit starts collapsed so the
+        // editor/PDF own the width; a stored preference still wins.
+        return firstVisitCollapsed ? new Set() : new Set(["compile-preview", "project"]);
+      }
       return new Set(JSON.parse(raw));
     } catch {
       return new Set(["hints", "compile-preview", "project"]);

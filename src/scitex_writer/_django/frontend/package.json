@@ -9,9 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@scitex/ui": "file:../../../../../scitex-ui",
     "monaco-editor": "^0.45.0",
-    "pdfjs-dist": "^4.10.38"
+    "pdfjs-dist": "^4.10.38",
+    "@scitex/sdk": "file:../../../../../scitex-sdk/src/scitex_sdk"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

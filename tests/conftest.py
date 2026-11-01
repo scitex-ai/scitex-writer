@@ -32,6 +32,17 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 os.environ["COVERAGE_PROCESS_START"] = str(_PROJECT_ROOT / "pyproject.toml")
 os.environ["COVERAGE_FILE"] = str(_PROJECT_ROOT / ".coverage")
 
+# scitex-logging defaults to WARN, which would silence log.info/DEBUG
+# diagnostics the suite (and smoke children) should see. INFO keeps the
+# CLI-output contract tests meaningful without flooding.
+os.environ.setdefault("SCITEX_LOGGING_LEVEL", "INFO")
+try:
+    import scitex_logging as _slogging
+
+    _slogging.set_level("INFO")
+except Exception:  # pragma: no cover - logging must never break collection
+    pass
+
 
 def _ensure_subprocess_coverage_shim() -> None:
     """Drop an idempotent `.pth` file in site-packages that auto-starts
@@ -170,6 +181,29 @@ def _no_accidental_fleet_store_writes() -> Iterator[None]:
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = previous
+
+
+@pytest.fixture(autouse=True)
+def _ensure_runtime_gitignore() -> Iterator[None]:
+    """PS-234: the checkout's own runtime/ dir must carry a catch-all .gitignore.
+
+    Tracked runtime entries are forbidden, so the file cannot arrive via git;
+    and the suite itself writes runtime state (citation-trust caches, GUI
+    state) into the checkout, which would otherwise leave a runtime/ dir
+    with no ignore policy by the time test_audit_all_clean runs. Ensure the
+    mandated `*` file before each test (function scope: STX-TQ004 forbids
+    writes in session/module fixtures); the file's own catch-all keeps it
+    invisible to `git status`. Missing-only: a present-but-wrong file stays
+    the audit's to flag, loudly.
+    """
+    policy = _PROJECT_ROOT / ".scitex" / "writer" / "runtime" / ".gitignore"
+    try:
+        if not policy.is_file():
+            policy.parent.mkdir(parents=True, exist_ok=True)
+            policy.write_text("*\n", encoding="utf-8")
+    except OSError:
+        pass
+    yield
 
 
 @pytest.fixture()

@@ -1,23 +1,27 @@
 {
-  "_claims-list.js": {
-    "file": "assets/claims-list.js",
-    "name": "claims-list",
+  "_monaco-base.js": {
+    "file": "assets/monaco-base.js",
+    "name": "monaco-base",
+    "imports": [
+      "_nls.js"
+    ],
+    "assets": [
+      "assets/codicon.ttf"
+    ]
+  },
+  "_nls.js": {
+    "file": "assets/nls.js",
+    "name": "nls"
+  },
+  "_pdf-menu.js": {
+    "file": "assets/pdf-menu.js",
+    "name": "pdf-menu",
     "dynamicImports": [
-      "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.mjs"
+      "node_modules/pdfjs-dist/build/pdf.mjs"
     ],
     "assets": [
       "assets/pdf.worker.min.mjs"
     ]
-  },
-  "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.mjs": {
-    "file": "assets/pdf.js",
-    "name": "pdf",
-    "src": "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.mjs",
-    "isDynamicEntry": true
-  },
-  "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.worker.min.mjs": {
-    "file": "assets/pdf.worker.min.mjs",
-    "src": "node_modules/@scitex/ui/node_modules/pdfjs-dist/build/pdf.worker.min.mjs"
   },
   "node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.ttf": {
     "file": "assets/codicon.ttf",
@@ -138,7 +142,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/fsharp/fsharp.js": {
@@ -166,7 +172,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/hcl/hcl.js": {
@@ -182,7 +190,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/ini/ini.js": {
@@ -205,7 +215,9 @@
     "imports": [
       "node_modules/monaco-editor/esm/vs/basic-languages/typescript/typescript.js",
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/julia/julia.js": {
@@ -239,7 +251,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/lua/lua.js": {
@@ -267,7 +281,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/mips/mips.js": {
@@ -367,7 +383,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/qsharp/qsharp.js": {
@@ -389,7 +407,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/redis/redis.js": {
@@ -513,7 +533,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/vb/vb.js": {
@@ -535,7 +557,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/basic-languages/yaml/yaml.js": {
@@ -545,7 +569,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/language/css/cssMode.js": {
@@ -555,7 +581,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/language/html/htmlMode.js": {
@@ -565,7 +593,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/language/json/jsonMode.js": {
@@ -575,7 +605,9 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/esm/vs/language/typescript/tsMode.js": {
@@ -585,12 +617,24 @@
     "isDynamicEntry": true,
     "imports": [
       "src/index.ts",
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ]
   },
   "node_modules/monaco-editor/min/vs/base/browser/ui/codicons/codicon/codicon.ttf": {
     "file": "assets/codicon.ttf",
     "src": "node_modules/monaco-editor/min/vs/base/browser/ui/codicons/codicon/codicon.ttf"
+  },
+  "node_modules/pdfjs-dist/build/pdf.mjs": {
+    "file": "assets/pdf.js",
+    "name": "pdf",
+    "src": "node_modules/pdfjs-dist/build/pdf.mjs",
+    "isDynamicEntry": true
+  },
+  "node_modules/pdfjs-dist/build/pdf.worker.min.mjs": {
+    "file": "assets/pdf.worker.min.mjs",
+    "src": "node_modules/pdfjs-dist/build/pdf.worker.min.mjs"
   },
   "src/index.ts": {
     "file": "assets/index.js",
@@ -598,7 +642,9 @@
     "src": "src/index.ts",
     "isEntry": true,
     "imports": [
-      "_claims-list.js"
+      "_monaco-base.js",
+      "_nls.js",
+      "_pdf-menu.js"
     ],
     "dynamicImports": [
       "node_modules/monaco-editor/esm/vs/basic-languages/abap/abap.js",
@@ -694,9 +740,6 @@
       "node_modules/monaco-editor/esm/vs/language/json/jsonMode.js",
       "node_modules/monaco-editor/esm/vs/language/typescript/tsMode.js"
     ],
-    "css": [
-      "assets/index.css"
-    ],
     "assets": [
       "assets/codicon.ttf"
     ]
@@ -707,7 +750,11 @@
     "src": "src/viewer.ts",
     "isEntry": true,
     "imports": [
-      "_claims-list.js"
+      "_pdf-menu.js"
     ]
+  },
+  "style.css": {
+    "file": "assets/index.css",
+    "src": "style.css"
   }
 }

@@ -17,12 +17,13 @@ provider. It treats the filesystem as the source of truth.
 from __future__ import annotations
 
 import hashlib
-import logging
 import subprocess
 from pathlib import Path
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+from scitex_logging import getLogger
+
+logger = getLogger(__name__)
 
 
 # Extensions we can thumbnail, in preference order (highest quality first).

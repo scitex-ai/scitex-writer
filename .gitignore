@@ -723,3 +723,7 @@ logs/
 # Python source distributions (accidentally committed once — keep out)
 Python-*/
 Python-*.tgz
+
+# Writer's tracked brand assets must reach both the sdist and installed wheel.
+!/src/scitex_writer/_django/static/writer/favicon*.png
+!/src/scitex_writer/_django/static/writer/favicon.svg
