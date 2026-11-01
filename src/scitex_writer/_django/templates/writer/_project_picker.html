@@ -1,4 +1,4 @@
-{% load static scitex_project_picker %}
+{% load static scitex_project_picker scitex_static %}
 {# Writer is project-scoped (manifest "scope"): its picker bar sits above the panes; the host serves the projects. #}
-<link rel="stylesheet" href="{% static 'writer/css/project-picker.css' %}">
+<link rel="stylesheet" href="{% app_static 'writer/css/project-picker.css' %}">
 <div class="writer-project-scope">{% scitex_project_picker scope="project" current=current_project %}</div>

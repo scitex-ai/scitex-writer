@@ -10,7 +10,7 @@ import {
   waitForMonaco,
 } from "@scitex/sdk/ui/monaco-editor";
 
-import { PROJECT_DIR, getFile, saveFile, projectInfo, resourceUrl } from "./api";
+import { PROJECT_DIR, getFile, saveFile, projectInfo } from "./api";
 import type { SectionEntry } from "./api";
 import { SectionTabs, humanize } from "./sections";
 import { countWords, mountToolbar } from "./toolbar";
@@ -277,6 +277,7 @@ async function bootstrap(): Promise<void> {
         modeButtons: Array.from(root.querySelectorAll<HTMLButtonElement>("[data-compile-mode]")),
         modeSelect: root.querySelector<HTMLSelectElement>("#compile-mode-select"),
         pdf,
+        getSection: () => currentPath ? { path: currentPath, content: editor.getValue() } : null,
         getDocType: () =>
           root.querySelector<HTMLSelectElement>("#doc-type-select")?.value ||
           "manuscript",
@@ -327,10 +328,11 @@ async function bootstrap(): Promise<void> {
         root.querySelector<HTMLSelectElement>("#doc-type-select")?.value ||
         "manuscript";
       const a = document.createElement("a");
-      a.href = resourceUrl(
-        `api/pdf?doc_type=${encodeURIComponent(docType)}&download=1&t=${Date.now()}`,
-      );
-      a.download = `${docType}.pdf`;
+      if (!pdf?.downloadUrl) return;
+      a.href = pdf.downloadUrl;
+      a.download = compile?.isSectionPreview
+        ? `${currentPath?.split("/").pop()?.replace(/\.tex$/, "") || "section"}.pdf`
+        : `${docType}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -339,7 +341,6 @@ async function bootstrap(): Promise<void> {
   const toolbar = mountToolbar(root, {
     onDocType: async (docType) => {
       await sections?.load(docType);
-      await pdf?.load(docType);
       insert?.invalidate(docType);
     },
     onFontSize: (size) => {
@@ -353,10 +354,7 @@ async function bootstrap(): Promise<void> {
   root
     .querySelector<HTMLElement>("#btn-refresh-pdf")
     ?.addEventListener("click", async () => {
-      const dt =
-        root.querySelector<HTMLSelectElement>("#doc-type-select")?.value ||
-        "manuscript";
-      await pdf?.load(dt);
+      await compile?.sectionChanged();
     });
 
   root
@@ -541,6 +539,7 @@ async function bootstrap(): Promise<void> {
 
   // Declare state BEFORE any loadSection trigger (TDZ guard).
   let currentPath: string | null = null;
+  let sectionLoadSequence = 0;
   let saveTimer: number | null = null;
   let isLoadingFile = false;
 
@@ -608,7 +607,7 @@ async function bootstrap(): Promise<void> {
   const docSelect = root.querySelector<HTMLSelectElement>("#doc-type-select");
   if (docSelect) docSelect.value = initialDocType;
   await sections?.load(initialDocType);
-  await pdf?.load(initialDocType);
+  // The selected section loads its own isolated preview through loadSection.
   }
 
   /* Operator 2026-10-23: the Draft option names the open section
@@ -634,9 +633,19 @@ async function bootstrap(): Promise<void> {
   }
 
   async function loadSection(section: SectionEntry): Promise<void> {
+    const sequence = ++sectionLoadSequence;
+    if (saveTimer) {
+      window.clearTimeout(saveTimer);
+      saveTimer = null;
+      await flushSave();
+      if (sequence !== sectionLoadSequence) return;
+    }
+    currentPath = null;
+    compile?.sectionPending();
     updateCompileModeLabels(section);
     try {
       const file = await getFile(section.path);
+      if (sequence !== sectionLoadSequence) return;
       currentPath = section.path;
       isLoadingFile = true;
       try {
@@ -648,6 +657,7 @@ async function bootstrap(): Promise<void> {
       const currentFileEl = root?.querySelector<HTMLElement>("#current-file");
       if (currentFileEl) currentFileEl.textContent = file.name;
       toolbar.setSavedStatus("saved");
+      void compile?.sectionChanged();
     } catch (err) {
       console.error("[writer] loadSection failed", err);
       toolbar.setSavedStatus("error");
@@ -707,6 +717,7 @@ async function bootstrap(): Promise<void> {
   });
 
   async function flushSave(): Promise<void> {
+    saveTimer = null;
     if (!currentPath) return;
     try {
       await saveFile(currentPath, editor.getValue());

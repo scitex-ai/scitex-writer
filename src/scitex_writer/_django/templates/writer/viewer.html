@@ -1,12 +1,12 @@
 {% extends "scitex_sdk/ui/standalone_shell.html" %}
-{% load static %}
+{% load static scitex_static %}
 {% block extra_css %}
     <meta name="stx-app-scope" content="{{ app_scope }}">
     <meta name="writer-csrf-token" content="{{ csrf_token }}">
     {% comment %}Tab icon: the scitex-sdk shell emits the official mark
     via _branding_head.html (operator 2026-10-23 — no leaf-local icons,
     no per-environment variant).{% endcomment %}
-    <link rel="stylesheet" href="{% static 'writer/assets/index.css' %}">
+    <link rel="stylesheet" href="{% app_static 'writer/assets/index.css' %}">
     <link rel="stylesheet" href="{% static 'writer/css/editor.css' %}">
 {% endblock %}
 {% block worktree_title_full %}Project files{% endblock %}
@@ -91,5 +91,5 @@
 {% endblock %}
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-    <script type="module" src="{% static 'writer/assets/viewer.js' %}"></script>
+    <script type="module" src="{% app_static 'writer/assets/viewer.js' %}"></script>
 {% endblock %}
