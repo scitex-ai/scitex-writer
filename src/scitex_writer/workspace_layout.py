@@ -437,6 +437,22 @@ def _write_under(root: Path, rel_parts: tuple, data: bytes, mode: int = 0o644) -
         os.close(fd)
 
 
+def _vendored_script_mode(source: Path) -> int:
+    """Public engine scripts keep executable entry points after safe copying.
+
+    Shell entry points also work when wheel/archive extraction drops mode bits.
+    User/group write permissions and special mode bits are never imported.
+    """
+    return 0o755 if source.suffix == ".sh" or source.stat().st_mode & 0o111 else 0o644
+
+
+def _vendored_mode_matches(destination: Path, mode: int) -> bool:
+    try:
+        return destination.is_file() and destination.lstat().st_mode & 0o777 == mode
+    except OSError:
+        return False
+
+
 def refresh_vendored_scripts(
     workspace: Path,
     scripts_dir: Optional[Path] = None,
@@ -447,7 +463,7 @@ def refresh_vendored_scripts(
     Fast path: a marker file (``<workspace>/scripts/.scitex_writer_scripts_
     version``) stores the content hash the workspace was last synced against.
     If it equals :func:`_source_sentinel_hash` of the installed scripts, the
-    workspace is in step and nothing is touched. On a mismatch — a fresh
+    workspace is in step and executable metadata is checked before skipping. On a mismatch — a fresh
     workspace, a script change, or an OLD marker (a version string from the
     pre-hash gate) — every installed ``scripts/`` file is hash-compared against
     its workspace copy and the missing/differing ones overwritten.
@@ -495,12 +511,22 @@ def refresh_vendored_scripts(
 
     sentinel = _source_sentinel_hash(scripts_dir)
     marker = ws_scripts / _SCRIPTS_SENTINEL
+    source_files = sorted(p for p in scripts_dir.rglob("*") if p.is_file())
     if marker.is_file() and marker.read_text().strip() == sentinel:
-        return []
+        # A content marker cannot certify executable metadata. Older refreshes
+        # copied every helper as 0644, then permanently skipped those files.
+        if all(
+            _vendored_mode_matches(
+                ws_scripts / source.relative_to(scripts_dir),
+                _vendored_script_mode(source),
+            )
+            for source in source_files
+        ):
+            return []
 
     written: list[Path] = []
     incomplete = False
-    for src_file in sorted(p for p in scripts_dir.rglob("*") if p.is_file()):
+    for src_file in source_files:
         rel = src_file.relative_to(scripts_dir)
         dst_file = ws_scripts / rel
         # ONE READ, AND IT IS THE THING WE HASH. This used to hash the source
@@ -515,9 +541,13 @@ def refresh_vendored_scripts(
             incomplete = True
             continue
         src_hash = hashlib.sha256(payload).hexdigest()
-        if dst_file.is_file() and _sha256(dst_file) == src_hash:
+        mode = _vendored_script_mode(src_file)
+        if (
+            dst_file.is_file() and _sha256(dst_file) == src_hash
+            and _vendored_mode_matches(dst_file, mode)
+        ):
             continue  # already in step: not a skip, and not an incompletion
-        if _write_under(ws_scripts, rel.parts, payload):
+        if _write_under(ws_scripts, rel.parts, payload, mode=mode):
             written.append(dst_file)
         else:
             incomplete = True

@@ -456,8 +456,10 @@ def _vs_make_source(root: Path, check_content: str) -> Path:
 def _vs_make_workspace(root: Path, check_content: str, marker: str | None) -> Path:
     ws = root / "workspace"
     (ws / "scripts" / "shell" / "modules").mkdir(parents=True)
-    (ws / "scripts" / "compile.sh").write_text("#!/bin/bash\nexit 0\n")
+    (ws / "scripts" / "shell" / "compile.sh").write_text("#!/bin/bash\nexit 0\n")
     (ws / "scripts" / _VS_CHECK).write_text(check_content)
+    for script in (ws / "scripts").rglob("*.sh"):
+        script.chmod(0o755)
     (ws / "01_manuscript").mkdir()  # user content — must never be touched
     (ws / "01_manuscript" / "paper.tex").write_text("\\documentclass{article}\n")
     if marker is not None:
@@ -1046,3 +1048,38 @@ def test_a_swapped_source_variant_lands_whole_and_marks_in_sync(tmp_path: Path):
 
 
 # EOF
+
+
+def test_refresh_repairs_executable_mode_even_with_current_content_marker(tmp_path):
+    # Arrange
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _NEW_CHECK, marker=_vs_source_sentinel(src))
+    helper = ws / "scripts" / "shell" / "compile.sh"
+    helper.chmod(0o644)
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert
+    assert helper.stat().st_mode & 0o777 == 0o755
+
+
+def test_real_packaged_compile_help_runs_after_refresh_without_execute_bits(tmp_path):
+    # Arrange: actual package engine, including its real config and dispatcher.
+    import shutil
+    import subprocess
+
+    repo = Path(__file__).resolve().parents[2]
+    ws = tmp_path / "paper"
+    ws.mkdir()
+    shutil.copy2(repo / "compile.sh", ws / "compile.sh")
+    shutil.copytree(repo / "config", ws / "config")
+    shutil.copytree(repo / "scripts", ws / "scripts")
+    for script in (ws / "scripts").rglob("*.sh"):
+        script.chmod(0o644)
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=repo / "scripts")
+    result = subprocess.run(
+        ["bash", str(ws / "compile.sh"), "manuscript", "--help"],
+        cwd=ws, capture_output=True, text=True, timeout=30,
+    )
+    # Assert
+    assert result.returncode == 0, result.stderr
