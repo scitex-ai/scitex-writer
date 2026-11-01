@@ -1,3 +1,10 @@
+---
+description: |
+  [TOPIC] Mounted Writer editor
+  [DETAILS] Diagnose project context, presence, preview controls, and deployed frontend behavior.
+tags: [scitex-writer-mounted-editor]
+---
+
 # Mounted Writer editor
 
 Use this note when diagnosing `/apps/writer/` or verifying its editor controls.
