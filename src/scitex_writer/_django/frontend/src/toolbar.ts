@@ -3,9 +3,15 @@
  * Mirrors the look of scitex.ai/apps/writer top bar.
  */
 
+import type { UiTheme } from "./host-theme-fallback";
+import {
+  applyUiTheme,
+  syncWriterThemeButton,
+} from "./host-theme-fallback";
+
 type DocTypeHandler = (docType: string) => void;
 type FontSizeHandler = (size: number) => void;
-type ThemeHandler = (mode: "dark" | "light") => void;
+type ThemeHandler = (mode: UiTheme) => void;
 
 export interface ToolbarHandles {
   setWordCount: (count: number) => void;
@@ -31,27 +37,17 @@ export function mountToolbar(
   );
 
   const themeBtn = root.querySelector<HTMLButtonElement>("#btn-toggle-theme");
-  const syncThemeIcon = () => {
-    if (!themeBtn) return;
-    const mode =
-      document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-    const icon = themeBtn.querySelector<HTMLElement>("i");
-    if (icon) {
-      // fa-circle-half-stroke unambiguously signals a toggle — avoids the
-      // "sun icon looks like a gear" readability issue with fa-sun.
-      icon.className = "fas fa-circle-half-stroke";
-    }
-    themeBtn.classList.toggle("theme-dark", mode === "dark");
-    themeBtn.classList.toggle("theme-light", mode === "light");
-    themeBtn.title = `Theme: ${mode} (click to switch)`;
-  };
-  syncThemeIcon();
+  // State sync lives in host-theme-fallback so the host row and this button
+  // never disagree about the rendered theme.
+  syncWriterThemeButton();
   themeBtn?.addEventListener("click", () => {
-    const html = document.documentElement;
-    const next = html.dataset.theme === "dark" ? "light" : "dark";
-    html.dataset.theme = next;
-    localStorage.setItem("scitex-theme", next);
-    syncThemeIcon();
+    // Route through the shared applier: attribute + canonical storage keys
+    // ("stx-theme" — the key the pre-paint boot and the host honour) +
+    // theme-changed event. The previous "scitex-theme" key was write-only:
+    // nothing ever read it back, so the choice died on reload.
+    const next =
+      document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    applyUiTheme(next);
     callbacks.onTheme(next);
   });
 

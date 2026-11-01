@@ -14,6 +14,7 @@ import { getFile, saveFile, projectInfo } from "./api";
 import type { SectionEntry } from "./api";
 import { SectionTabs } from "./sections";
 import { countWords, mountToolbar } from "./toolbar";
+import { wireHostThemeToggle } from "./host-theme-fallback";
 import { MobileLayout, isMobileViewport } from "./mobile";
 import { PDFViewer } from "./pdf-viewer";
 import { type AnnotationUIHandle, mountAnnotationUI } from "./annotation-ui";
@@ -37,6 +38,11 @@ async function bootstrap(): Promise<void> {
     console.warn("[writer] .writer-app container not found — aborting init");
     return;
   }
+
+  // Host-injected theme row (hub global header on hub-served leaf pages):
+  // wire it when the host bundle that owns it is absent, otherwise the row
+  // is a dead button. No-op on standalone deployments (no such element).
+  wireHostThemeToggle();
 
   // Monaco needs LaTeX registered before we create any editor
   const monaco = await waitForMonaco();
