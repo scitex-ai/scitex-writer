@@ -1366,11 +1366,11 @@ select:focus {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 2px 6px 4px;
+  padding: 6px 4px 6px 2px;
   background: transparent;
   color: var(--text-secondary);
   border: none;
-  border-left: 2px solid transparent;
+  border-right: 2px solid transparent;
   border-radius: 0;
   font-size: 10px;
   cursor: pointer;
@@ -1378,16 +1378,18 @@ select:focus {
 .insert-bar-btn i {
   font-size: 14px;
 }
-/* Operator 2026-10-23: the selected rail button reads as a vertical bar
- * on its left edge — not a bottom underline. Hover is text-only (the
- * earlier no-fill direction stands); only the active state carries ink. */
+/* Operator 2026-10-24: the selected rail button reads as a vertical bar
+ * on its RIGHT edge — not a bottom underline, not the left edge (the rail
+ * sits left of the switched pane, so the ink belongs on the side facing
+ * the content). Hover is text-only (the earlier no-fill direction stands);
+ * only the active state carries ink. */
 .insert-bar-btn:hover {
   color: var(--text-primary);
 }
 .insert-bar-btn.active {
   background: transparent;
   color: var(--text-primary);
-  border-left-color: var(--accent);
+  border-right-color: var(--accent);
   border-radius: 0;
 }
 .insert-panel {

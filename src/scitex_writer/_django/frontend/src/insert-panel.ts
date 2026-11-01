@@ -7,6 +7,11 @@
 import { listFigures, listTables } from "./api";
 import type { MediaEntry } from "./api";
 import { CitationsPanel } from "./citations-panel";
+import {
+  projectRefFromLocation,
+  startPresence,
+  stopPresence,
+} from "./presence";
 
 export type InsertPaneId =
   | "pdf"
@@ -61,6 +66,7 @@ export class InsertPanel {
 
   close(): void {
     this.active = null;
+    stopPresence();
     this.opts.panel.classList.add("u-hidden");
     this.opts.bar
       .querySelectorAll<HTMLElement>("[data-pane]")
@@ -69,6 +75,7 @@ export class InsertPanel {
 
   open(pane: InsertPaneId): void {
     this.active = pane;
+    stopPresence();
     this.opts.panel.classList.remove("u-hidden");
     this.opts.bar
       .querySelectorAll<HTMLElement>("[data-pane]")
@@ -128,7 +135,6 @@ export class InsertPanel {
       }
     }
     this.renderList(
-      "Figures",
       this.figCache[docType].map((figure) => ({
         label: figure.name,
         sub: figure.label ? `\\ref{${figure.label}}` : "",
@@ -151,7 +157,6 @@ export class InsertPanel {
       }
     }
     this.renderList(
-      "Tables",
       this.tableCache[docType].map((table) => ({
         label: table.name,
         sub: table.label ? `\\ref{${table.label}}` : "",
@@ -163,8 +168,9 @@ export class InsertPanel {
   }
 
   private renderHistory(): void {
+    // Operator 2026-10-24: no in-panel title — the rail selector already
+    // says "History", so a second heading is redundant.
     this.opts.panel.innerHTML = `
-      <div class="insert-panel-header">Version history</div>
       <div class="insert-panel-body">
         <p class="insert-panel-empty">Git history integration lands in a later PR.</p>
       </div>
@@ -172,37 +178,33 @@ export class InsertPanel {
   }
 
   private renderCollab(): void {
-    // Operator 2026-10-23: the old copy claimed "not on a shared host"
-    // even when served from Hub (compute-03-net) — the appMode dataset
-    // knows. On Hub, collaboration is review-based (Hub owns presence/
-    // comments); realtime co-editing in this pane is not wired yet.
+    // Operator 2026-10-24 (slice 1: presence): hub-mounted mode shows live
+    // presence from the Hub session backend instead of the old static copy.
     // Standalone keeps the push-to-Hub pointer. No fake presence.
     const onHub =
       document.querySelector<HTMLElement>(".writer-app")?.dataset.appMode ===
       "hub";
-    this.opts.panel.innerHTML = `
-      <div class="insert-panel-header">Collaboration</div>
+    const projectRef = onHub ? projectRefFromLocation() : null;
+    if (!onHub || !projectRef) {
+      // No in-panel title (rail already says "Collaboration" — #483 rule).
+      this.opts.panel.innerHTML = `
       <div class="insert-panel-body insert-panel-info">
-        ${
-          onHub
-            ? `<p>
-            You are on SciTeX Hub — review and merge changes together from
-            the project. Presence and inline comments live in Hub; the
-            realtime co-editing session for this pane is not wired yet
-            (2026-10-23).
-          </p>`
-            : `<p>
-            This project is opened standalone, not through SciTeX Hub.
-            Open it from Hub to review and merge changes together — Hub is
-            where collaboration lives (2026-10-23).
-          </p>
-          <p>
-            Real-time co-editing (presence, inline comments) needs the Hub
-            session backend, which is not wired to this view yet.
-          </p>`
-        }
+        <p>
+          This project is opened standalone, not through SciTeX Hub.
+          Open it from Hub to review and merge changes together — Hub is
+          where collaboration lives (2026-10-23).
+        </p>
       </div>
     `;
+      return;
+    }
+    this.opts.panel.innerHTML = `
+      <div class="insert-panel-body insert-panel-info">
+        <p>Here now<span data-presence-count></span>:</p>
+        <ul data-presence-list><li class="insert-panel-empty">Connecting…</li></ul>
+      </div>
+    `;
+    startPresence(this.opts.panel, projectRef, this.opts.getDocType());
   }
 
   private setLoading(title: string): void {
@@ -220,7 +222,6 @@ export class InsertPanel {
   }
 
   private renderList(
-    title: string,
     items: Array<{
       label: string;
       sub: string;
@@ -231,9 +232,8 @@ export class InsertPanel {
   ): void {
     if (items.length === 0) {
       this.opts.panel.innerHTML = `
-        <div class="insert-panel-header">${title}</div>
-        <div class="insert-panel-body"><p class="insert-panel-empty">(none)</p></div>
-      `;
+      <div class="insert-panel-body"><p class="insert-panel-empty">(none)</p></div>
+    `;
       return;
     }
     const anyThumbnail = items.some((i) => i.thumbnail_url);
@@ -259,8 +259,10 @@ export class InsertPanel {
         </div>`;
       })
       .join("");
+    // Operator 2026-10-24: no in-panel title or count heading — the rail
+    // selector already names the view, so a second heading is redundant.
+    // The drag hint stays: it is functional guidance, not a title.
     this.opts.panel.innerHTML = `
-      <div class="insert-panel-header">${title}<span class="insert-count">${items.length}</span></div>
       <div class="insert-panel-drag-hint">Drag an item into the editor to insert its reference.</div>
       <div class="insert-panel-body insert-panel-body--${anyThumbnail ? "grid" : "list"}">${listHtml}</div>
     `;
