@@ -1083,3 +1083,15 @@ def test_real_packaged_compile_help_runs_after_refresh_without_execute_bits(tmp_
     )
     # Assert
     assert result.returncode == 0, result.stderr
+
+
+def test_refresh_preserves_readonly_executable_engine_protection(tmp_path):
+    # Arrange
+    src = _vs_make_source(tmp_path, _NEW_CHECK)
+    ws = _vs_make_workspace(tmp_path, _NEW_CHECK, marker=_vs_source_sentinel(src))
+    helper = ws / "scripts" / "shell" / "compile.sh"
+    helper.chmod(0o555)
+    # Act
+    refresh_vendored_scripts(ws, scripts_dir=src)
+    # Assert
+    assert helper.stat().st_mode & 0o777 == 0o555

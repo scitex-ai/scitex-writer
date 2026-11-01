@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import stat
 from pathlib import Path
 from typing import Optional, Union
 
@@ -448,7 +449,9 @@ def _vendored_script_mode(source: Path) -> int:
 
 def _vendored_mode_matches(destination: Path, mode: int) -> bool:
     try:
-        return destination.is_file() and destination.lstat().st_mode & 0o777 == mode
+        actual = destination.lstat().st_mode
+        # Keep update-project's readonly444/555 protection when bytes match.
+        return stat.S_ISREG(actual) and actual & 0o111 == mode & 0o111
     except OSError:
         return False
 
