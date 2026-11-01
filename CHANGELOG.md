@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Inherit shared semantic text colors instead of cyclic self-references, and remove leaf header sizing/picker palette overrides. Updated assets use automatic content versions.
+
 ## [2.43.19] - 2026-11-01
 
 ### Fixed

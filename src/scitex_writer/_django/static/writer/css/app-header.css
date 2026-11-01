@@ -29,31 +29,11 @@ used to carry here.
   min-width: 0;
 }
 
-/* CCT4715 size standard: FigRecipe 45px header is the reference. The shared
-   row's min-height is 40px; writer pins its own row to the 45px standard
-   here (leaf-owned, same pattern as the identity grouping above) so the
-   reference does not depend on SDK release timing. Padding stays 4px — the
-   5px delta is row height, all of it usable content space. Specificity:
-   #writer-app-header (1,0,0) beats the shared .stx-app-header (0,1,0)
-   regardless of stylesheet order. */
-#writer-app-header {
-  min-height: 45px;
-}
-
 @media (max-width: 768px) {
   /* The identity takes the first row on its own, so the selector wraps under
      it exactly as the shared sheet lays out at 600px. */
   .writer-app-header__identity {
     flex: 1 1 auto;
-  }
-
-  /* Whatever the host puts in the slot is a finger target here, not a 25px
-     mouse target. --writer-touch-target-min is declared by editor-mobile.css
-     on `.writer-app`, which this header is inside. */
-  .writer-app-header select,
-  .writer-app-header button,
-  .writer-app-header a {
-    min-height: var(--writer-touch-target-min, 44px);
   }
 
   /* A host picker with a long project name must not push the bar sideways. */
