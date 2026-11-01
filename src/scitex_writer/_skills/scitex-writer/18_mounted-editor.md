@@ -24,8 +24,8 @@ Verify their responses and the displayed users before claiming it works.
 Presence does not establish real-time co-editing or inline comments. History
 still displays an explicit future-integration placeholder.
 
-The preview rail has PDF, Cite, Fig, Table, Collab and History. From 2.43.18,
-PDF is active on first paint and Ctrl+wheel over Monaco changes the toolbar
+The preview rail has PDF, Cite, Fig, Table, Collab and History. PDF remains
+active after initialization, and Ctrl+wheel over Monaco changes the toolbar
 font size through a capture listener. The shared theme control should update
 Monaco immediately. Figure/table entries display supported thumbnails;
 clicking an item must leave the manuscript unchanged. Insertion uses an
@@ -48,3 +48,6 @@ The provider checks read-only targets before mutation callbacks. A box gesture
 persists once. Section previews and explicit full PDF mode remain distinct.
 This source adoption does not establish deployment or Journal adoption. Shared `example-project-mnist` claims
 may be labeled demo/registered and are not evidence of scientific verification.
+
+The rich PDF source preview is qualified against SDK 0.3.17 and LivePaper
+0.2.20 frontend packages; those preview builds are not official releases.
