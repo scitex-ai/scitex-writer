@@ -21,11 +21,13 @@ export function stopPresence(): void {
   epoch++;
 }
 
-/** Hub project ref from the page URL (?project=owner/slug). Null when the
- *  page carries no Hub project identity — heartbeat is then impossible. */
+/** Prefer the project identity authorized by the server. Hub remembers a
+ *  picker selection in the session, so the URL need not contain ?project=. */
 export function projectRefFromLocation(): string | null {
+  const selected = document.querySelector<HTMLElement>(".writer-app")?.dataset.projectId;
+  if (selected) return selected;
   const ref = new URLSearchParams(location.search).get("project");
-  return ref && ref.includes("/") ? ref : null;
+  return ref && (ref.includes("/") || /^\d+$/.test(ref)) ? ref : null;
 }
 
 function csrfFromCookie(): string {
