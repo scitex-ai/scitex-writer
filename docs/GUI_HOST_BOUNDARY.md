@@ -1,5 +1,28 @@
 # Writer standalone and plugin host boundary
 
+## Current mounted editor behavior (2026-11-01)
+
+The development Hub mounts the Writer leaf at `/apps/writer/` with
+`SCITEX_APP_MODE="hub"`. The older migration notes below describe the
+individual compatibility slices; their held/cutover wording is historical.
+
+The editor receives its authorized project identity in
+`.writer-app[data-project-id]`. Collaboration presence uses that identity,
+including a selection remembered by the host session when `?project=` is
+absent. The host still authorizes each presence request; this browser value
+is a selector, never an authorization grant. Presence is polling through the
+Hub session backend, rather than real-time co-editing or inline comments.
+
+Ctrl+wheel over Monaco changes Writer's font-size setting through a capture
+listener, and the shared theme toggle updates the editor immediately. The
+initial preview rail selection is PDF. Figure and table entries expose
+thumbnails when supported by their media and insert references only through
+drag and drop.
+
+The rich LivePaper provider and its consumer payload translator are separate
+from this mounted editor's own `PDFViewer`. Provider availability does not
+establish that Writer or Journal has adopted that viewer end to end.
+
 The GUI requires the consolidated SDK 0.3.0 contract. The SDK physically owns
 `scitex_sdk.app` and `scitex_sdk.ui`, their Django registrations and the resources
 under `scitex_sdk/app/` and `scitex_sdk/ui/`. Writer requires the SDK directly and
