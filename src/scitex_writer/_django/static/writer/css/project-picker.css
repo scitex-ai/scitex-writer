@@ -22,41 +22,10 @@
   min-height: 0;
 }
 
-/* Legacy separate picker bar: the trigger/panel sits on the writer
- * bluish-gray chrome, not the SDK light-mode defaults. The shared
- * component reads var(--bg-surface)/var(--border-default); writer scopes
- * those tokens to its --bg-secondary/--border-color so trigger, panel,
- * search, and hover states all follow the app palette (dark and light).
- * The canonical SDK header does not consume these legacy bar overrides. */
-.writer-project-scope .stx-app-project-selector__trigger {
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
-  color: var(--text-primary);
-}
-.writer-project-scope .stx-app-project-selector__panel {
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-.writer-project-scope .stx-app-project-selector__search {
-  background: var(--bg-primary);
-  border-color: var(--border-color);
-  color: var(--text-primary);
-}
-.writer-project-scope .stx-app-project-selector__option {
-  color: var(--text-primary);
-}
-.writer-project-scope .stx-app-project-selector__option:hover,
-.writer-project-scope .stx-app-project-selector__option--current {
-  background: var(--hover-bg);
-}
-
 @media (max-width: 767px) {
   .writer-project-scope {
     min-height: 56px;
   }
 
-  .writer-project-scope .stx-app-project-selector {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
+
 }
