@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.19] - 2026-11-01
+
+### Fixed
+
+- Build figure/table thumbnail links from the mounted request path and authorized project identity, preserving standalone working-directory context. Mounted panes no longer request an unscoped root `/api/thumbnail`.
+
 ## [2.43.18] - 2026-11-01
 
 - Use the server-authorized session project for collaboration presence when the picker selection is absent from the URL.
