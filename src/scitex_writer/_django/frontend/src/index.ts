@@ -417,6 +417,11 @@ async function bootstrap(): Promise<void> {
       claimsLoaded = true;
       void claimsTab.render();
     }
+    // Operator 2026-10-24: close FIRST. InsertPanel.close() strips .active
+    // from every rail button, so running it after the toggles below wiped
+    // the PDF highlight (pdf/claims never looked selected). Closing before
+    // the toggles lets the .active assignment stick.
+    if (view === "pdf" || view === "claims") insert?.close();
     root
       ?.querySelectorAll<HTMLElement>(".preview-view")
       .forEach((v) =>
@@ -435,7 +440,6 @@ async function bootstrap(): Promise<void> {
       .forEach((b) =>
         b.classList.toggle("active", (b as HTMLElement).dataset.pane === view),
       );
-    if (view === "pdf" || view === "claims") insert?.close();
   }
   let insert: InsertPanel | null = null;
   if (insertBar && insertPanel) {
