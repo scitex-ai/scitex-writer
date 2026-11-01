@@ -18,7 +18,15 @@
     "Verifiable claims with Clew verification chains",
     "Dark/light theme"
   ],
-  "allowed_extensions": [".tex", ".bib", ".md", ".csv", ".yaml", ".yml", ".json"],
+  "allowed_extensions": [
+    ".tex",
+    ".bib",
+    ".md",
+    ".csv",
+    ".yaml",
+    ".yml",
+    ".json"
+  ],
   "wip": false,
   "standalone": true,
   "standalone_command": "scitex-writer gui",
@@ -27,7 +35,10 @@
   "mobile_layout": true,
   "embedded_package": true,
   "dependencies": {
-    "python": ["scitex-writer", "django"]
+    "python": [
+      "scitex-writer",
+      "django"
+    ]
   },
   "mount_policy": {
     "login_required": true,
@@ -35,7 +46,16 @@
     "jail": {
       "scope": "project",
       "working_dir_param": "working_dir",
-      "path_params": ["path", "target", "output_file", "pdf"]
+      "path_params": [
+        "path",
+        "target",
+        "output_file",
+        "pdf"
+      ]
     }
+  },
+  "scope_capabilities": {
+    "user": false,
+    "project": true
   }
 }
