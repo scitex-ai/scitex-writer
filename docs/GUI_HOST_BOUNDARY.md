@@ -6,7 +6,7 @@ The development Hub mounts the Writer leaf at `/apps/writer/` with
 `SCITEX_APP_MODE="hub"`. The older migration notes below describe the
 individual compatibility slices; their held/cutover wording is historical.
 
-The editor receives its authorized project identity in
+From Writer 2.43.18, the editor receives its authorized project identity in
 `.writer-app[data-project-id]`. Collaboration presence uses that identity,
 including a selection remembered by the host session when `?project=` is
 absent. The host still authorizes each presence request; this browser value
