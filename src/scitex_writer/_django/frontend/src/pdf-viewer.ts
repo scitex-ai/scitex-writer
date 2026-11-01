@@ -71,6 +71,9 @@ export class PDFViewer {
   private activeTool: AnnotationTool = "highlight";
   private currentMode: EditorMode = "markup";
   private currentDocType = "manuscript";
+  private currentEndpoint = "";
+  private loadSequence = 0;
+  private loading: Promise<boolean> = Promise.resolve(true);
   private placeholder: HTMLElement | null = null;
 
   constructor(options: PDFViewerOptions) {
@@ -91,18 +94,44 @@ export class PDFViewer {
 
   async load(docType: string): Promise<boolean> {
     this.currentDocType = docType;
-    const url =
-      resourceUrl(`api/pdf?doc_type=${encodeURIComponent(docType)}&t=${Date.now()}`);
-    this.clearPlaceholder();
-    try {
-      await this.api.load(url);
-      this.echoMarks();
-      return true;
-    } catch (err) {
-      console.warn("[pdf-viewer] load failed:", err);
-      this.renderPlaceholder();
-      return false;
-    }
+    return this.loadResource(`api/pdf?doc_type=${encodeURIComponent(docType)}`);
+  }
+
+  async loadPreview(previewId: string): Promise<boolean> {
+    this.currentDocType = `section-${previewId}`;
+    return this.loadResource(`api/preview/pdf?preview_id=${encodeURIComponent(previewId)}`);
+  }
+
+  get downloadUrl(): string {
+    return this.currentEndpoint ? resourceUrl(`${this.currentEndpoint}&download=1&t=${Date.now()}`) : "";
+  }
+
+  private loadResource(endpoint: string): Promise<boolean> {
+    const sequence = ++this.loadSequence;
+    if (endpoint !== this.currentEndpoint) this.store.replaceAll([]);
+    this.currentEndpoint = endpoint;
+    this.container.style.visibility = "hidden";
+    const load = async (): Promise<boolean> => {
+      if (sequence !== this.loadSequence) return false;
+      this.clearPlaceholder();
+      try {
+        await this.api.load(resourceUrl(`${endpoint}&t=${Date.now()}`));
+        await this.api.fitWidth();
+        if (sequence !== this.loadSequence) return false;
+        this.container.style.visibility = "";
+        this.echoMarks();
+        return true;
+      } catch (err) {
+        if (sequence === this.loadSequence) {
+          console.warn("[pdf-viewer] load failed:", err);
+          this.container.style.visibility = "";
+          this.renderPlaceholder();
+        }
+        return false;
+      }
+    };
+    this.loading = this.loading.then(load, load);
+    return this.loading;
   }
 
   renderPlaceholder(message = "No PDF available."): void {
@@ -120,9 +149,13 @@ export class PDFViewer {
   }
 
   clear(): void {
+    this.loadSequence += 1;
+    this.currentEndpoint = "";
+    this.container.style.visibility = "hidden";
     this.store.replaceAll([]);
     this.echoMarks();
-    this.renderPlaceholder();
+    this.container.replaceChildren();
+    this.placeholder = null;
   }
 
   setZoom(delta: number): void {

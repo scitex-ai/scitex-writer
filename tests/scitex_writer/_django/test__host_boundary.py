@@ -93,7 +93,7 @@ def token(client):
     return client.cookies["csrftoken"].value
 
 
-@pytest.mark.parametrize('route', ['', 'viewer/', 'ping', 'api/project-info', 'api/file', 'api/compile'])
+@pytest.mark.parametrize('route', ['', 'viewer/', 'ping', 'api/project-info', 'api/file', 'api/compile', 'api/preview', 'api/preview/pdf'])
 def test_anonymous_requests_never_reach_project_or_handlers_returns_authentication_refusal(mounted, route):
     # Arrange: pytest fixtures and local setup.
     client, _, candidate, _ = mounted
@@ -103,7 +103,7 @@ def test_anonymous_requests_never_reach_project_or_handlers_returns_authenticati
     assert response.status_code == (302 if route in {'', 'viewer/'} else 401)
 
 
-@pytest.mark.parametrize('route', ['', 'viewer/', 'ping', 'api/project-info', 'api/file', 'api/compile'])
+@pytest.mark.parametrize('route', ['', 'viewer/', 'ping', 'api/project-info', 'api/file', 'api/compile', 'api/preview', 'api/preview/pdf'])
 def test_anonymous_requests_never_reach_project_or_handlers_leaves_project_cache_empty(mounted, route):
     # Arrange: pytest fixtures and local setup.
     client, _, candidate, _ = mounted
@@ -113,7 +113,7 @@ def test_anonymous_requests_never_reach_project_or_handlers_leaves_project_cache
     assert not services._project_cache
 
 
-@pytest.mark.parametrize('route', ['', 'viewer/', 'ping', 'api/project-info', 'api/file', 'api/compile'])
+@pytest.mark.parametrize('route', ['', 'viewer/', 'ping', 'api/project-info', 'api/file', 'api/compile', 'api/preview', 'api/preview/pdf'])
 def test_anonymous_requests_never_reach_project_or_handlers_does_not_create_scholar(mounted, route):
     # Arrange: pytest fixtures and local setup.
     client, _, candidate, _ = mounted
@@ -733,3 +733,33 @@ def test_rendered_token_works_with_http_only_cookie_and_session_storage_writes_a
         saved = client.post('/api/file?working_dir=' + str(local), {'path': 'new.tex', 'content': 'X'}, content_type='application/json', HTTP_X_CSRFTOKEN=csrf)
         # Assert
         assert (local / 'new.tex').read_text() == 'X'
+
+
+@pytest.mark.parametrize("route", ["api/preview", "api/preview/pdf"])
+def test_preview_resources_refuse_foreign_project_selection(mounted, route):
+    # Arrange
+    client, _, _, _ = mounted
+    # Act
+    response = client.get("/plugin/writer/" + route + "?project=foreign", HTTP_AUDIT_SESSION="synthetic")
+    # Assert
+    assert response.status_code == 404
+
+
+def test_preview_post_requires_the_existing_csrf_guard(mounted):
+    # Arrange
+    client, _, _, _ = mounted
+    # Act
+    response = client.post("/plugin/writer/api/preview?project=owned", data="{}", content_type="application/json", HTTP_AUDIT_SESSION="synthetic")
+    # Assert
+    assert response.status_code == 403
+
+
+def test_preview_post_requires_project_write_permission(mounted):
+    # Arrange
+    client, storage, _, _ = mounted
+    csrf = token(client)
+    storage.writable = False
+    # Act
+    response = client.post("/plugin/writer/api/preview?project=owned", data="{}", content_type="application/json", HTTP_AUDIT_SESSION="synthetic", HTTP_X_CSRFTOKEN=csrf)
+    # Assert
+    assert response.status_code == 403
