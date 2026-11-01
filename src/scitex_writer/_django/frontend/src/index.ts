@@ -717,6 +717,7 @@ async function bootstrap(): Promise<void> {
   });
 
   async function flushSave(): Promise<void> {
+    saveTimer = null;
     if (!currentPath) return;
     try {
       await saveFile(currentPath, editor.getValue());
