@@ -41,7 +41,10 @@ that collected frontend assets are current. The relevant source is
 `_django/frontend/src/index.ts`, `host-theme-fallback.ts`, `insert-panel.ts`,
 and `_django/templates/writer/editor.html`.
 
-Writer still owns its mounted `PDFViewer`. LivePaper's renderer, overlay and
-comment ports are a separate provider surface; do not infer Writer/Journal
-adoption from provider availability. Shared `example-project-mnist` claims
+Writer's mounted `PDFViewer` now delegates to LivePaper's public rich provider
+through `rich-pdf-adapter.ts`; the SDK still owns page raster/text/link layers.
+Writer alone translates annotation records and project/CSRF-bound API calls.
+The provider checks read-only targets before mutation callbacks. A box gesture
+persists once. Section previews and explicit full PDF mode remain distinct.
+This source adoption does not establish deployment or Journal adoption. Shared `example-project-mnist` claims
 may be labeled demo/registered and are not evidence of scientific verification.

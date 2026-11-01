@@ -21,9 +21,24 @@ drag and drop or the explicit Insert reference action. Clicking a thumbnail
 does not edit the manuscript. PDF and annotation actions share one menu,
 and Monaco has semantic borders on both gutter edges.
 
-The rich LivePaper provider and its consumer payload translator are separate
-from this mounted editor's own `PDFViewer`. Provider availability does not
-establish that Writer or Journal has adopted that viewer end to end.
+The PDF pane uses LivePaper's public rich provider through Writer's
+`rich-pdf-adapter.ts`. The SDK remains the sole PDF raster/text/link renderer.
+Writer resolves its own project-scoped URLs and translates its annotation API;
+the provider owns overlay/comment UI. Read-only annotation targets are checked
+before mutation callbacks. Box gestures persist once despite the SDK emitting
+both pen and region events. Section previews retain their separate PDF route,
+cache and download identity; explicit full-manuscript compilation is unchanged.
+
+Rebuilding this source preview requires provider-capable SDK and LivePaper
+frontend packages from their Python wheels. The public helper
+`scitex_live_paper.get_frontend_package_dir()` validates the wheel's exported
+provider module, types and CSS. Use normal npm file dependencies or npm pack;
+do not add source aliases or import LivePaper's private native bundle adapter.
+The already-built Writer wheel contains its provider bundle and needs no
+LivePaper browser runtime lookup. The reproducible browser runner is
+`tests/scitex_writer/_django/check_writer_rich_pdf_browser.py`; pass a normally
+installed frontend and disposable PDF fixture. Its HTTP fixtures do not prove
+live host annotation credentials or persistence.
 
 The GUI requires the consolidated SDK 0.3.0 contract. The SDK physically owns
 `scitex_sdk.app` and `scitex_sdk.ui`, their Django registrations and the resources

@@ -605,3 +605,7 @@ Change citation style in `config/config_manuscript.yaml`:
 </p>
 
 <!-- EOF -->
+
+The mounted PDF pane composes LivePaper's public rich provider with SDK PDF
+rendering through a Writer-owned adapter. See [GUI host boundaries](docs/GUI_HOST_BOUNDARY.md)
+for the port ownership, wheel-derived frontend build, and disposable browser checks.

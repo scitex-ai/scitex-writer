@@ -1,8 +1,8 @@
 /**
- * PDF pane — backed by the shared L1 viewer (`@scitex/ui/pdf-viewer`, ADR 0001).
+ * PDF pane — LivePaper rich provider + SDK rendering through a Writer adapter.
  *
- * Swaps Writer's from-scratch pdfjs pane to the shared component (the ADR's
- * "first consumer" step) WITHOUT changing this class's public surface, so
+ * The consumer adapter owns Writer API/auth and annotation DTO translation.
+ * The existing public class surface stays stable, so
  * existing callers (viewer.ts, index.ts, compile.ts) are untouched:
  *   load / renderPlaceholder / clear / setZoom / setFitWidth / goToPage / zoomPercent
  *
@@ -14,7 +14,6 @@
  */
 
 import {
-  createPdfViewer,
   type Mark,
   type PdfRect,
   type PdfTool,
@@ -34,6 +33,8 @@ import {
   type EditorMode,
 } from "./annotations";
 import { type ContextMenuItem, showContextMenu } from "./context-menu";
+
+import { createWriterPdfViewer } from "./rich-pdf-adapter";
 
 interface PDFViewerOptions {
   container: HTMLElement;
@@ -80,12 +81,19 @@ export class PDFViewer {
     this.container = options.container;
     this.container.classList.add("pdf-viewer-host");
     this.onAnnotate = options.onAnnotate;
-    this.api = createPdfViewer({
+    this.api = createWriterPdfViewer({
       container: this.container,
       hooks: {
-        onPenInput: (input) => this.handlePen(input),
+        onPenInput: (input) => {
+          // SDK rect gestures also emit onRegionSelect; persist exactly once.
+          if (input.tool !== "rect") this.handlePen(input);
+        },
         onRegionSelect: (region) => this.handleRegion(region),
       },
+    }, {
+      getDocType: () => this.currentDocType,
+      canMutate: (action) => action === "mark-create" || action === "region-select" ? this.currentMode === "markup" : true,
+      onPortError: (error) => console.warn("[writer-pdf] annotation port failed:", error),
     });
     this.container.addEventListener("contextmenu", (e) =>
       this.handleContextMenu(e),
