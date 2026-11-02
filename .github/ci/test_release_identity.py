@@ -21,10 +21,11 @@ import tarfile
 import tempfile
 import threading
 import time
-import tomllib
 import unittest
 import zipfile
 from pathlib import Path
+
+import tomllib
 
 if not __debug__:
     raise RuntimeError("Release identity controls require assertions enabled")
@@ -94,7 +95,9 @@ def public_source_files():
             if (
                 item.isdir()
                 or item.name in OMITTED_GENERATED_LOGS
-                or item.name.startswith("src/scitex_writer/_django/frontend/node_modules/")
+                or item.name.startswith(
+                    "src/scitex_writer/_django/frontend/node_modules/"
+                )
             ):
                 continue
             if not item.isfile():
@@ -127,8 +130,18 @@ def generated_headers():
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(body)
         subprocess.run(
-            [sys.executable, "-m", "build", "--wheel", "--outdir", str(output), str(source)],
-            check=True, capture_output=True, timeout=180,
+            [
+                sys.executable,
+                "-m",
+                "build",
+                "--wheel",
+                "--outdir",
+                str(output),
+                str(source),
+            ],
+            check=True,
+            capture_output=True,
+            timeout=180,
         )
         wheels = list(output.glob("*.whl"))
         if len(wheels) != 1:
@@ -143,15 +156,22 @@ def generated_headers():
 GENERATED_METADATA, GENERATED_ENTRY_POINTS = generated_headers()
 # Compatibility encoding variant, not a claim of a second independent build.
 # Every other header remains the genuine current-source Hatch output.
-GENERATED_METADATA_25 = b"Metadata-Version: 2.5\n" + GENERATED_METADATA.split(b"\n", 1)[1]
+GENERATED_METADATA_25 = (
+    b"Metadata-Version: 2.5\n" + GENERATED_METADATA.split(b"\n", 1)[1]
+)
 
 
 def generated_counts(project):
     """Observability counts follow the real builder headers/current project."""
     return {
-        "runtime_requirements": sum(line.startswith(b"Requires-Dist:") for line in GENERATED_METADATA.splitlines()),
+        "runtime_requirements": sum(
+            line.startswith(b"Requires-Dist:")
+            for line in GENERATED_METADATA.splitlines()
+        ),
         "extras": len(project.get("optional-dependencies", {})),
-        "entry_point_groups": len(project.get("entry-points", {})) + bool(project.get("scripts")) + bool(project.get("gui-scripts")),
+        "entry_point_groups": len(project.get("entry-points", {}))
+        + bool(project.get("scripts"))
+        + bool(project.get("gui-scripts")),
     }
 
 
@@ -330,14 +350,28 @@ def source_commit_with_project(project):
         blob = command("-C", str(source), "hash-object", "-w", "--stdin", body=project)
         command("-C", str(source), "read-tree", SOURCE)
         command(
-            "-C", str(source), "update-index", "--cacheinfo", "100644",
-            blob.decode().strip(), "pyproject.toml",
+            "-C",
+            str(source),
+            "update-index",
+            "--cacheinfo",
+            "100644",
+            blob.decode().strip(),
+            "pyproject.toml",
         )
         tree = command("-C", str(source), "write-tree").decode().strip()
-        commit = command(
-            "-C", str(source), "commit-tree", tree, "-p", SOURCE,
-            body=b"Disposable declared-selection control\n",
-        ).decode().strip()
+        commit = (
+            command(
+                "-C",
+                str(source),
+                "commit-tree",
+                tree,
+                "-p",
+                SOURCE,
+                body=b"Disposable declared-selection control\n",
+            )
+            .decode()
+            .strip()
+        )
         yield source, commit
 
 
@@ -1087,7 +1121,6 @@ class WholeSourceTests(unittest.TestCase):
                 # Assert
                 assert refused
 
-
     def test_sdist_selection_refuses_missing_broad_or_fourth_exclusions(self):
         # Arrange
         literal = b'    "/scripts/shell/.compile_manuscript.sh.log",\n'
@@ -1232,10 +1265,13 @@ class GeneratedMetadataTests(unittest.TestCase):
     def test_weakening_hard_sdk_floor_refused(self):
         # Arrange
         sdk_requirement = next(
-            line for line in GENERATED_METADATA.splitlines()
+            line
+            for line in GENERATED_METADATA.splitlines()
             if line.startswith(b"Requires-Dist: scitex-sdk")
         )
-        bad = GENERATED_METADATA.replace(sdk_requirement, b"Requires-Dist: scitex-sdk>=0.0")
+        bad = GENERATED_METADATA.replace(
+            sdk_requirement, b"Requires-Dist: scitex-sdk>=0.0"
+        )
         if bad == GENERATED_METADATA:
             raise RuntimeError("weakened SDK fixture did not change source metadata")
         # Act
@@ -1576,7 +1612,6 @@ class GeneratedMetadataTests(unittest.TestCase):
             # Assert
             assert refused
 
-
     def test_supported_metadata_25_absent_import_fields_passes(self):
         # Arrange
         project = tomllib.loads(PYPROJECT.decode())["project"]
@@ -1597,7 +1632,8 @@ class GeneratedMetadataTests(unittest.TestCase):
                 b"Metadata-Version: 2.5", b"Metadata-Version: " + replacement
             )
             for wheel_body, sdist_body in (
-                (bad, GENERATED_METADATA_25), (GENERATED_METADATA_25, bad)
+                (bad, GENERATED_METADATA_25),
+                (GENERATED_METADATA_25, bad),
             ):
                 with self.subTest(
                     version=replacement, wheel_tampered=wheel_body == bad
@@ -1605,7 +1641,9 @@ class GeneratedMetadataTests(unittest.TestCase):
                     # Act
                     refused = refusal(
                         lambda: RELEASE.metadata_source_identity(
-                            wheel_body, sdist_body, GENERATED_ENTRY_POINTS,
+                            wheel_body,
+                            sdist_body,
+                            GENERATED_ENTRY_POINTS,
                             tomllib.loads(PYPROJECT.decode())["project"],
                         ),
                         ValueError,
@@ -1620,7 +1658,9 @@ class GeneratedMetadataTests(unittest.TestCase):
         # Act
         refused = refusal(
             lambda: RELEASE.metadata_source_identity(
-                bad, bad, GENERATED_ENTRY_POINTS,
+                bad,
+                bad,
+                GENERATED_ENTRY_POINTS,
                 tomllib.loads(PYPROJECT.decode())["project"],
             ),
             ValueError,
@@ -1640,7 +1680,8 @@ class GeneratedMetadataTests(unittest.TestCase):
         for declaration in declarations:
             bad = GENERATED_METADATA_25 + declaration
             for wheel_body, sdist_body in (
-                (bad, GENERATED_METADATA_25), (GENERATED_METADATA_25, bad)
+                (bad, GENERATED_METADATA_25),
+                (GENERATED_METADATA_25, bad),
             ):
                 with self.subTest(
                     declaration=declaration, wheel_tampered=wheel_body == bad
@@ -1648,7 +1689,9 @@ class GeneratedMetadataTests(unittest.TestCase):
                     # Act
                     refused = refusal(
                         lambda: RELEASE.metadata_source_identity(
-                            wheel_body, sdist_body, GENERATED_ENTRY_POINTS,
+                            wheel_body,
+                            sdist_body,
+                            GENERATED_ENTRY_POINTS,
                             tomllib.loads(PYPROJECT.decode())["project"],
                         ),
                         ValueError,
@@ -1667,8 +1710,10 @@ class GeneratedMetadataTests(unittest.TestCase):
                     # Act
                     refused = refusal(
                         lambda: RELEASE.metadata_source_identity(
-                            GENERATED_METADATA_25, GENERATED_METADATA_25,
-                            GENERATED_ENTRY_POINTS, project,
+                            GENERATED_METADATA_25,
+                            GENERATED_METADATA_25,
+                            GENERATED_ENTRY_POINTS,
+                            project,
                         ),
                         ValueError,
                         "source import declarations",

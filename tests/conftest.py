@@ -15,6 +15,7 @@ ROOTDIR conftest, so both reach `tests/integration/`, `tests/develop/` and
 `tests/examples/` as well as `tests/scitex_writer/`; putting them one level
 down would leave those siblings unprotected.
 """
+
 from __future__ import annotations
 
 import getpass
