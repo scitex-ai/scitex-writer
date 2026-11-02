@@ -49,6 +49,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install the declared release-boundary fixture builder
+        run: python -m pip install 'build>=1.0'
       - name: Check the release identity and archive refusal controls
         run: python .github/ci/test_release_identity.py
       - id: identity
@@ -59,13 +61,13 @@ jobs:
 
   test:
     # Fixed guarded shared defining callee (Infrastructure-owned):
-    # writer-release-sif.yml@d977ddd0c1c8438344de70a59356510f8f91c30e
-    # (central PR #60 merged). Typed inputs per supported-caller-input-map-v1.
+    # writer-release-sif.yml@81734e25c10b8c8b8ac3d80fbf0f5149e689f5cf
+    # (central PR #100 merged). Typed inputs per supported-caller-input-map-v1.
     # DAG + AUTHORIZATION PRESERVED: no test executes without release-identity
     # preflight + admission, same as the leaf job this replaces.
     needs: [admission, preflight]
     if: needs.admission.outputs.native_authorized == 'true'
-    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@d977ddd0c1c8438344de70a59356510f8f91c30e
+    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@81734e25c10b8c8b8ac3d80fbf0f5149e689f5cf
     with:
       operation: test
       source_commit: ${{ needs.preflight.outputs.commit }}
@@ -80,7 +82,7 @@ jobs:
     # github.sha divergence.
     needs: [admission, preflight, test]
     if: needs.admission.outputs.native_authorized == 'true'
-    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@d977ddd0c1c8438344de70a59356510f8f91c30e
+    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@81734e25c10b8c8b8ac3d80fbf0f5149e689f5cf
     with:
       operation: build
       source_commit: ${{ needs.preflight.outputs.commit }}

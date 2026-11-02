@@ -13,6 +13,7 @@ import importlib.util
 import io
 import json
 import os
+import shlex
 import signal
 import stat
 import subprocess
@@ -21,10 +22,11 @@ import tarfile
 import tempfile
 import threading
 import time
-import tomllib
 import unittest
 import zipfile
 from pathlib import Path
+
+import tomllib
 
 if not __debug__:
     raise RuntimeError("Release identity controls require assertions enabled")
@@ -94,7 +96,9 @@ def public_source_files():
             if (
                 item.isdir()
                 or item.name in OMITTED_GENERATED_LOGS
-                or item.name.startswith("src/scitex_writer/_django/frontend/node_modules/")
+                or item.name.startswith(
+                    "src/scitex_writer/_django/frontend/node_modules/"
+                )
             ):
                 continue
             if not item.isfile():
@@ -113,20 +117,63 @@ def public_wheel_files():
     }
 
 
-# Actual static Hatchling 1.27.0 metadata/entry-point projection of this source.
-# The pure fixtures carry genuine requirements/extras/Python/entry points;
-# dependency metadata changes require refreshing this independently produced fixture.
-GENERATED_METADATA = b"Metadata-Version: 2.4\nName: scitex-writer\nVersion: 2.43.17\nSummary: LaTeX manuscript compilation system for scientific documents with MCP server\nProject-URL: Homepage, https://github.com/ywatanabe1989/scitex-writer\nProject-URL: Documentation, https://scitex-writer.readthedocs.io\nProject-URL: Repository, https://github.com/ywatanabe1989/scitex-writer.git\nProject-URL: Issues, https://github.com/ywatanabe1989/scitex-writer/issues\nAuthor-email: Yusuke Watanabe <ywatanabe@scitex.ai>\nLicense-Expression: AGPL-3.0-only\nLicense-File: LICENSE\nKeywords: academic,bibliography,bibtex,compilation,latex,manuscript,mcp,mcp-server,paper,scientific-writing,scitex\nClassifier: Development Status :: 4 - Beta\nClassifier: Environment :: Console\nClassifier: Intended Audience :: Science/Research\nClassifier: Operating System :: OS Independent\nClassifier: Programming Language :: Python :: 3\nClassifier: Programming Language :: Python :: 3.10\nClassifier: Programming Language :: Python :: 3.11\nClassifier: Programming Language :: Python :: 3.12\nClassifier: Programming Language :: Python :: 3.13\nClassifier: Topic :: Scientific/Engineering\nClassifier: Topic :: Text Processing :: Markup :: LaTeX\nRequires-Python: >=3.10\nRequires-Dist: bibtexparser<2.0,>=1.4\nRequires-Dist: click>=8.0\nRequires-Dist: django>=4.2\nRequires-Dist: fastmcp>=2.0.0\nRequires-Dist: pandas>=2.0\nRequires-Dist: pillow>=9.0\nRequires-Dist: scitex-config>=0.3.6\nRequires-Dist: scitex-dev>=0.48.0\nRequires-Dist: scitex-logging>=0.2.1\nRequires-Dist: scitex-sdk>=0.3.9\nProvides-Extra: all\nRequires-Dist: myst-parser>=2.0; extra == 'all'\nRequires-Dist: openpyxl; extra == 'all'\nRequires-Dist: pre-commit>=3.5.0; extra == 'all'\nRequires-Dist: pytest-cov>=4.0.0; extra == 'all'\nRequires-Dist: pytest-xdist>=3.0.0; extra == 'all'\nRequires-Dist: pytest>=7.0.0; extra == 'all'\nRequires-Dist: pytest-testmon>=2.2.0; extra == 'all'\nRequires-Dist: pywebview>=4.0.0; extra == 'all'\nRequires-Dist: scitex-scholar>=1.5.2; extra == 'all'\nRequires-Dist: sphinx-autodoc-typehints>=1.25; extra == 'all'\nRequires-Dist: sphinx-copybutton>=0.5; extra == 'all'\nRequires-Dist: sphinx-rtd-theme>=2.0; extra == 'all'\nRequires-Dist: sphinx>=7.0; extra == 'all'\nProvides-Extra: dev\nRequires-Dist: openpyxl; extra == 'dev'\nRequires-Dist: pre-commit>=3.5.0; extra == 'dev'\nRequires-Dist: pytest-cov>=4.0.0; extra == 'dev'\nRequires-Dist: pytest-xdist>=3.0.0; extra == 'dev'\nRequires-Dist: pytest>=7.0.0; extra == 'dev'\nRequires-Dist: pytest-testmon>=2.2.0; extra == 'dev'\nRequires-Dist: scitex-scholar>=1.5.2; extra == 'dev'\nProvides-Extra: docs\nRequires-Dist: myst-parser>=2.0; extra == 'docs'\nRequires-Dist: sphinx-autodoc-typehints>=1.25; extra == 'docs'\nRequires-Dist: sphinx-copybutton>=0.5; extra == 'docs'\nRequires-Dist: sphinx-rtd-theme>=2.0; extra == 'docs'\nRequires-Dist: sphinx>=7.0; extra == 'docs'\nDescription-Content-Type: text/markdown\n"
-# Genuine header bytes from the private Hatchling 1.32.4 sdist-to-wheel build.
-# Original Metadata 2.4 fixture above remains unchanged.
-# Refreshed for the 2.43.9 source (sdk floor 0.3.5, pytest-testmon in all/dev).
-# Full METADATA SHA256 (2.43.11): 5f47f6e4edee6d4c329fcb104aec17b561c031d12deffd11020d598eb6633706.
-# Previous 2.43.9 bytes: 1203a8187f6fe36680e279f107aa29a070394bea6433b4441ee2ff9e646a19ae.
-# Previous 2.43.8 bytes — wheel 25ce08ecccba1829da0c0d687756fe3d29067858e6224d4be25008077e1a33e3,
-# metadata 530bcc5fe58cb914e218b0692a598b7bf53abba33a88cc453b530a548c272bce,
-# header 3f319bc7953caa3e2e1a9ad779193ebdf5f27ddd70c64c646b43830ea1bf28e0.
-GENERATED_METADATA_25 = b"Metadata-Version: 2.5\nName: scitex-writer\nVersion: 2.43.17\nSummary: LaTeX manuscript compilation system for scientific documents with MCP server\nProject-URL: Homepage, https://github.com/ywatanabe1989/scitex-writer\nProject-URL: Documentation, https://scitex-writer.readthedocs.io\nProject-URL: Repository, https://github.com/ywatanabe1989/scitex-writer.git\nProject-URL: Issues, https://github.com/ywatanabe1989/scitex-writer/issues\nAuthor-email: Yusuke Watanabe <ywatanabe@scitex.ai>\nLicense-Expression: AGPL-3.0-only\nLicense-File: LICENSE\nKeywords: academic,bibliography,bibtex,compilation,latex,manuscript,mcp,mcp-server,paper,scientific-writing,scitex\nClassifier: Development Status :: 4 - Beta\nClassifier: Environment :: Console\nClassifier: Intended Audience :: Science/Research\nClassifier: Operating System :: OS Independent\nClassifier: Programming Language :: Python :: 3\nClassifier: Programming Language :: Python :: 3.10\nClassifier: Programming Language :: Python :: 3.11\nClassifier: Programming Language :: Python :: 3.12\nClassifier: Programming Language :: Python :: 3.13\nClassifier: Topic :: Scientific/Engineering\nClassifier: Topic :: Text Processing :: Markup :: LaTeX\nRequires-Python: >=3.10\nRequires-Dist: bibtexparser<2.0,>=1.4\nRequires-Dist: click>=8.0\nRequires-Dist: django>=4.2\nRequires-Dist: fastmcp>=2.0.0\nRequires-Dist: pandas>=2.0\nRequires-Dist: pillow>=9.0\nRequires-Dist: scitex-config>=0.3.6\nRequires-Dist: scitex-dev>=0.48.0\nRequires-Dist: scitex-logging>=0.2.1\nRequires-Dist: scitex-sdk>=0.3.9\nProvides-Extra: all\nRequires-Dist: myst-parser>=2.0; extra == 'all'\nRequires-Dist: openpyxl; extra == 'all'\nRequires-Dist: pre-commit>=3.5.0; extra == 'all'\nRequires-Dist: pytest-cov>=4.0.0; extra == 'all'\nRequires-Dist: pytest-xdist>=3.0.0; extra == 'all'\nRequires-Dist: pytest>=7.0.0; extra == 'all'\nRequires-Dist: pytest-testmon>=2.2.0; extra == 'all'\nRequires-Dist: pywebview>=4.0.0; extra == 'all'\nRequires-Dist: scitex-scholar>=1.5.2; extra == 'all'\nRequires-Dist: sphinx-autodoc-typehints>=1.25; extra == 'all'\nRequires-Dist: sphinx-copybutton>=0.5; extra == 'all'\nRequires-Dist: sphinx-rtd-theme>=2.0; extra == 'all'\nRequires-Dist: sphinx>=7.0; extra == 'all'\nProvides-Extra: dev\nRequires-Dist: openpyxl; extra == 'dev'\nRequires-Dist: pre-commit>=3.5.0; extra == 'dev'\nRequires-Dist: pytest-cov>=4.0.0; extra == 'dev'\nRequires-Dist: pytest-xdist>=3.0.0; extra == 'dev'\nRequires-Dist: pytest>=7.0.0; extra == 'dev'\nRequires-Dist: pytest-testmon>=2.2.0; extra == 'dev'\nRequires-Dist: scitex-scholar>=1.5.2; extra == 'dev'\nProvides-Extra: docs\nRequires-Dist: myst-parser>=2.0; extra == 'docs'\nRequires-Dist: sphinx-autodoc-typehints>=1.25; extra == 'docs'\nRequires-Dist: sphinx-copybutton>=0.5; extra == 'docs'\nRequires-Dist: sphinx-rtd-theme>=2.0; extra == 'docs'\nRequires-Dist: sphinx>=7.0; extra == 'docs'\nDescription-Content-Type: text/markdown\n"
-GENERATED_ENTRY_POINTS = b"[console_scripts]\nscitex-writer = scitex_writer._cli:main\n\n[scitex.apps]\nwriter = scitex_writer._django.apps:WriterEditorConfig\n\n[scitex_dev.docs]\nscitex-writer = scitex_writer\n\n[scitex_dev.skills]\nscitex-writer = scitex_writer\n\n[scitex_dev.system_deps]\nscitex-writer = scitex_writer._core._system_deps:provide\n"
+# Produce the baseline once from the exact tracked source using a real PEP517
+# wheel build. Future version/dependency changes do not require hand-edited
+# metadata literals. Negative controls below mutate one boundary of these bytes.
+@functools.lru_cache(maxsize=1)
+def generated_headers():
+    with tempfile.TemporaryDirectory(prefix="writer-release-metadata-") as directory:
+        root = Path(directory)
+        source, output = root / "source", root / "dist"
+        source.mkdir()
+        for name, body in public_source_files().items():
+            path = source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(body)
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "build",
+                "--wheel",
+                "--outdir",
+                str(output),
+                str(source),
+            ],
+            check=True,
+            capture_output=True,
+            timeout=180,
+        )
+        wheels = list(output.glob("*.whl"))
+        if len(wheels) != 1:
+            raise RuntimeError("release fixture build must produce exactly one wheel")
+        with zipfile.ZipFile(wheels[0]) as archive:
+            metadata_bytes = archive.read(DIST_INFO + "/METADATA")
+            entries = archive.read(DIST_INFO + "/entry_points.txt")
+        # README text is not part of the metadata header identity under test.
+        return metadata_bytes.split(b"\n\n", 1)[0] + b"\n", entries
+
+
+GENERATED_METADATA, GENERATED_ENTRY_POINTS = generated_headers()
+# Compatibility encoding variant, not a claim of a second independent build.
+# Every other header remains the genuine current-source Hatch output.
+GENERATED_METADATA_25 = (
+    b"Metadata-Version: 2.5\n" + GENERATED_METADATA.split(b"\n", 1)[1]
+)
+
+
+def generated_counts(project):
+    """Observability counts follow the real builder headers/current project."""
+    return {
+        "runtime_requirements": sum(
+            line.startswith(b"Requires-Dist:")
+            for line in GENERATED_METADATA.splitlines()
+        ),
+        "extras": len(project.get("optional-dependencies", {})),
+        "entry_point_groups": len(project.get("entry-points", {}))
+        + bool(project.get("scripts"))
+        + bool(project.get("gui-scripts")),
+    }
 
 
 def metadata(version=VERSION, name="scitex-writer", duplicate=False):
@@ -300,18 +347,43 @@ def source_commit_with_project(project):
                 env=environment,
             ).stdout
 
-        command("clone", "--bare", "--shared", "--quiet", str(REPOSITORY), str(source))
+        # An isolated index/commit needs source objects, not every public ref.
+        # Git's shared object mechanism avoids cloning a busy CI checkout.
+        objects = (
+            command("-C", str(REPOSITORY), "rev-parse", "--git-path", "objects")
+            .decode()
+            .strip()
+        )
+        object_root = (REPOSITORY / objects).resolve()
+        if not object_root.is_dir() or "\n" in str(object_root):
+            raise ValueError("Source Git object directory is unavailable")
+        command("init", "--bare", "--quiet", "--template=", str(source))
+        (source / "objects/info/alternates").write_text(str(object_root) + "\n")
         blob = command("-C", str(source), "hash-object", "-w", "--stdin", body=project)
         command("-C", str(source), "read-tree", SOURCE)
         command(
-            "-C", str(source), "update-index", "--cacheinfo", "100644",
-            blob.decode().strip(), "pyproject.toml",
+            "-C",
+            str(source),
+            "update-index",
+            "--cacheinfo",
+            "100644",
+            blob.decode().strip(),
+            "pyproject.toml",
         )
         tree = command("-C", str(source), "write-tree").decode().strip()
-        commit = command(
-            "-C", str(source), "commit-tree", tree, "-p", SOURCE,
-            body=b"Disposable declared-selection control\n",
-        ).decode().strip()
+        commit = (
+            command(
+                "-C",
+                str(source),
+                "commit-tree",
+                tree,
+                "-p",
+                SOURCE,
+                body=b"Disposable declared-selection control\n",
+            )
+            .decode()
+            .strip()
+        )
         yield source, commit
 
 
@@ -1061,7 +1133,6 @@ class WholeSourceTests(unittest.TestCase):
                 # Assert
                 assert refused
 
-
     def test_sdist_selection_refuses_missing_broad_or_fourth_exclusions(self):
         # Arrange
         literal = b'    "/scripts/shell/.compile_manuscript.sh.log",\n'
@@ -1179,11 +1250,7 @@ class GeneratedMetadataTests(unittest.TestCase):
             GENERATED_METADATA, GENERATED_METADATA, GENERATED_ENTRY_POINTS, project
         )
         # Assert
-        assert result == {
-            "runtime_requirements": 35,
-            "extras": 3,
-            "entry_point_groups": 5,
-        }
+        assert result == generated_counts(project)
 
     def test_missing_runtime_requirements_refused_in_either_artifact(self):
         # Arrange
@@ -1209,7 +1276,14 @@ class GeneratedMetadataTests(unittest.TestCase):
 
     def test_weakening_hard_sdk_floor_refused(self):
         # Arrange
-        bad = GENERATED_METADATA.replace(b"scitex-sdk>=0.3.9", b"scitex-sdk>=0.0")
+        sdk_requirement = next(
+            line
+            for line in GENERATED_METADATA.splitlines()
+            if line.startswith(b"Requires-Dist: scitex-sdk")
+        )
+        bad = GENERATED_METADATA.replace(
+            sdk_requirement, b"Requires-Dist: scitex-sdk>=0.0"
+        )
         if bad == GENERATED_METADATA:
             raise RuntimeError("weakened SDK fixture did not change source metadata")
         # Act
@@ -1550,8 +1624,7 @@ class GeneratedMetadataTests(unittest.TestCase):
             # Assert
             assert refused
 
-
-    def test_genuine_current_metadata_25_absent_import_fields_passes(self):
+    def test_supported_metadata_25_absent_import_fields_passes(self):
         # Arrange
         project = tomllib.loads(PYPROJECT.decode())["project"]
         # Act
@@ -1562,11 +1635,7 @@ class GeneratedMetadataTests(unittest.TestCase):
             project,
         )
         # Assert
-        assert result == {
-            "runtime_requirements": 35,
-            "extras": 3,
-            "entry_point_groups": 5,
-        }
+        assert result == generated_counts(project)
 
     def test_unqualified_metadata_versions_refused_in_either_artifact(self):
         # Arrange
@@ -1575,7 +1644,8 @@ class GeneratedMetadataTests(unittest.TestCase):
                 b"Metadata-Version: 2.5", b"Metadata-Version: " + replacement
             )
             for wheel_body, sdist_body in (
-                (bad, GENERATED_METADATA_25), (GENERATED_METADATA_25, bad)
+                (bad, GENERATED_METADATA_25),
+                (GENERATED_METADATA_25, bad),
             ):
                 with self.subTest(
                     version=replacement, wheel_tampered=wheel_body == bad
@@ -1583,7 +1653,9 @@ class GeneratedMetadataTests(unittest.TestCase):
                     # Act
                     refused = refusal(
                         lambda: RELEASE.metadata_source_identity(
-                            wheel_body, sdist_body, GENERATED_ENTRY_POINTS,
+                            wheel_body,
+                            sdist_body,
+                            GENERATED_ENTRY_POINTS,
                             tomllib.loads(PYPROJECT.decode())["project"],
                         ),
                         ValueError,
@@ -1598,7 +1670,9 @@ class GeneratedMetadataTests(unittest.TestCase):
         # Act
         refused = refusal(
             lambda: RELEASE.metadata_source_identity(
-                bad, bad, GENERATED_ENTRY_POINTS,
+                bad,
+                bad,
+                GENERATED_ENTRY_POINTS,
                 tomllib.loads(PYPROJECT.decode())["project"],
             ),
             ValueError,
@@ -1618,7 +1692,8 @@ class GeneratedMetadataTests(unittest.TestCase):
         for declaration in declarations:
             bad = GENERATED_METADATA_25 + declaration
             for wheel_body, sdist_body in (
-                (bad, GENERATED_METADATA_25), (GENERATED_METADATA_25, bad)
+                (bad, GENERATED_METADATA_25),
+                (GENERATED_METADATA_25, bad),
             ):
                 with self.subTest(
                     declaration=declaration, wheel_tampered=wheel_body == bad
@@ -1626,7 +1701,9 @@ class GeneratedMetadataTests(unittest.TestCase):
                     # Act
                     refused = refusal(
                         lambda: RELEASE.metadata_source_identity(
-                            wheel_body, sdist_body, GENERATED_ENTRY_POINTS,
+                            wheel_body,
+                            sdist_body,
+                            GENERATED_ENTRY_POINTS,
                             tomllib.loads(PYPROJECT.decode())["project"],
                         ),
                         ValueError,
@@ -1645,8 +1722,10 @@ class GeneratedMetadataTests(unittest.TestCase):
                     # Act
                     refused = refusal(
                         lambda: RELEASE.metadata_source_identity(
-                            GENERATED_METADATA_25, GENERATED_METADATA_25,
-                            GENERATED_ENTRY_POINTS, project,
+                            GENERATED_METADATA_25,
+                            GENERATED_METADATA_25,
+                            GENERATED_ENTRY_POINTS,
+                            project,
                         ),
                         ValueError,
                         "source import declarations",
@@ -1900,10 +1979,11 @@ import json,os,sys,time
 a=sys.argv[1:]
 name=Path(sys.argv[0]).name
 body=sys.stdin.read() if a and a[0]=='-' else ''
-stage='uv' if name=='uv' else ('pytest' if a[:2]==['-m','pytest'] else 'twine' if a[:2]==['-m','twine'] else 'build' if a[:2]==['-m','build'] else 'mint' if body else 'proof-first' if 'verify-proof' in a and '--revalidate' in a else 'proof-final' if 'verify-proof' in a else 'python')
+stage='uv' if name=='uv' else ('pytest' if (a[:2]==['-m','pytest'] or a[:1]==['.github/ci/with-test-postgres.py']) else 'twine' if a[:2]==['-m','twine'] else 'build' if a[:2]==['-m','build'] else 'mint' if body else 'proof-first' if 'verify-proof' in a and '--revalidate' in a else 'proof-final' if 'verify-proof' in a else 'python')
 root=Path(os.environ['TMPDIR'])
 with open(os.environ['FIXTURE_LOG'],'a') as f:
- f.write(json.dumps({'stage':stage,'root':str(root),'minted_fixture_only':os.environ.get('TWINE_PASSWORD')=='fixture-token'})+'\n')
+ fields=Path('/proc/self/stat').read_text().rsplit(') ',1)[1].split()
+ f.write(json.dumps({'stage':stage,'root':str(root),'pid':os.getpid(),'birth':fields[19],'isolated':sys.flags.isolated,'no_site':sys.flags.no_site, 'pgrp':int(fields[2]),'minted_fixture_only':os.environ.get('TWINE_PASSWORD')=='fixture-token'})+'\n')
 if os.environ.get('REPLACE_STAGE')==stage:
  displaced=root.with_name(root.name+'-displaced')
  root.rename(displaced)
@@ -1927,14 +2007,14 @@ class DriverCleanup(unittest.TestCase):
 
     def exercise(self, name, mode="success"):
         with tempfile.TemporaryDirectory(
-            prefix="writer-driver-fixture-", dir=os.environ.get("TMPDIR")
+            prefix="writer-driver-fixture-", dir=signal_fixture_parent()
         ) as directory:
             fixture = Path(directory)
             bin_dir = fixture / "fake-bin"
             bin_dir.mkdir()
             for executable in ("python", "uv"):
                 path = bin_dir / executable
-                path.write_text("#!" + DRIVER_PYTHON + "\n" + DRIVER_STUB)
+                path.write_text("#!" + DRIVER_PYTHON + " -IS\n" + DRIVER_STUB)
                 path.chmod(0o700)
             source_path = DRIVER_SOURCE / name
             source = source_path.read_text()
@@ -1952,6 +2032,13 @@ class DriverCleanup(unittest.TestCase):
                 "set -euo pipefail",
                 'unset() { builtin unset "$@"; if [[ "${1-}" = MINTED ]] && ! declare -p MINTED >/dev/null 2>&1; then printf \'cleared\\n\' >> "$MINT_CLEAR_LOG"; fi; }\nset -euo pipefail',
                 1,
+            )
+            phase_file = fixture / "cleanup-entered"
+            # Observe phase entry after the real trap captured its incoming status.
+            marker = "    local result=$? cleanup_result=0 current_id='' attempt=0\n"
+            self.assertEqual(source.count(marker), 1)
+            source = source.replace(
+                marker, marker + '    printf cleanup > "$FIXTURE_CLEANUP_PHASE"\n', 1
             )
             driver = fixture / name
             driver.write_text(source)
@@ -1989,6 +2076,7 @@ class DriverCleanup(unittest.TestCase):
                 "FIXTURE_LOG": str(log),
                 "BLOCK_READY": str(ready),
                 "MINT_CLEAR_LOG": str(minted_log),
+                "FIXTURE_CLEANUP_PHASE": str(phase_file),
                 "TMPDIR": str(unrelated),
                 "UNRELATED": str(unrelated),
                 "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "fixture-only",
@@ -2037,6 +2125,8 @@ class DriverCleanup(unittest.TestCase):
                 stderr=subprocess.PIPE,
                 start_new_session=True,
             )
+            cancelled_at = None
+            failure_report = None
             try:
                 if mode in (
                     "term",
@@ -2055,6 +2145,7 @@ class DriverCleanup(unittest.TestCase):
                     self.assertTrue(
                         ready.exists(), "real finite child must reach interrupted stage"
                     )
+                    cancelled_at = time.monotonic()
                     os.kill(
                         child.pid,
                         signal.SIGINT
@@ -2063,11 +2154,100 @@ class DriverCleanup(unittest.TestCase):
                     ) if mode.endswith("-shell") else os.killpg(
                         child.pid, signal.SIGTERM
                     )
-                stdout, stderr = child.communicate(timeout=4)
+                if cancelled_at is not None:
+                    rows = [json.loads(line) for line in log.read_text().splitlines()]
+                    groups = {row["pgrp"] for row in rows}
+                    deadline = cancelled_at + 4
+                    while True:
+                        live = []
+                        for row in rows:
+                            state = fixture_birth({"pid": row["pid"]})
+                            if state and state[0] == row["birth"] and state[1] != "Z":
+                                live.append(row["pid"])
+                        if not live:
+                            for task in Path("/proc").iterdir():
+                                if task.name.isdecimal():
+                                    state = fixture_process_fields(int(task.name))
+                                    if (
+                                        state
+                                        and int(state[2]) in groups
+                                        and state[0] != "Z"
+                                    ):
+                                        live.append(int(task.name))
+                        now = time.monotonic()
+                        if not live or now >= deadline:
+                            break
+                        time.sleep(0.005)
+                    self.assertTrue(
+                        not live and now <= deadline,
+                        "cancellation payload fence exceeded: " + json.dumps(live),
+                    )
+                # Each finite stub retains a four-second live-payload fence.
+                # Multiple interpreter invocations and later filesystem teardown
+                # are separate phases, not a single four-second budget.
+                phase_deadline = time.monotonic() + 30
+                while not phase_file.exists() and child.poll() is None:
+                    now = time.monotonic()
+                    lines = (
+                        log.read_text().splitlines(keepends=True)
+                        if log.exists()
+                        else []
+                    )
+                    for line in lines:
+                        if not line.endswith("\n"):
+                            continue
+                        row = json.loads(line)
+                        state = fixture_birth({"pid": row["pid"]})
+                        if state and state[0] == row["birth"] and state[1] != "Z":
+                            self.assertLess(
+                                time.clock_gettime(time.CLOCK_BOOTTIME)
+                                - int(row["birth"]) / os.sysconf("SC_CLK_TCK"),
+                                4,
+                                "finite payload exceeded four seconds: "
+                                + json.dumps(row),
+                            )
+                    self.assertLess(
+                        now,
+                        phase_deadline,
+                        "finite driver phases did not reach cleanup",
+                    )
+                    time.sleep(0.005)
+                # Actual cleanup's existing group-drain2s + rm10s/kill-after2s.
+                stdout, stderr = child.communicate(timeout=15)
+            except (subprocess.TimeoutExpired, AssertionError) as failure:
+                states = []
+                for row in (
+                    [json.loads(line) for line in log.read_text().splitlines()]
+                    if log.exists()
+                    else []
+                ):
+                    fields = fixture_process_fields(row["pid"])
+                    states.append(
+                        {
+                            "stage": row["stage"],
+                            "pid": row["pid"],
+                            "expected_birth": row["birth"],
+                            "state": fields[0] if fields else "gone",
+                            "birth": fields[19] if fields else None,
+                        }
+                    )
+                failure_report = json.dumps(
+                    {
+                        "cleanup_entered": phase_file.exists(),
+                        "owned_phases": states,
+                    }
+                )
+                raise AssertionError(failure_report) from failure
             finally:
                 if child.poll() is None:
                     os.killpg(child.pid, signal.SIGKILL)
-                    child.communicate()
+                    try:
+                        child.communicate(timeout=5)
+                    except subprocess.TimeoutExpired as secondary:
+                        raise AssertionError(
+                            "fixture secondary teardown exceeded bound: "
+                            + str(failure_report)
+                        ) from secondary
             rows = (
                 [json.loads(line) for line in log.read_text().splitlines()]
                 if log.exists()
@@ -2392,7 +2572,9 @@ if os.environ['STUBBORN']=='1':
    fd=os.open('/dev/null',os.O_WRONLY);os.dup2(fd,1);os.dup2(fd,2);os.close(fd)
   with (root/'grandchild-held-file').open('w') as held:
    held.write('fixture');held.flush()
-   (base/'grandchild.json').write_text(json.dumps(metadata()))
+   identity=metadata()
+   (base/'grandchild.identity').write_text(str(identity['pid'])+' '+identity['fixture_birth']+'\n')
+   (base/'grandchild.json').write_text(json.dumps(identity))
    time.sleep(20)
   os._exit(0)
  while not (base/'grandchild.json').exists():time.sleep(.005)
@@ -2402,29 +2584,146 @@ if os.environ.get('LEAK_SUCCESS')=='1':
  sys.exit(0)
 time.sleep(20)
 """
-DRIVER_REMOVER = r"""from pathlib import Path
-import json,os,sys
-base=Path(os.environ['FIXTURE_PARENT']);p=base/'grandchild.json';live=False
-if p.exists():
- old=json.loads(p.read_text());s=Path('/proc')/str(old['pid'])/'stat'
- if s.exists():
-  raw=s.read_text().rsplit(') ',1)[1].split();live=raw[19]==old['fixture_birth'] and raw[0]!='Z'
-(base/'removal-witness.json').write_text(json.dumps({'grandchild_live_before_rm':live}))
-os.execv('/usr/bin/rm',['/usr/bin/rm',*sys.argv[1:]])
+DRIVER_REMOVER = r"""set -euo pipefail
+base="${FIXTURE_PARENT:?}"
+live=false
+if [[ -f "$base/grandchild.identity" ]]; then
+    read -r child_pid child_birth < "$base/grandchild.identity"
+    [[ "$child_pid" =~ ^[0-9]+$ && "$child_birth" =~ ^[0-9]+$ ]] || exit 92
+    task="/proc/$child_pid/stat"
+    if [[ -e "$task" ]]; then
+        if IFS= read -r row < "$task"; then
+            row="${row##*) }"
+            read -r -a fields <<< "$row"
+            [[ "${#fields[@]}" -ge 20 ]] || exit 92
+            if [[ "${fields[19]}" == "$child_birth" && "${fields[0]}" != Z ]]; then
+                live=true
+            fi
+        elif [[ -e "$task" ]]; then
+            # Unknown/read-denied state must never become a false death witness.
+            exit 93
+        fi
+    fi
+fi
+printf '{"grandchild_live_before_rm":%s}\n' "$live" > "$base/removal-witness.json"
+exec /usr/bin/rm "$@"
 """
 
 
-def fixture_birth(metadata):
+def fixture_fields_from_stream(stream):
+    """A proc file may vanish after open; ESRCH and ENOENT both mean gone."""
     try:
-        raw = (
-            (Path("/proc") / str(metadata["pid"]) / "stat")
-            .read_text()
-            .rsplit(") ", 1)[1]
-            .split()
-        )
-    except FileNotFoundError:
+        return stream.read().rsplit(") ", 1)[1].split()
+    except (FileNotFoundError, ProcessLookupError):
         return None
-    return raw[19], raw[0]
+
+
+def fixture_process_fields(pid):
+    try:
+        with (Path("/proc") / str(pid) / "stat").open() as stream:
+            return fixture_fields_from_stream(stream)
+    except (FileNotFoundError, ProcessLookupError):
+        return None
+
+
+def fixture_birth(metadata):
+    fields = fixture_process_fields(metadata["pid"])
+    return (fields[19], fields[0]) if fields is not None else None
+
+
+class OwnedProcessObservation(unittest.TestCase):
+    def test_finite_stubs_skip_real_operator_site_startup(self):
+        # Arrange: an actual hostile startup module, never a patched import.
+        with tempfile.TemporaryDirectory(
+            prefix="writer-stub-startup-", dir="/tmp"
+        ) as directory:
+            root = Path(directory)
+            marker = root / "site-ran"
+            (root / "sitecustomize.py").write_text(
+                "from pathlib import Path\nPath("
+                + repr(str(marker))
+                + ").write_text('ran')\n"
+            )
+            stub = root / "python"
+            stub.write_text("#!" + DRIVER_PYTHON + " -IS\n" + DRIVER_STUB)
+            stub.chmod(0o700)
+            log = root / "events"
+            environment = {
+                "PATH": "/usr/bin:/bin",
+                "TMPDIR": str(root),
+                "PYTHONPATH": str(root),
+                "FIXTURE_LOG": str(log),
+            }
+            observed = []
+            # Act: the old interpreter path loads site; the actual shebang skips it.
+            for command in ([DRIVER_PYTHON, str(stub)], [str(stub)]):
+                subprocess.run(command, env=environment, check=True, timeout=5)
+                event = json.loads(log.read_text().splitlines()[-1])
+                observed.append((event["isolated"], event["no_site"], marker.exists()))
+                marker.unlink(missing_ok=True)
+            # Assert
+            assert observed == [(0, 0, True), (1, 1, False)]
+
+    def test_native_recorder_observes_live_wrong_birth_and_gone_children(self):
+        # Arrange: real proc state and real rm --version; no filesystem remover stub.
+        with tempfile.TemporaryDirectory(
+            prefix="native-proc-recorder-", dir="/tmp"
+        ) as directory:
+            root = Path(directory)
+            recorder = root / "recorder.sh"
+            recorder.write_text(DRIVER_REMOVER)
+            child = subprocess.Popen(["/usr/bin/sleep", "20"], start_new_session=True)
+            try:
+                birth = fixture_birth({"pid": child.pid})[0]
+                identity = root / "grandchild.identity"
+                environment = {"PATH": "/usr/bin:/bin", "FIXTURE_PARENT": str(root)}
+                values, statuses = [], []
+                # Act: the same owned task is live, has a wrong identity, then is gone.
+                for expected_birth, terminate in (
+                    (birth, False),
+                    (str(int(birth) + 1), False),
+                    (birth, True),
+                ):
+                    identity.write_text(f"{child.pid} {expected_birth}\n")
+                    if terminate:
+                        child.terminate()
+                        child.wait(timeout=3)
+                    result = subprocess.run(
+                        ["/bin/bash", str(recorder), "--version"],
+                        env=environment,
+                        capture_output=True,
+                        text=True,
+                        timeout=3,
+                    )
+                    statuses.append(result.returncode)
+                    values.append(
+                        json.loads((root / "removal-witness.json").read_text())[
+                            "grandchild_live_before_rm"
+                        ]
+                    )
+                # Assert
+                assert (statuses, values) == ([0, 0, 0], [True, False, False])
+            finally:
+                if child.poll() is None:
+                    child.kill()
+                    child.wait(timeout=3)
+
+    def test_reaped_task_proc_handle_is_gone_without_killing_the_observer(self):
+        # Arrange: use the actual kernel proc descriptor, not a mocked errno.
+        child = subprocess.Popen(["/usr/bin/sleep", "20"], start_new_session=True)
+        try:
+            alive = fixture_birth({"pid": child.pid})
+            with (Path("/proc") / str(child.pid) / "stat").open() as stream:
+                # Act: reap after opening; Linux reports ESRCH when this fd reads.
+                child.terminate()
+                child.wait(timeout=3)
+                gone = fixture_fields_from_stream(stream)
+            # Assert
+            assert (alive is not None, gone) == (True, None)
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.wait(timeout=3)
 
 
 def fixture_reap(metadata):
@@ -2432,6 +2731,17 @@ def fixture_reap(metadata):
         os.waitpid(metadata["pid"], os.WNOHANG)
     except ChildProcessError:
         pass
+
+
+def signal_fixture_parent():
+    """Keep timing-sensitive helpers off a different CI workspace filesystem.
+
+    A SIF driver's inherited private /tmp parent stays in use, preserving its
+    outer cleanup containment. Ordinary runner scratch may be another device.
+    """
+    local = Path("/tmp")
+    inherited = Path(os.environ.get("TMPDIR", "/tmp"))
+    return inherited if inherited.stat().st_dev == local.stat().st_dev else local
 
 
 class ShellCancellation(unittest.TestCase):
@@ -2452,21 +2762,64 @@ class ShellCancellation(unittest.TestCase):
         if cls._libc.prctl(36, cls._previous_subreaper, 0, 0, 0) != 0:
             raise RuntimeError("fixture subreaper state could not be restored")
 
-    def exercise(self, name, signum, stubborn):
+    def exercise(
+        self,
+        name,
+        signum,
+        stubborn,
+        admission_phase=None,
+        hostile_site=False,
+        hold_cleanup=False,
+    ):
         source = (DRIVER_SOURCE / name).read_text()
         start = source.index("# BEGIN owned temporary-root lifecycle")
         end = source.index("driver_body() {", start)
         # Use the entire actual lifecycle plus allocation; only rm is instrumented.
         lifecycle = source[start:end]
         with tempfile.TemporaryDirectory(
-            prefix="shell-signal-fixture-", dir=os.environ.get("TMPDIR")
+            prefix="shell-signal-fixture-", dir=signal_fixture_parent()
         ) as directory:
             fixture = Path(directory)
             child_script, remover = fixture / "finite-child.py", fixture / "remover"
             child_script.write_text(DRIVER_CHILD)
-            remover.write_text("#!" + DRIVER_PYTHON + "\n" + DRIVER_REMOVER)
+            remover_source = DRIVER_REMOVER
+            if hold_cleanup:
+                remover_source = remover_source.replace(
+                    'exec /usr/bin/rm "$@"',
+                    'printf ready > "$base/cleanup-open"\n'
+                    'while [[ ! -f "$base/cleanup-release" ]]; do sleep .005; done\n'
+                    'exec /usr/bin/rm "$@"',
+                )
+            remover.write_text("#!/bin/bash\n" + remover_source)
             remover.chmod(0o700)
-            lifecycle = lifecycle.replace("/usr/bin/rm ", str(remover) + " ")
+            lifecycle = lifecycle.replace(
+                "/usr/bin/rm ",
+                "/bin/bash " + shlex.quote(str(remover)) + " ",
+            )
+            if admission_phase is not None:
+                barrier = (
+                    '    printf ready > "$FIXTURE_PARENT/owner-admission-open"\n'
+                    '    while [[ ! -f "$FIXTURE_PARENT/owner-admission-release" ]]; do sleep .005; done\n'
+                )
+                if admission_phase == "before-pid":
+                    marker = "    OWNED_CHILD_PID=$!\n"
+                    replacement = barrier + marker
+                elif admission_phase == "before-birth":
+                    marker = '    OWNED_CHILD_BIRTH="$(owned_birth "$OWNED_CHILD_PID" 2>/dev/null || true)"\n'
+                    replacement = barrier + marker
+                elif admission_phase == "during-birth":
+                    marker = "owned_birth() {\n"
+                    replacement = (
+                        marker
+                        + '    if [[ ! -f "$FIXTURE_PARENT/owner-admission-open" ]]; then\n'
+                        + barrier
+                        + "    fi\n"
+                    )
+                else:
+                    raise AssertionError("Unknown admission barrier")
+                self.assertEqual(lifecycle.count(marker), 1)
+                lifecycle = lifecycle.replace(marker, replacement, 1)
+
             script = fixture / "driver.sh"
             script.write_text(
                 'set -euo pipefail\nSCRATCH_PREFIX="/tmp/ci-scitex_writer-7000002-1-3.12-"\n'
@@ -2482,6 +2835,16 @@ class ShellCancellation(unittest.TestCase):
                 "FIXTURE_PYTHON": DRIVER_PYTHON,
                 "STUBBORN": "1" if stubborn else "0",
             }
+            if hostile_site:
+                external_site = fixture / "external-site"
+                external_site.mkdir()
+                (external_site / "sitecustomize.py").write_text(
+                    "from pathlib import Path\nimport os\n"
+                    "Path(os.environ['SITE_WITNESS']).write_text('unexpected startup')\n"
+                    "raise SystemExit(97)\n"
+                )
+                env["PYTHONPATH"] = str(external_site)
+                env["SITE_WITNESS"] = str(fixture / "external-site-ran")
             if signum is None:
                 env["LEAK_SUCCESS"] = "1"
             unrelated = subprocess.Popen(
@@ -2543,18 +2906,19 @@ class ShellCancellation(unittest.TestCase):
                         )
                         for raw_pid in children.read_text().split():
                             try:
-                                state = (
-                                    (Path("/proc") / raw_pid / "stat")
-                                    .read_text()
-                                    .rsplit(") ", 1)[1]
-                                    .split()
-                                )
+                                state = fixture_process_fields(int(raw_pid))
+                                if state is None:
+                                    continue
                                 if (
                                     int(state[1]) == os.getpid()
                                     and int(state[2]) == body_pid
                                 ):
                                     os.waitpid(int(raw_pid), os.WNOHANG)
-                            except (FileNotFoundError, ChildProcessError):
+                            except (
+                                FileNotFoundError,
+                                ProcessLookupError,
+                                ChildProcessError,
+                            ):
                                 pass
                         time.sleep(0.005)
 
@@ -2564,11 +2928,107 @@ class ShellCancellation(unittest.TestCase):
                 if signum is None:
                     (fixture / "release-normal").write_text("release")
                 else:
+                    if admission_phase is not None:
+                        deadline = time.monotonic() + 3
+                        while (
+                            not (fixture / "owner-admission-open").exists()
+                            and owner.poll() is None
+                            and time.monotonic() < deadline
+                        ):
+                            time.sleep(0.005)
+                        self.assertTrue((fixture / "owner-admission-open").exists())
+                    signalled_at = time.monotonic()
                     os.kill(owner.pid, signum)
+                    if admission_phase is not None:
+                        (fixture / "owner-admission-release").write_text("release")
+                extinction_elapsed = None
+                if signum is not None:
+                    # The four-second fence concerns actual owned payloads, not
+                    # subsequent filesystem work in the independently bounded rm.
+                    deadline = signalled_at + 4
+                    while True:
+                        live = []
+                        for item in [body, *records]:
+                            state = fixture_birth(item)
+                            if (
+                                state
+                                and state[0] == item["fixture_birth"]
+                                and state[1] != "Z"
+                            ):
+                                live.append(item["pid"])
+                        if not live:
+                            # Include actual group descendants not named by the
+                            # fixture (e.g. the driver's cancellation-trap sleep).
+                            for task in Path("/proc").iterdir():
+                                if task.name.isdecimal():
+                                    state = fixture_process_fields(int(task.name))
+                                    if (
+                                        state
+                                        and int(state[2]) == body_pid
+                                        and state[0] != "Z"
+                                    ):
+                                        live.append(int(task.name))
+                        if not live or time.monotonic() >= deadline:
+                            break
+                        time.sleep(0.005)
+                    extinction_elapsed = time.monotonic() - signalled_at
+                    if live or extinction_elapsed > 4:
+                        stalled = {
+                            "phase": "payload-extinction",
+                            "live_owned_pids": live,
+                            "elapsed": extinction_elapsed,
+                        }
+                    if hold_cleanup:
+                        cleanup_deadline = time.monotonic() + 2
+                        while (
+                            not (fixture / "cleanup-open").exists()
+                            and time.monotonic() < cleanup_deadline
+                        ):
+                            time.sleep(0.005)
+                        self.assertTrue((fixture / "cleanup-open").exists())
+                        self.assertTrue(
+                            root.exists(), "held cleanup retains the actual scratch"
+                        )
+                        self.assertIsNone(unrelated.poll())
+                        while time.monotonic() - signalled_at < 4.1:
+                            time.sleep(0.005)
+                        (fixture / "cleanup-release").write_text("release")
                 try:
-                    stdout, stderr = owner.communicate(timeout=4)
+                    # Actual driver cleanup: group-drain 2s + rm 10s/kill-after2s.
+                    # Production bounds stay unchanged; payload death is checked above.
+                    stdout, stderr = owner.communicate(timeout=15 if signum else 4)
                 except subprocess.TimeoutExpired:
-                    stalled = True
+                    # Record only owned fixture identities, before forced fixture
+                    # cleanup can hide a live holder or an already-gone leader.
+                    observed = []
+                    owned = {owner.pid, body_pid, *(item["pid"] for item in records)}
+                    for _ in range(2):
+                        for pid in tuple(owned):
+                            try:
+                                children = Path(f"/proc/{pid}/task/{pid}/children")
+                                owned.update(map(int, children.read_text().split()))
+                            except (FileNotFoundError, ProcessLookupError):
+                                pass
+                    for pid in sorted(owned):
+                        state = fixture_process_fields(pid)
+                        observed.append(
+                            {
+                                "pid": pid,
+                                "state": state[0] if state else "gone",
+                                "ppid": state[1] if state else None,
+                                "pgrp": state[2] if state else None,
+                                "birth": state[19] if state else None,
+                            }
+                        )
+                    stalled = {
+                        "phase": "filesystem-teardown",
+                        "prior_extinction_failure": stalled or None,
+                        "owner_status": owner.poll(),
+                        "elapsed": round(time.monotonic() - started, 4),
+                        "root_exists": root.exists(),
+                        "removal_witness": (fixture / "removal-witness.json").exists(),
+                        "owned_processes": observed,
+                    }
                     for item in records:
                         observed = fixture_birth(item)
                         if (
@@ -2577,7 +3037,12 @@ class ShellCancellation(unittest.TestCase):
                             and observed[1] != "Z"
                         ):
                             os.kill(item["pid"], signal.SIGKILL)
-                    stdout, stderr = owner.communicate(timeout=2)
+                    try:
+                        stdout, stderr = owner.communicate(timeout=2)
+                    except subprocess.TimeoutExpired as exc:
+                        raise AssertionError(
+                            "fixture teardown exceeded bound: " + json.dumps(stalled)
+                        ) from exc
                 deadline = time.monotonic() + 1
                 while time.monotonic() < deadline:
                     for item in records:
@@ -2614,11 +3079,13 @@ class ShellCancellation(unittest.TestCase):
                         }
                     )
                     return
-                witness = json.loads((fixture / "removal-witness.json").read_text())
                 self.assertFalse(
                     stalled,
-                    "stubborn descendant kept fixture pipes alive after cancellation",
+                    "owned cancellation exceeded its deadline: " + json.dumps(stalled),
                 )
+                witness = json.loads((fixture / "removal-witness.json").read_text())
+                if hostile_site:
+                    self.assertFalse((fixture / "external-site-ran").exists())
                 self.assertEqual(
                     owner.returncode,
                     130 if signum == signal.SIGINT else 143,
@@ -2650,6 +3117,8 @@ class ShellCancellation(unittest.TestCase):
                         "stubborn_grandchild": stubborn,
                         "exit": owner.returncode,
                         "elapsed_s": round(time.monotonic() - started, 4),
+                        "payload_extinction_s": round(extinction_elapsed, 4),
+                        "filesystem_cleanup_held": hold_cleanup,
                         "body": body,
                         "fixture_children": records,
                         "all_reaped": True,
@@ -2683,6 +3152,18 @@ class ShellCancellation(unittest.TestCase):
                 unrelated.terminate()
                 unrelated.wait(timeout=5)
 
+    def test_payload_extinction_precedes_separately_held_filesystem_cleanup(self):
+        # Arrange: exercise the real driver with its scratch retained by a barrier.
+        driver = "run-in-sif.sh"
+        # Act
+        self.exercise(driver, signal.SIGTERM, True, hold_cleanup=True)
+        # Assert
+        assert (
+            self.receipts[-1]["filesystem_cleanup_held"],
+            self.receipts[-1]["payload_extinction_s"] < 4,
+            self.receipts[-1]["elapsed_s"] >= 4,
+        ) == (True, True, True)
+
     def test_run_live_group_refuses_rm(self):
         # Arrange
         driver = "run-in-sif.sh"
@@ -2698,6 +3179,26 @@ class ShellCancellation(unittest.TestCase):
         self.exercise(driver, signal.SIGTERM, False)
         # Assert
         assert self.receipts[-1]["driver"] == driver
+
+    def test_control_helpers_ignore_external_python_startup_hooks(self):
+        # Arrange: a real sitecustomize hook would abort the recorder at startup.
+        driver = "run-in-sif.sh"
+        # Act: actual process cleanup must remain a stdlib-only observation.
+        self.exercise(driver, signal.SIGTERM, True, hostile_site=True)
+        # Assert
+        assert self.receipts[-1]["driver"] == driver
+
+    def test_cancellation_waits_for_complete_child_ownership_admission(self):
+        # Arrange: preempt the actual lifecycle at each ownership admission edge.
+        for driver in ("run-in-sif.sh", "build-in-sif.sh", "publish-in-sif.sh"):
+            for phase in ("before-pid", "before-birth", "during-birth"):
+                for signum in (signal.SIGINT, signal.SIGTERM):
+                    with self.subTest(driver=driver, phase=phase, signal=signum):
+                        # Act: signal only the owner, with a real stubborn descendant.
+                        self.exercise(driver, signum, True, admission_phase=phase)
+                        # Assert: all existing birth/group/cleanup/unrelated-process
+                        # assertions run; the cancellation deadline is unchanged.
+                        assert self.receipts[-1]["driver"] == driver
 
     def test_run_term_grandchild(self):
         # Arrange

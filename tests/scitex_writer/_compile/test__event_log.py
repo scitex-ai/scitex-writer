@@ -186,7 +186,6 @@ class TestLocation:
 # Through the runner (Writer-class path): <workspace>/scripts/shell/compile_*.sh
 # ---------------------------------------------------------------------------
 
-pytest.importorskip("git")
 from scitex_writer._compile._runner import run_compile  # noqa: E402
 
 

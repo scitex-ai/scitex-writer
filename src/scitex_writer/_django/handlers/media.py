@@ -11,7 +11,7 @@ same list to populate the insert-figure / insert-table panels.
 from __future__ import annotations
 
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import urlencode
 
 from django.http import FileResponse, Http404, JsonResponse
 
@@ -21,7 +21,14 @@ from scitex_writer._ports.thumbnails import (
 )
 
 
-def _list_media(project_dir: Path, doc_type: str, kind: str) -> list[dict]:
+def _list_media(
+    project_dir: Path,
+    doc_type: str,
+    kind: str,
+    *,
+    thumbnail_base: str = "/api/thumbnail",
+    selector: dict[str, str] | None = None,
+) -> list[dict]:
     """kind: 'figures' | 'tables'."""
     doc_map = {
         "manuscript": "01_manuscript",
@@ -41,7 +48,8 @@ def _list_media(project_dir: Path, doc_type: str, kind: str) -> list[dict]:
         if media is not None:
             try:
                 media_rel = media.resolve().relative_to(project_dir.resolve())
-                thumb_url = f"/api/thumbnail?kind={kind}&path={quote(str(media_rel))}"
+                query = {"kind": kind, "path": str(media_rel), **(selector or {})}
+                thumb_url = thumbnail_base + "?" + urlencode(query)
             except ValueError:
                 thumb_url = None
         entries.append(
@@ -70,12 +78,31 @@ def _extract_label(tex_path: Path) -> str | None:
     return match.group(1) if match else None
 
 
+def _thumbnail_context(request, project) -> dict:
+    """Use this request's mount and already-authorized project selection."""
+    access = getattr(request, "writer_project_access", None)
+    selector = (
+        {"project": str(access.id)}
+        if access is not None
+        else {"working_dir": str(project.project_dir)}
+    )
+    return {
+        "thumbnail_base": request.path.rstrip("/").rsplit("/", 1)[0] + "/thumbnail",
+        "selector": selector,
+    }
+
+
 def handle_figures(request, project):
     doc_type = request.GET.get("doc_type", "manuscript")
     return JsonResponse(
         {
             "doc_type": doc_type,
-            "figures": _list_media(project.project_dir, doc_type, "figures"),
+            "figures": _list_media(
+                project.project_dir,
+                doc_type,
+                "figures",
+                **_thumbnail_context(request, project),
+            ),
         }
     )
 
@@ -85,7 +112,12 @@ def handle_tables(request, project):
     return JsonResponse(
         {
             "doc_type": doc_type,
-            "tables": _list_media(project.project_dir, doc_type, "tables"),
+            "tables": _list_media(
+                project.project_dir,
+                doc_type,
+                "tables",
+                **_thumbnail_context(request, project),
+            ),
         }
     )
 

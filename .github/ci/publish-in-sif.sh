@@ -16,6 +16,9 @@ OWNED_TMP_ID=""
 OWNED_CHILD_PID=""
 OWNED_CHILD_GROUP=""
 OWNED_CHILD_BIRTH=""
+OWNED_CHILD_STARTING=0
+OWNED_PENDING_SIGNAL=""
+OWNED_PENDING_STATUS=""
 
 owned_birth() {
     local line
@@ -60,6 +63,16 @@ cleanup_owned_tmp() {
 
 terminate_owned_child() {
     local signal="$1" status="$2" watchdog=""
+    # A child may run before $! and its kernel birth token are registered.
+    # Retain the first cancellation until admission completes; do not exit
+    # with an untracked live group or signal a PID without its birth token.
+    if [[ "$OWNED_CHILD_STARTING" == 1 ]]; then
+        if [[ -z "$OWNED_PENDING_SIGNAL" ]]; then
+            OWNED_PENDING_SIGNAL="$signal"
+            OWNED_PENDING_STATUS="$status"
+        fi
+        return 0
+    fi
     trap '' INT TERM
     if [[ -n "$OWNED_CHILD_PID" && "$OWNED_CHILD_BIRTH" =~ ^[0-9]+$ ]] \
         && [[ "$(owned_birth "$OWNED_CHILD_PID" 2>/dev/null || true)" == "$OWNED_CHILD_BIRTH" ]]; then
@@ -86,6 +99,7 @@ trap 'terminate_owned_child TERM 143' TERM
 
 run_owned_body() {
     local status=0
+    OWNED_CHILD_STARTING=1
     # Bash job control creates a group for exactly this owned body, so a
     # termination targets its descendants rather than the runner's group.
     set -m
@@ -100,6 +114,10 @@ run_owned_body() {
     OWNED_CHILD_PID=$!
     OWNED_CHILD_GROUP="$OWNED_CHILD_PID"
     OWNED_CHILD_BIRTH="$(owned_birth "$OWNED_CHILD_PID" 2>/dev/null || true)"
+    OWNED_CHILD_STARTING=0
+    if [[ -n "$OWNED_PENDING_SIGNAL" ]]; then
+        terminate_owned_child "$OWNED_PENDING_SIGNAL" "$OWNED_PENDING_STATUS"
+    fi
     wait "$OWNED_CHILD_PID" || status=$?
     OWNED_CHILD_PID=""
     return "$status"

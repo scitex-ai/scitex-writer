@@ -88,12 +88,13 @@ def test_insert_bar_active_has_no_fill_background():
 
 
 def test_insert_bar_active_is_a_vertical_bar():
-    # Arrange (stylesheet on disk): operator 2026-10-23 — the selected
-    # rail button carries a left-edge vertical bar, not an underline.
+    # Arrange (stylesheet on disk): operator 2026-10-24 — the selected
+    # rail button carries a RIGHT-edge vertical bar (facing the switched
+    # pane), not an underline and not the old left edge.
     block = _rule_block(".insert-bar-btn.active")
     # Act
     # Assert
-    assert ("border-left-color: var(--accent);" in block) and (
+    assert ("border-right-color: var(--accent);" in block) and (
         "border-bottom-color" not in block
     )
 

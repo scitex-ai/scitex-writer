@@ -12,6 +12,7 @@ import {
   renderDagFor,
 } from "./claims-list";
 import { PDFViewer } from "./pdf-viewer";
+import { wireHostThemeToggle } from "./host-theme-fallback";
 import { mountPdfMenu } from "./pdf-menu";
 
 declare global {
@@ -29,6 +30,9 @@ declare global {
 async function bootstrap(): Promise<void> {
   const root = document.querySelector<HTMLElement>(".writer-app--viewer");
   if (!root) return;
+
+  // Same dead-row fallback as the editor (hub header is injected here too).
+  wireHostThemeToggle();
 
   window.mermaid?.initialize({ startOnLoad: false, theme: "dark" });
 

@@ -6,15 +6,18 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.cjs"
   },
   "dependencies": {
     "monaco-editor": "^0.45.0",
     "pdfjs-dist": "^4.10.38",
-    "@scitex/sdk": "file:../../../../../scitex-sdk/src/scitex_sdk"
+    "@scitex/sdk": "file:../../../../../scitex-sdk/src/scitex_sdk",
+    "@scitex/live-paper": "file:../../../../../scitex-live-paper/src/scitex_live_paper"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
-    "vite": "^5.4.0"
+    "vite": "^5.4.0",
+    "jsdom": "^26.1.0"
   }
 }

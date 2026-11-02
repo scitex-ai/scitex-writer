@@ -10,10 +10,11 @@ import {
   waitForMonaco,
 } from "@scitex/sdk/ui/monaco-editor";
 
-import { PROJECT_DIR, getFile, saveFile, projectInfo, resourceUrl } from "./api";
+import { PROJECT_DIR, getFile, saveFile, projectInfo } from "./api";
 import type { SectionEntry } from "./api";
 import { SectionTabs, humanize } from "./sections";
 import { countWords, mountToolbar } from "./toolbar";
+import { wireHostThemeToggle } from "./host-theme-fallback";
 import { MobileLayout, isMobileViewport } from "./mobile";
 import { PDFViewer } from "./pdf-viewer";
 import { type AnnotationUIHandle, mountAnnotationUI } from "./annotation-ui";
@@ -44,6 +45,11 @@ async function bootstrap(): Promise<void> {
     documentType.title = controlsTranslate("documentType");
     documentType.setAttribute("aria-label", controlsTranslate("documentType"));
   }
+
+  // Host-injected theme row (hub global header on hub-served leaf pages):
+  // wire it when the host bundle that owns it is absent, otherwise the row
+  // is a dead button. No-op on standalone deployments (no such element).
+  wireHostThemeToggle();
 
   // Monaco needs LaTeX registered before we create any editor
   const monaco = await waitForMonaco();
@@ -177,6 +183,7 @@ async function bootstrap(): Promise<void> {
       )
         return;
       event.preventDefault();
+      event.stopPropagation();
       const step = event.deltaY < 0 ? 1 : -1;
       const next = Math.min(
         fontSizeEl.options.length - 1,
@@ -187,7 +194,9 @@ async function bootstrap(): Promise<void> {
         fontSizeEl.dispatchEvent(new Event("change"));
       }
     },
-    { passive: false },
+    // Monaco consumes bubbling wheel events; capture the explicit font
+    // gesture before its scroll layer so the select and editor stay in sync.
+    { passive: false, capture: true },
   );
 
   // Toolbar wiring
@@ -229,6 +238,10 @@ async function bootstrap(): Promise<void> {
       toolbar: annotToolbar,
       panel: annotPanel,
       controller: pdf,
+      menu: {
+        button: root.querySelector<HTMLButtonElement>("#btn-pdf-menu")!,
+        list: root.querySelector<HTMLElement>("#pdf-menu-list")!,
+      },
     });
   }
 
@@ -268,6 +281,7 @@ async function bootstrap(): Promise<void> {
         modeButtons: Array.from(root.querySelectorAll<HTMLButtonElement>("[data-compile-mode]")),
         modeSelect: root.querySelector<HTMLSelectElement>("#compile-mode-select"),
         pdf,
+        getSection: () => currentPath ? { path: currentPath, content: editor.getValue() } : null,
         getDocType: () =>
           root.querySelector<HTMLSelectElement>("#doc-type-select")?.value ||
           "manuscript",
@@ -318,10 +332,11 @@ async function bootstrap(): Promise<void> {
         root.querySelector<HTMLSelectElement>("#doc-type-select")?.value ||
         "manuscript";
       const a = document.createElement("a");
-      a.href = resourceUrl(
-        `api/pdf?doc_type=${encodeURIComponent(docType)}&download=1&t=${Date.now()}`,
-      );
-      a.download = `${docType}.pdf`;
+      if (!pdf?.downloadUrl) return;
+      a.href = pdf.downloadUrl;
+      a.download = compile?.isSectionPreview
+        ? `${currentPath?.split("/").pop()?.replace(/\.tex$/, "") || "section"}.pdf`
+        : `${docType}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -330,7 +345,6 @@ async function bootstrap(): Promise<void> {
   const toolbar = mountToolbar(root, {
     onDocType: async (docType) => {
       await sections?.load(docType);
-      await pdf?.load(docType);
       insert?.invalidate(docType);
     },
     onFontSize: (size) => {
@@ -344,10 +358,7 @@ async function bootstrap(): Promise<void> {
   root
     .querySelector<HTMLElement>("#btn-refresh-pdf")
     ?.addEventListener("click", async () => {
-      const dt =
-        root.querySelector<HTMLSelectElement>("#doc-type-select")?.value ||
-        "manuscript";
-      await pdf?.load(dt);
+      await compile?.sectionChanged();
     });
 
   root
@@ -417,6 +428,11 @@ async function bootstrap(): Promise<void> {
       claimsLoaded = true;
       void claimsTab.render();
     }
+    // Operator 2026-10-24: close FIRST. InsertPanel.close() strips .active
+    // from every rail button, so running it after the toggles below wiped
+    // the PDF highlight (pdf/claims never looked selected). Closing before
+    // the toggles lets the .active assignment stick.
+    if (view === "pdf" || view === "claims") insert?.close();
     root
       ?.querySelectorAll<HTMLElement>(".preview-view")
       .forEach((v) =>
@@ -435,7 +451,6 @@ async function bootstrap(): Promise<void> {
       .forEach((b) =>
         b.classList.toggle("active", (b as HTMLElement).dataset.pane === view),
       );
-    if (view === "pdf" || view === "claims") insert?.close();
   }
   let insert: InsertPanel | null = null;
   if (insertBar && insertPanel) {
@@ -469,6 +484,7 @@ async function bootstrap(): Promise<void> {
           },
         });
     insert = panel;
+    showPreviewView("pdf");
   }
   root
     ?.querySelectorAll<HTMLElement>('.preview-tab[data-view="claims"]')
@@ -476,20 +492,35 @@ async function bootstrap(): Promise<void> {
       t.addEventListener("click", () => showPreviewView("claims")),
     );
 
-  // Citation drop: drag a card into the Monaco host → insert at drop position.
-  // Only accept our own custom MIME type so arbitrary text drops (e.g. a
-  // paragraph from another tab) don't go through this path.
-  const CITE_MIME = "application/x-scitex-cite";
+  // Insert drop: drag a card/item into the Monaco host → insert at drop
+  // position. Only accept our own custom MIME type so arbitrary text
+  // drops (e.g. a paragraph from another tab) don't go through this path.
+  // Cite cards carry \cite{...}; figure/table items carry \ref{...}.
+  const INSERT_MIME = "application/x-scitex-insert";
+  const CITE_MIME = "application/x-scitex-cite"; // legacy, kept reading
   host.addEventListener("dragover", (e) => {
-    if (e.dataTransfer?.types.includes(CITE_MIME)) {
+    if (
+      e.dataTransfer?.types.includes(INSERT_MIME) ||
+      e.dataTransfer?.types.includes(CITE_MIME)
+    ) {
       e.preventDefault();
       e.dataTransfer.dropEffect = "copy";
     }
   });
   host.addEventListener("drop", (e) => {
-    if (!e.dataTransfer?.types.includes(CITE_MIME)) return;
-    const payload = e.dataTransfer.getData(CITE_MIME);
-    if (!payload || !payload.startsWith("\\cite")) return;
+    const types = e.dataTransfer?.types ?? [];
+    const mime = types.includes(INSERT_MIME)
+      ? INSERT_MIME
+      : types.includes(CITE_MIME)
+        ? CITE_MIME
+        : null;
+    if (!mime) return;
+    const payload = e.dataTransfer!.getData(mime);
+    if (
+      !payload ||
+      !(payload.startsWith("\\cite") || payload.startsWith("\\ref"))
+    )
+      return;
     e.preventDefault();
     const mEditor = editor.getEditor();
     if (!mEditor) return;
@@ -513,6 +544,7 @@ async function bootstrap(): Promise<void> {
 
   // Declare state BEFORE any loadSection trigger (TDZ guard).
   let currentPath: string | null = null;
+  let sectionLoadSequence = 0;
   let saveTimer: number | null = null;
   let isLoadingFile = false;
 
@@ -580,7 +612,7 @@ async function bootstrap(): Promise<void> {
   const docSelect = root.querySelector<HTMLSelectElement>("#doc-type-select");
   if (docSelect) docSelect.value = initialDocType;
   await sections?.load(initialDocType);
-  await pdf?.load(initialDocType);
+  // The selected section loads its own isolated preview through loadSection.
   }
 
   /* Operator 2026-10-23: the Draft option names the open section
@@ -606,9 +638,19 @@ async function bootstrap(): Promise<void> {
   }
 
   async function loadSection(section: SectionEntry): Promise<void> {
+    const sequence = ++sectionLoadSequence;
+    if (saveTimer) {
+      window.clearTimeout(saveTimer);
+      saveTimer = null;
+      await flushSave();
+      if (sequence !== sectionLoadSequence) return;
+    }
+    currentPath = null;
+    compile?.sectionPending();
     updateCompileModeLabels(section);
     try {
       const file = await getFile(section.path);
+      if (sequence !== sectionLoadSequence) return;
       currentPath = section.path;
       isLoadingFile = true;
       try {
@@ -620,6 +662,7 @@ async function bootstrap(): Promise<void> {
       const currentFileEl = root?.querySelector<HTMLElement>("#current-file");
       if (currentFileEl) currentFileEl.textContent = file.name;
       toolbar.setSavedStatus("saved");
+      void compile?.sectionChanged();
     } catch (err) {
       console.error("[writer] loadSection failed", err);
       toolbar.setSavedStatus("error");
@@ -679,6 +722,7 @@ async function bootstrap(): Promise<void> {
   });
 
   async function flushSave(): Promise<void> {
+    saveTimer = null;
     if (!currentPath) return;
     try {
       await saveFile(currentPath, editor.getValue());

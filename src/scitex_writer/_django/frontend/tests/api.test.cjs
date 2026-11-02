@@ -107,38 +107,21 @@ test("PDF, DAG and downloads retain the declared custom prefix and canonical pro
 });
 
 
-// Real module source is transpiled; these fixtures bound host DOM/fetch only.
-// They do not establish browser focus, image decoding, live routes or producer provenance.
-const insertSource = fs.readFileSync(path.join(__dirname, "../src/insert-panel.ts"), "utf8");
-const insertCompiled = ts.transpileModule(insertSource, {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-}).outputText;
-
-function decodeHtmlAttribute(value) {
-  return value.replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
-}
-
-function classListFixture() {
-  const classes = new Set();
-  return {
-    add(value) { classes.add(value); },
-    remove(value) { classes.delete(value); },
-    toggle(value, enabled) { if (enabled) classes.add(value); else classes.delete(value); },
-  };
-}
+// Real DOM events and actual transitive TypeScript modules preserve the mounted
+// media contract without a fake InsertPanel, presence client or HTML parser.
+const { JSDOM } = require("jsdom");
 
 function insertClient(mode, kind) {
   const apiBase = "/science/custom/writer/v2/";
   const alphaDirectory = "/local/alpha manuscript & inputs";
   const betaDirectory = "/local/beta manuscript";
-  const root = { dataset: {
-    appMode: mode, apiBase, projectDir: alphaDirectory, projectId: "17",
-  } };
+  const dom = new JSDOM(`<div class="writer-app"></div><nav><button data-pane="fig"></button><button data-pane="table"></button></nav><section></section>`, { url: "http://testserver/" });
+  const document = dom.window.document;
+  const root = document.querySelector(".writer-app");
+  Object.assign(root.dataset, { appMode: mode, apiBase, projectDir: alphaDirectory, projectId: "17" });
   const requests = [];
   const insertions = [];
   const mediaPath = `01_manuscript/contents/${kind}/caption_and_media/01 result & proof.${kind === "figures" ? "png" : "csv"}`;
-  // This is the actual media.py wire schema; quote() preserves '/' separators.
   const encodedPath = mediaPath.split("/").map(encodeURIComponent).join("/");
   const label = kind === "figures" ? "fig:nonempty" : "tab:nonempty";
   const entry = {
@@ -148,75 +131,36 @@ function insertClient(mode, kind) {
     media_ext: kind === "figures" ? ".png" : ".csv",
     thumbnail_url: `/api/thumbnail?kind=${kind}&path=${encodedPath}`,
   };
-  const apiContext = {
-    exports: {}, URLSearchParams,
-    document: { querySelector(selector) {
-      if (selector === ".writer-app") return root;
-      return null;
-    } },
+  const globals = {
+    document, location: dom.window.location, URLSearchParams, URL,
+    setTimeout, clearTimeout, setInterval, clearInterval,
     async fetch(url, options) {
       requests.push({ url, options });
       const parsed = new URL(url, "http://testserver");
-      if (parsed.pathname !== `${apiBase}api/${kind}`) {
-        throw new Error(`Unexpected media-list URL: ${parsed.pathname}`);
-      }
-      return { ok: true, async json() {
-        return { doc_type: "manuscript", [kind]: [entry] };
-      } };
+      if (parsed.pathname !== `${apiBase}api/${kind}`) throw new Error(`Unexpected media-list URL: ${parsed.pathname}`);
+      return { ok: true, async json() { return { doc_type: "manuscript", [kind]: [entry] }; } };
     },
   };
-  vm.runInNewContext(compiled, apiContext);
-  const insertContext = {
-    exports: {},
-    require(name) {
-      if (name === "./api") return apiContext.exports;
-      if (name === "./citations-panel") return { CitationsPanel: class {
-        constructor() { throw new Error("CitationsPanel is outside this media control"); }
-      } };
-      throw new Error(`Unexpected InsertPanel dependency: ${name}`);
-    },
-  };
-  vm.runInNewContext(insertCompiled, insertContext);
-  const items = [];
-  let markup = "";
-  const panel = {
-    classList: classListFixture(),
-    get innerHTML() { return markup; },
-    set innerHTML(value) {
-      markup = value;
-      items.length = 0;
-      // Observe literal attributes emitted by the real renderList, not invented insert HTML.
-      const pattern = /<div class="insert-item[^"]*"\s+data-index="([^"]*)"\s+data-insert="([^"]*)">/g;
-      for (const match of value.matchAll(pattern)) {
-        const listeners = new Map();
-        items.push({
-          dataset: { index: match[1], insert: decodeHtmlAttribute(match[2]) },
-          addEventListener(type, listener) { listeners.set(type, listener); },
-          click() {
-            const listener = listeners.get("click");
-            if (!listener) throw new Error("Real media item has no click listener");
-            listener();
-          },
-        });
-      }
-    },
-    querySelectorAll(selector) {
-      if (selector !== ".insert-item") throw new Error(`Unexpected panel selector: ${selector}`);
-      return items;
-    },
-  };
-  const buttons = ["fig", "table"].map(pane => ({
-    dataset: { pane }, classList: classListFixture(), addEventListener() {},
-  }));
-  const bar = { querySelectorAll(selector) {
-    if (selector !== "[data-pane]") throw new Error(`Unexpected bar selector: ${selector}`);
-    return buttons;
-  } };
-  const controller = new insertContext.exports.InsertPanel({
-    bar, panel, getDocType: () => "manuscript",
+  const modules = new Map();
+  function load(name) {
+    if (!/^\.\/[\w-]+$/.test(name)) throw new Error(`Unexpected module: ${name}`);
+    if (modules.has(name)) return modules.get(name).exports;
+    const module = { exports: {} };
+    modules.set(name, module);
+    const source = fs.readFileSync(path.join(__dirname, "../src", `${name.slice(2)}.ts`), "utf8");
+    const compiled = ts.transpileModule(source, {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    }).outputText;
+    vm.runInNewContext(compiled, { ...globals, module, exports: module.exports, require: load });
+    return module.exports;
+  }
+  const panel = document.querySelector("section");
+  const { InsertPanel } = load("./insert-panel");
+  const controller = new InsertPanel({
+    bar: document.querySelector("nav"), panel, getDocType: () => "manuscript",
     insertAtCursor(snippet) { insertions.push(snippet); },
   });
-  return { root, requests, insertions, panel, items, controller, entry,
+  return { root, requests, insertions, panel, controller, entry, dom,
     apiBase, alphaDirectory, betaDirectory, mediaPath, encodedPath };
 }
 
@@ -235,10 +179,13 @@ for (const mode of ["hub", "standalone"]) {
       // Act: real public pane opening executes real renderFig/renderTable and renderList.
       fixture.controller.open(kind === "figures" ? "fig" : "table");
       await new Promise(resolve => setImmediate(resolve));
-      const image = fixture.panel.innerHTML.match(/<img class="insert-item-thumb" src="([^"]+)"/);
+      const image = fixture.panel.querySelector("img.insert-item-thumb");
       if (!image) throw new Error(`Real nonempty ${kind} render produced no thumbnail: ${fixture.panel.innerHTML}`);
-      const actualImage = decodeHtmlAttribute(image[1]);
-      fixture.items[0].click();
+      const actualImage = image.getAttribute("src");
+      const item = fixture.panel.querySelector(".insert-item");
+      item.click();
+      assert.deepEqual(fixture.insertions, [], "row clicks must preserve editor text");
+      item.querySelector(".insert-item-action").click();
       // Assert: rendered URL, list identity and actual registered insertion callback are observed together.
       assert.deepEqual({
         listUrls: fixture.requests.map(request => request.url),

@@ -5,6 +5,9 @@
 %% may set it read-only in the consumer workspace after vendoring).
 %% File: 00_shared/latex_styles/formatting.tex
 
+%% Keep the shared title available for delayed elsarticle page headers.
+\input{./00_shared/latex_styles/title_scope}
+
 %% --- Journal name header (show journal name as-is, without "Preprint submitted to" prefix) ---
 \makeatletter
 \def\ps@pprintTitle{%

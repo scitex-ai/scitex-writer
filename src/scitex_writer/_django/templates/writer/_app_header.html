@@ -1,4 +1,4 @@
-{% load static %}{% comment %}
+{% load static scitex_static %}{% comment %}
  Writer's leaf header — THE one app header: the shared AppHeader primitive
    (`data-stx-app-header` mount, scitex_sdk/ui/css/app/app-header.css linked
    below). The leaf owns only identity values (title + live version) and the
@@ -32,7 +32,7 @@
    The title is `SciTeX Writer` (manifest `label`), matching the Scholar /
    FigRecipe shape (`<title> + <version>`), never the bare `Writer`.
 {% endcomment %}
-<link rel="stylesheet" href="{% static 'scitex_sdk/ui/css/app/app-header.css' %}">
+<link rel="stylesheet" href="{% app_static 'scitex_sdk/ui/css/app/app-header.css' %}">
 {# Shared AppHeader primitive (data-stx-app-header mount) — replaces the #}
 {# hand-rolled row above. Same slots, same picker, same version; the #}
 {# wrapper keeps the `.writer-app-header` scope for leaf CSS hooks. #}
@@ -40,7 +40,7 @@
   <div data-stx-app-header
        data-app-title="{{ writer_label|default:'Writer' }}"
        {% if writer_version %}data-app-version="{{ writer_version }}"{% endif %}></div>
-  <script type="module" src="{% static 'scitex_sdk/ui/js/app/app-header.js' %}"></script>
+  <script type="module" src="{% app_static 'scitex_sdk/ui/js/app/app-header.js' %}"></script>
   {% if project_picker_available %}{% include "writer/_project_picker.html" %}{% endif %}
   <script type="module" src="{% static 'writer/js/header-picker.js' %}"></script>
 </div>

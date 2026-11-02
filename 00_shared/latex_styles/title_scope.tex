@@ -1,0 +1,9 @@
+%% ROLE: engine-vendored — preserve consumer-owned 00_shared/title.tex.
+%% elsarticle retains the shared title for page headers after frontmatter ends.
+%% A \newcommand defined by the title input inside that environment is local;
+%% export its existing value before the group closes, without redefining text.
+\AddToHook{env/frontmatter/end}{%
+  \ifdefined\scitexmanuscripttitle
+    \global\let\scitexmanuscripttitle\scitexmanuscripttitle
+  \fi
+}

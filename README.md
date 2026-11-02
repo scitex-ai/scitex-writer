@@ -49,6 +49,28 @@ git clone https://github.com/ywatanabe1989/scitex-writer.git my-paper
 cd my-paper && make manuscript   # or: ./compile.sh manuscript
 ```
 
+## Mounted editor and frontend builds
+
+The editor previews the current section separately from explicit full-manuscript
+compilation. Its PDF pane uses LivePaper's public rich provider through Writer's
+own annotation adapter; the SDK owns PDF rendering. Clicking a figure or table
+row does not insert text: use drag and drop or the explicit insert action.
+Caption-only tables have no data thumbnail.
+
+Contributor builds require SDK>=0.3.17, LivePaper>=0.2.20 and Node/npm. From the
+checkout, install the declared developer dependencies and run the tracked build:
+
+```bash
+python -m pip install -e '.[dev]'
+python scripts/build_frontend.py --receipt /tmp/writer-frontend-build.json
+```
+
+The build discovers both frontend packages from installed Python distributions,
+runs normal npm installation and produces the complete asset closure without
+sibling source checkouts. See [the host boundary](docs/GUI_HOST_BOUNDARY.md) for
+project authorization, CSRF and disposable browser qualification. Database-backed
+tests and publication gates follow the [CI release contract](docs/CI_RELEASE_CONTRACT.md).
+
 ## Demo
 
 <p align="center">
@@ -402,6 +424,8 @@ SCITEX_WRITER_DARK_MODE=true make manuscript
 
 **GUI Editor** — Standalone browser-based editor with file tree, PDF preview, and compilation controls.
 
+The default preview renders only the selected section (for example, Abstract), using the package snippet compiler. Selecting another section updates the preview. Choose the document name (for example, Manuscript) in the compile-mode selector to view or compile the full document. Section previews use separate `.preview/` PDFs and never replace the full manuscript PDF.
+
 <p align="center">
 <p align="center">
   <img src="docs/demo-gui-light.png" alt="GUI Light Mode" width="380"/>
@@ -603,3 +627,7 @@ Change citation style in `config/config_manuscript.yaml`:
 </p>
 
 <!-- EOF -->
+
+The mounted PDF pane composes LivePaper's public rich provider with SDK PDF
+rendering through a Writer-owned adapter. See [GUI host boundaries](docs/GUI_HOST_BOUNDARY.md)
+for the port ownership, wheel-derived frontend build, and disposable browser checks.

@@ -10,11 +10,9 @@ no patching of run_compile, no real LaTeX toolchain.
 """
 
 import inspect
+from pathlib import Path
 
 import pytest
-
-pytest.importorskip("git")
-from pathlib import Path
 
 from scitex_writer._compile.manuscript import compile_manuscript
 from scitex_writer._dataclasses import CompilationResult
