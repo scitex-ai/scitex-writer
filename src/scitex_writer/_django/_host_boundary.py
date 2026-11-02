@@ -19,7 +19,7 @@ def standalone() -> bool:
     return mode == "standalone"
 
 
-def project_boundary(*, page=False, project_from_url=False):
+def project_boundary(*, page=False, project_from_url=False, project_selector=None):
     """Authorize every request before loading cached state or invoking handlers.
 
     Host settings provide project identity, storage and permissions. HTTP
@@ -36,6 +36,8 @@ def project_boundary(*, page=False, project_from_url=False):
                 # Project resolution may remember an explicit selection. Keep
                 # that side effect behind CSRF validation for unsafe requests.
                 capability_request = request
+                if project_selector is not None:
+                    capability_request = project_selector(request, *args, **kwargs)
                 if project_from_url:
                     # Numeric legacy URLs are an explicit selector, never an
                     # authorization grant or a fallback to the stored project.
