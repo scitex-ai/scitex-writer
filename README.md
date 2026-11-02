@@ -402,6 +402,8 @@ SCITEX_WRITER_DARK_MODE=true make manuscript
 
 **GUI Editor** — Standalone browser-based editor with file tree, PDF preview, and compilation controls.
 
+The default preview renders only the selected section (for example, Abstract), using the package snippet compiler. Selecting another section updates the preview. Choose the document name (for example, Manuscript) in the compile-mode selector to view or compile the full document. Section previews use separate `.preview/` PDFs and never replace the full manuscript PDF.
+
 <p align="center">
 <p align="center">
   <img src="docs/demo-gui-light.png" alt="GUI Light Mode" width="380"/>
@@ -603,3 +605,7 @@ Change citation style in `config/config_manuscript.yaml`:
 </p>
 
 <!-- EOF -->
+
+The mounted PDF pane composes LivePaper's public rich provider with SDK PDF
+rendering through a Writer-owned adapter. See [GUI host boundaries](docs/GUI_HOST_BOUNDARY.md)
+for the port ownership, wheel-derived frontend build, and disposable browser checks.

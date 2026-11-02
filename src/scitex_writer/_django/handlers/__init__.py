@@ -14,6 +14,7 @@ from .claim import (
 )
 from .compile import handle_compile, handle_compile_status, handle_pdf
 from .core import handle_ping, handle_project_info
+from .preview import handle_section_pdf, handle_section_preview
 from .files import handle_file, handle_list_files, handle_sections
 from .hints import handle_hints
 from .media import handle_figures, handle_tables, handle_thumbnail
@@ -44,6 +45,9 @@ HANDLERS = {
     "api/compile":            (handle_compile,        ("POST",)),
     "api/compile/status":     (handle_compile_status, ("GET",)),
     "api/pdf":                (handle_pdf,            ("GET",)),
+
+    "api/preview":            (handle_section_preview, ("POST",)),
+    "api/preview/pdf":        (handle_section_pdf,     ("GET",)),
 
     # Bibliography
     "api/bib/files":          (handle_bib_files,      ("GET",)),

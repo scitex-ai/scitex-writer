@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Inherit shared semantic text colors instead of cyclic self-references, and remove leaf header sizing/picker palette overrides. Updated assets use automatic content versions.
+
 ## [2.43.19] - 2026-11-01
 
 ### Fixed
@@ -52,6 +54,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (#475).
 
 ### Changed
+
+- Compile and Log toolbar buttons use the shared extra-small spacing token
+  between their icon and label.
+- Version the editor stylesheet URL with the leaf version so reloads fetch the
+  current release's styles.
 
 - Editor toolbar condenses into the overflow hamburger with aligned 32px
   row heights; Draft/Full compile labels read the live section title

@@ -48,16 +48,11 @@ def test_figtable_drag_carries_the_shared_insert_mime():
     assert "setData(INSERT_MIME, snippet)" in source
 
 
-def test_figtable_click_does_not_insert():
-    # Arrange: renderList wires dragstart/dragend only — no click handler
-    # may call insertAtCursor for items (cite parity: click only selects).
+def test_figtable_insertion_requires_the_explicit_action():
     source = _INSERT_TS.read_text(encoding="utf-8")
     listed = source[source.index("private renderList(") :]
-    # Act
-    # Assert
-    assert ('addEventListener("click"' not in listed) and (
-        "insertAtCursor" not in listed
-    )
+    assert 'action?.addEventListener("click"' in listed
+    assert 'el.addEventListener("click"' not in listed
 
 
 def test_monaco_accepts_ref_payloads_on_drop():
@@ -81,9 +76,7 @@ def test_thumb_images_render_on_the_tertiary_face():
     block = _rule_block(".insert-item-thumb")
     # Act
     # Assert
-    assert ("background: var(--bg-tertiary);" in block) and (
-        "#fff" not in block
-    )
+    assert ("background: var(--bg-tertiary);" in block) and ("#fff" not in block)
 
 
 def test_drag_hint_names_the_gesture():
