@@ -346,7 +346,18 @@ def source_commit_with_project(project):
                 env=environment,
             ).stdout
 
-        command("clone", "--bare", "--shared", "--quiet", str(REPOSITORY), str(source))
+        # An isolated index/commit needs source objects, not every public ref.
+        # Git's shared object mechanism avoids cloning a busy CI checkout.
+        objects = (
+            command("-C", str(REPOSITORY), "rev-parse", "--git-path", "objects")
+            .decode()
+            .strip()
+        )
+        object_root = (REPOSITORY / objects).resolve()
+        if not object_root.is_dir() or "\n" in str(object_root):
+            raise ValueError("Source Git object directory is unavailable")
+        command("init", "--bare", "--quiet", "--template=", str(source))
+        (source / "objects/info/alternates").write_text(str(object_root) + "\n")
         blob = command("-C", str(source), "hash-object", "-w", "--stdin", body=project)
         command("-C", str(source), "read-tree", SOURCE)
         command(
