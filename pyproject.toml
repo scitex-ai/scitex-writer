@@ -137,6 +137,9 @@ all = [
     "scitex-writer[docs]",
 ]
 dev = [
+    # Public private-cluster testing helper and corrected canonical auditors.
+    "scitex-dev>=0.62.7",
+    "build>=1.0",
     # Contributor builds use LivePaper's public wheel-contained frontend package.
     "scitex-live-paper>=0.2.20",
     "pytest>=7.0.0",

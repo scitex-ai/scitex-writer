@@ -113,20 +113,46 @@ def public_wheel_files():
     }
 
 
-# Actual static Hatchling 1.27.0 metadata/entry-point projection of this source.
-# The pure fixtures carry genuine requirements/extras/Python/entry points;
-# dependency metadata changes require refreshing this independently produced fixture.
-GENERATED_METADATA = b"Metadata-Version: 2.4\nName: scitex-writer\nVersion: 2.43.17\nSummary: LaTeX manuscript compilation system for scientific documents with MCP server\nProject-URL: Homepage, https://github.com/ywatanabe1989/scitex-writer\nProject-URL: Documentation, https://scitex-writer.readthedocs.io\nProject-URL: Repository, https://github.com/ywatanabe1989/scitex-writer.git\nProject-URL: Issues, https://github.com/ywatanabe1989/scitex-writer/issues\nAuthor-email: Yusuke Watanabe <ywatanabe@scitex.ai>\nLicense-Expression: AGPL-3.0-only\nLicense-File: LICENSE\nKeywords: academic,bibliography,bibtex,compilation,latex,manuscript,mcp,mcp-server,paper,scientific-writing,scitex\nClassifier: Development Status :: 4 - Beta\nClassifier: Environment :: Console\nClassifier: Intended Audience :: Science/Research\nClassifier: Operating System :: OS Independent\nClassifier: Programming Language :: Python :: 3\nClassifier: Programming Language :: Python :: 3.10\nClassifier: Programming Language :: Python :: 3.11\nClassifier: Programming Language :: Python :: 3.12\nClassifier: Programming Language :: Python :: 3.13\nClassifier: Topic :: Scientific/Engineering\nClassifier: Topic :: Text Processing :: Markup :: LaTeX\nRequires-Python: >=3.10\nRequires-Dist: bibtexparser<2.0,>=1.4\nRequires-Dist: click>=8.0\nRequires-Dist: django>=4.2\nRequires-Dist: fastmcp>=2.0.0\nRequires-Dist: pandas>=2.0\nRequires-Dist: pillow>=9.0\nRequires-Dist: scitex-config>=0.3.6\nRequires-Dist: scitex-dev>=0.48.0\nRequires-Dist: scitex-logging>=0.2.1\nRequires-Dist: scitex-sdk>=0.3.9\nProvides-Extra: all\nRequires-Dist: myst-parser>=2.0; extra == 'all'\nRequires-Dist: openpyxl; extra == 'all'\nRequires-Dist: pre-commit>=3.5.0; extra == 'all'\nRequires-Dist: pytest-cov>=4.0.0; extra == 'all'\nRequires-Dist: pytest-xdist>=3.0.0; extra == 'all'\nRequires-Dist: pytest>=7.0.0; extra == 'all'\nRequires-Dist: pytest-testmon>=2.2.0; extra == 'all'\nRequires-Dist: pywebview>=4.0.0; extra == 'all'\nRequires-Dist: scitex-scholar>=1.5.2; extra == 'all'\nRequires-Dist: sphinx-autodoc-typehints>=1.25; extra == 'all'\nRequires-Dist: sphinx-copybutton>=0.5; extra == 'all'\nRequires-Dist: sphinx-rtd-theme>=2.0; extra == 'all'\nRequires-Dist: sphinx>=7.0; extra == 'all'\nProvides-Extra: dev\nRequires-Dist: openpyxl; extra == 'dev'\nRequires-Dist: pre-commit>=3.5.0; extra == 'dev'\nRequires-Dist: pytest-cov>=4.0.0; extra == 'dev'\nRequires-Dist: pytest-xdist>=3.0.0; extra == 'dev'\nRequires-Dist: pytest>=7.0.0; extra == 'dev'\nRequires-Dist: pytest-testmon>=2.2.0; extra == 'dev'\nRequires-Dist: scitex-scholar>=1.5.2; extra == 'dev'\nProvides-Extra: docs\nRequires-Dist: myst-parser>=2.0; extra == 'docs'\nRequires-Dist: sphinx-autodoc-typehints>=1.25; extra == 'docs'\nRequires-Dist: sphinx-copybutton>=0.5; extra == 'docs'\nRequires-Dist: sphinx-rtd-theme>=2.0; extra == 'docs'\nRequires-Dist: sphinx>=7.0; extra == 'docs'\nDescription-Content-Type: text/markdown\n"
-# Genuine header bytes from the private Hatchling 1.32.4 sdist-to-wheel build.
-# Original Metadata 2.4 fixture above remains unchanged.
-# Refreshed for the 2.43.9 source (sdk floor 0.3.5, pytest-testmon in all/dev).
-# Full METADATA SHA256 (2.43.11): 5f47f6e4edee6d4c329fcb104aec17b561c031d12deffd11020d598eb6633706.
-# Previous 2.43.9 bytes: 1203a8187f6fe36680e279f107aa29a070394bea6433b4441ee2ff9e646a19ae.
-# Previous 2.43.8 bytes — wheel 25ce08ecccba1829da0c0d687756fe3d29067858e6224d4be25008077e1a33e3,
-# metadata 530bcc5fe58cb914e218b0692a598b7bf53abba33a88cc453b530a548c272bce,
-# header 3f319bc7953caa3e2e1a9ad779193ebdf5f27ddd70c64c646b43830ea1bf28e0.
-GENERATED_METADATA_25 = b"Metadata-Version: 2.5\nName: scitex-writer\nVersion: 2.43.17\nSummary: LaTeX manuscript compilation system for scientific documents with MCP server\nProject-URL: Homepage, https://github.com/ywatanabe1989/scitex-writer\nProject-URL: Documentation, https://scitex-writer.readthedocs.io\nProject-URL: Repository, https://github.com/ywatanabe1989/scitex-writer.git\nProject-URL: Issues, https://github.com/ywatanabe1989/scitex-writer/issues\nAuthor-email: Yusuke Watanabe <ywatanabe@scitex.ai>\nLicense-Expression: AGPL-3.0-only\nLicense-File: LICENSE\nKeywords: academic,bibliography,bibtex,compilation,latex,manuscript,mcp,mcp-server,paper,scientific-writing,scitex\nClassifier: Development Status :: 4 - Beta\nClassifier: Environment :: Console\nClassifier: Intended Audience :: Science/Research\nClassifier: Operating System :: OS Independent\nClassifier: Programming Language :: Python :: 3\nClassifier: Programming Language :: Python :: 3.10\nClassifier: Programming Language :: Python :: 3.11\nClassifier: Programming Language :: Python :: 3.12\nClassifier: Programming Language :: Python :: 3.13\nClassifier: Topic :: Scientific/Engineering\nClassifier: Topic :: Text Processing :: Markup :: LaTeX\nRequires-Python: >=3.10\nRequires-Dist: bibtexparser<2.0,>=1.4\nRequires-Dist: click>=8.0\nRequires-Dist: django>=4.2\nRequires-Dist: fastmcp>=2.0.0\nRequires-Dist: pandas>=2.0\nRequires-Dist: pillow>=9.0\nRequires-Dist: scitex-config>=0.3.6\nRequires-Dist: scitex-dev>=0.48.0\nRequires-Dist: scitex-logging>=0.2.1\nRequires-Dist: scitex-sdk>=0.3.9\nProvides-Extra: all\nRequires-Dist: myst-parser>=2.0; extra == 'all'\nRequires-Dist: openpyxl; extra == 'all'\nRequires-Dist: pre-commit>=3.5.0; extra == 'all'\nRequires-Dist: pytest-cov>=4.0.0; extra == 'all'\nRequires-Dist: pytest-xdist>=3.0.0; extra == 'all'\nRequires-Dist: pytest>=7.0.0; extra == 'all'\nRequires-Dist: pytest-testmon>=2.2.0; extra == 'all'\nRequires-Dist: pywebview>=4.0.0; extra == 'all'\nRequires-Dist: scitex-scholar>=1.5.2; extra == 'all'\nRequires-Dist: sphinx-autodoc-typehints>=1.25; extra == 'all'\nRequires-Dist: sphinx-copybutton>=0.5; extra == 'all'\nRequires-Dist: sphinx-rtd-theme>=2.0; extra == 'all'\nRequires-Dist: sphinx>=7.0; extra == 'all'\nProvides-Extra: dev\nRequires-Dist: openpyxl; extra == 'dev'\nRequires-Dist: pre-commit>=3.5.0; extra == 'dev'\nRequires-Dist: pytest-cov>=4.0.0; extra == 'dev'\nRequires-Dist: pytest-xdist>=3.0.0; extra == 'dev'\nRequires-Dist: pytest>=7.0.0; extra == 'dev'\nRequires-Dist: pytest-testmon>=2.2.0; extra == 'dev'\nRequires-Dist: scitex-scholar>=1.5.2; extra == 'dev'\nProvides-Extra: docs\nRequires-Dist: myst-parser>=2.0; extra == 'docs'\nRequires-Dist: sphinx-autodoc-typehints>=1.25; extra == 'docs'\nRequires-Dist: sphinx-copybutton>=0.5; extra == 'docs'\nRequires-Dist: sphinx-rtd-theme>=2.0; extra == 'docs'\nRequires-Dist: sphinx>=7.0; extra == 'docs'\nDescription-Content-Type: text/markdown\n"
-GENERATED_ENTRY_POINTS = b"[console_scripts]\nscitex-writer = scitex_writer._cli:main\n\n[scitex.apps]\nwriter = scitex_writer._django.apps:WriterEditorConfig\n\n[scitex_dev.docs]\nscitex-writer = scitex_writer\n\n[scitex_dev.skills]\nscitex-writer = scitex_writer\n\n[scitex_dev.system_deps]\nscitex-writer = scitex_writer._core._system_deps:provide\n"
+# Produce the baseline once from the exact tracked source using a real PEP517
+# wheel build. Future version/dependency changes do not require hand-edited
+# metadata literals. Negative controls below mutate one boundary of these bytes.
+@functools.lru_cache(maxsize=1)
+def generated_headers():
+    with tempfile.TemporaryDirectory(prefix="writer-release-metadata-") as directory:
+        root = Path(directory)
+        source, output = root / "source", root / "dist"
+        source.mkdir()
+        for name, body in public_source_files().items():
+            path = source / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(body)
+        subprocess.run(
+            [sys.executable, "-m", "build", "--wheel", "--outdir", str(output), str(source)],
+            check=True, capture_output=True, timeout=180,
+        )
+        wheels = list(output.glob("*.whl"))
+        if len(wheels) != 1:
+            raise RuntimeError("release fixture build must produce exactly one wheel")
+        with zipfile.ZipFile(wheels[0]) as archive:
+            metadata_bytes = archive.read(DIST_INFO + "/METADATA")
+            entries = archive.read(DIST_INFO + "/entry_points.txt")
+        # README text is not part of the metadata header identity under test.
+        return metadata_bytes.split(b"\n\n", 1)[0] + b"\n", entries
+
+
+GENERATED_METADATA, GENERATED_ENTRY_POINTS = generated_headers()
+# Compatibility encoding variant, not a claim of a second independent build.
+# Every other header remains the genuine current-source Hatch output.
+GENERATED_METADATA_25 = b"Metadata-Version: 2.5\n" + GENERATED_METADATA.split(b"\n", 1)[1]
+
+
+def generated_counts(project):
+    """Observability counts follow the real builder headers/current project."""
+    return {
+        "runtime_requirements": sum(line.startswith(b"Requires-Dist:") for line in GENERATED_METADATA.splitlines()),
+        "extras": len(project.get("optional-dependencies", {})),
+        "entry_point_groups": len(project.get("entry-points", {})) + bool(project.get("scripts")) + bool(project.get("gui-scripts")),
+    }
 
 
 def metadata(version=VERSION, name="scitex-writer", duplicate=False):
@@ -1179,11 +1205,7 @@ class GeneratedMetadataTests(unittest.TestCase):
             GENERATED_METADATA, GENERATED_METADATA, GENERATED_ENTRY_POINTS, project
         )
         # Assert
-        assert result == {
-            "runtime_requirements": 35,
-            "extras": 3,
-            "entry_point_groups": 5,
-        }
+        assert result == generated_counts(project)
 
     def test_missing_runtime_requirements_refused_in_either_artifact(self):
         # Arrange
@@ -1209,7 +1231,11 @@ class GeneratedMetadataTests(unittest.TestCase):
 
     def test_weakening_hard_sdk_floor_refused(self):
         # Arrange
-        bad = GENERATED_METADATA.replace(b"scitex-sdk>=0.3.9", b"scitex-sdk>=0.0")
+        sdk_requirement = next(
+            line for line in GENERATED_METADATA.splitlines()
+            if line.startswith(b"Requires-Dist: scitex-sdk")
+        )
+        bad = GENERATED_METADATA.replace(sdk_requirement, b"Requires-Dist: scitex-sdk>=0.0")
         if bad == GENERATED_METADATA:
             raise RuntimeError("weakened SDK fixture did not change source metadata")
         # Act
@@ -1551,7 +1577,7 @@ class GeneratedMetadataTests(unittest.TestCase):
             assert refused
 
 
-    def test_genuine_current_metadata_25_absent_import_fields_passes(self):
+    def test_supported_metadata_25_absent_import_fields_passes(self):
         # Arrange
         project = tomllib.loads(PYPROJECT.decode())["project"]
         # Act
@@ -1562,11 +1588,7 @@ class GeneratedMetadataTests(unittest.TestCase):
             project,
         )
         # Assert
-        assert result == {
-            "runtime_requirements": 35,
-            "extras": 3,
-            "entry_point_groups": 5,
-        }
+        assert result == generated_counts(project)
 
     def test_unqualified_metadata_versions_refused_in_either_artifact(self):
         # Arrange
@@ -1900,7 +1922,7 @@ import json,os,sys,time
 a=sys.argv[1:]
 name=Path(sys.argv[0]).name
 body=sys.stdin.read() if a and a[0]=='-' else ''
-stage='uv' if name=='uv' else ('pytest' if a[:2]==['-m','pytest'] else 'twine' if a[:2]==['-m','twine'] else 'build' if a[:2]==['-m','build'] else 'mint' if body else 'proof-first' if 'verify-proof' in a and '--revalidate' in a else 'proof-final' if 'verify-proof' in a else 'python')
+stage='uv' if name=='uv' else ('pytest' if (a[:2]==['-m','pytest'] or a[:1]==['.github/ci/with-test-postgres.py']) else 'twine' if a[:2]==['-m','twine'] else 'build' if a[:2]==['-m','build'] else 'mint' if body else 'proof-first' if 'verify-proof' in a and '--revalidate' in a else 'proof-final' if 'verify-proof' in a else 'python')
 root=Path(os.environ['TMPDIR'])
 with open(os.environ['FIXTURE_LOG'],'a') as f:
  f.write(json.dumps({'stage':stage,'root':str(root),'minted_fixture_only':os.environ.get('TWINE_PASSWORD')=='fixture-token'})+'\n')

@@ -49,6 +49,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install the declared release-boundary fixture builder
+        run: python -m pip install 'build>=1.0'
       - name: Check the release identity and archive refusal controls
         run: python .github/ci/test_release_identity.py
       - id: identity

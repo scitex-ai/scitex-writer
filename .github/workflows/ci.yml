@@ -63,6 +63,11 @@ concurrency:
 jobs:
   pytest-matrix:
     uses: scitex-ai/.github/.github/workflows/pytest-matrix.yml@main
+    with:
+      pre_test_command: |
+        printf '%s\n' 'SCITEX_WRITER_TEST_PG_REQUIRED=1' 'SCITEX_WRITER_TEST_PG_DSN=postgresql://writer_ci_required@127.0.0.1:1/private_pg_plugin_required' >> "$GITHUB_ENV"
+        printf 'PYTHONPATH=%s/.github/ci%s\n' "$GITHUB_WORKSPACE" "${PYTHONPATH:+:$PYTHONPATH}" >> "$GITHUB_ENV"
+        printf 'PYTEST_ADDOPTS=%s -p writer_ci_postgres\n' "${PYTEST_ADDOPTS:-}" >> "$GITHUB_ENV"
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 

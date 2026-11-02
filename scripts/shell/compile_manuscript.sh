@@ -12,6 +12,18 @@
 export ORIG_DIR
 ORIG_DIR="$(pwd)"
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Help reads packaged text only: no config, project writes or external tools.
+for help_arg in "$@"; do
+    case "$help_arg" in
+    -h | --help)
+        PROJECT_ROOT="${SCITEX_WRITER_PROJECT_ROOT:-${PROJECT_ROOT:-$(cd "$THIS_DIR/../.." && pwd)}}"
+        source "$THIS_DIR/modules/usage_manuscript.sh"
+        usage
+        ;;
+    esac
+done
+
 LOG_PATH="$THIS_DIR/.$(basename "$0").log"
 echo >"$LOG_PATH"
 

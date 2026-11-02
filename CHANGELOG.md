@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Mandatory private Unix-socket PostgreSQL for ordinary, nightly and SIF test
+  runs, retaining the production-system-ID refusal and owned cleanup.
+- Release-boundary controls in ordinary test space, with metadata fixtures
+  generated from a real wheel of the current tracked source.
 - LivePaper public rich-PDF consumer adapter with Writer-owned project/CSRF
   translation, locked-target checks and single persistence per box gesture.
 - Reproducible contributor frontend builds using public SDK and LivePaper
@@ -20,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Serve packaged global, document and recursive help before configuration,
+  dependency checks, initialization or filesystem writes. Real compilation
+  still refuses missing yq.
 - Preview the current section using the existing snippet compiler, preserving
   explicit full-manuscript compilation and separate PDF artifacts.
 - Launch packaged compilation scripts through Bash when execute bits are

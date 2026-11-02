@@ -68,7 +68,8 @@ python scripts/build_frontend.py --receipt /tmp/writer-frontend-build.json
 The build discovers both frontend packages from installed Python distributions,
 runs normal npm installation and produces the complete asset closure without
 sibling source checkouts. See [the host boundary](docs/GUI_HOST_BOUNDARY.md) for
-project authorization, CSRF and disposable browser qualification.
+project authorization, CSRF and disposable browser qualification. Database-backed
+tests and publication gates follow the [CI release contract](docs/CI_RELEASE_CONTRACT.md).
 
 ## Demo
 

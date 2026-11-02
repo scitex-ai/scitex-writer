@@ -232,6 +232,7 @@ fi
 # available CPUs, with priority handling". The owning shell waits for the child
 # group so original exit/signal status reaches the runner after temporary cleanup.
 nice -n 19 ionice -c 3 \
+    python .github/ci/with-test-postgres.py -- \
     python -m pytest tests/ -n "$WORKERS" --dist load -q \
     --cov=src/scitex_writer --cov-report=xml --cov-report=term \
     -p no:cacheprovider
