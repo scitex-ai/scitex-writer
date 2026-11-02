@@ -37,9 +37,10 @@ cancellation path. Scheduling-barrier regressions cover INT and TERM before PID
 registration, before birth capture and during birth capture for all three release
 drivers; unrelated processes and the existing deadlines remain protected.
 Timed signal fixtures keep scripts and witnesses on the /tmp filesystem,
-preserving an already-local inherited private parent. Their stdlib-only recorder
-runs with isolated Python startup, so runner-workspace disk stalls and unrelated
-site hooks do not become false descendant-liveness failures.
+preserving an already-local inherited private parent. Their recorder uses Bash builtin proc reads and a builtin JSON witness before
+executing the real rm. It needs no Python/import startup, so recorder overhead
+and unrelated site hooks do not become false descendant-liveness failures.
+Real live-task, wrong-birth and gone-task probes verify the witness semantics.
 Real integration tests exercise SQL writes, success/failure/signal status,
 closed TCP listening and cleanup. A local developer with server tools can use:
 

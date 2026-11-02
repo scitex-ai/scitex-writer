@@ -2471,7 +2471,9 @@ if os.environ['STUBBORN']=='1':
    fd=os.open('/dev/null',os.O_WRONLY);os.dup2(fd,1);os.dup2(fd,2);os.close(fd)
   with (root/'grandchild-held-file').open('w') as held:
    held.write('fixture');held.flush()
-   (base/'grandchild.json').write_text(json.dumps(metadata()))
+   identity=metadata()
+   (base/'grandchild.identity').write_text(str(identity['pid'])+' '+identity['fixture_birth']+'\n')
+   (base/'grandchild.json').write_text(json.dumps(identity))
    time.sleep(20)
   os._exit(0)
  while not (base/'grandchild.json').exists():time.sleep(.005)
@@ -2481,15 +2483,29 @@ if os.environ.get('LEAK_SUCCESS')=='1':
  sys.exit(0)
 time.sleep(20)
 """
-DRIVER_REMOVER = r"""from pathlib import Path
-import json,os,sys
-base=Path(os.environ['FIXTURE_PARENT']);p=base/'grandchild.json';live=False
-if p.exists():
- old=json.loads(p.read_text());s=Path('/proc')/str(old['pid'])/'stat'
- if s.exists():
-  raw=s.read_text().rsplit(') ',1)[1].split();live=raw[19]==old['fixture_birth'] and raw[0]!='Z'
-(base/'removal-witness.json').write_text(json.dumps({'grandchild_live_before_rm':live}))
-os.execv('/usr/bin/rm',['/usr/bin/rm',*sys.argv[1:]])
+DRIVER_REMOVER = r"""set -euo pipefail
+base="${FIXTURE_PARENT:?}"
+live=false
+if [[ -f "$base/grandchild.identity" ]]; then
+    read -r child_pid child_birth < "$base/grandchild.identity"
+    [[ "$child_pid" =~ ^[0-9]+$ && "$child_birth" =~ ^[0-9]+$ ]] || exit 92
+    task="/proc/$child_pid/stat"
+    if [[ -e "$task" ]]; then
+        if IFS= read -r row < "$task"; then
+            row="${row##*) }"
+            read -r -a fields <<< "$row"
+            [[ "${#fields[@]}" -ge 20 ]] || exit 92
+            if [[ "${fields[19]}" == "$child_birth" && "${fields[0]}" != Z ]]; then
+                live=true
+            fi
+        elif [[ -e "$task" ]]; then
+            # Unknown/read-denied state must never become a false death witness.
+            exit 93
+        fi
+    fi
+fi
+printf '{"grandchild_live_before_rm":%s}\n' "$live" > "$base/removal-witness.json"
+exec /usr/bin/rm "$@"
 """
 
 
@@ -2515,6 +2531,50 @@ def fixture_birth(metadata):
 
 
 class OwnedProcessObservation(unittest.TestCase):
+    def test_native_recorder_observes_live_wrong_birth_and_gone_children(self):
+        # Arrange: real proc state and real rm --version; no filesystem remover stub.
+        with tempfile.TemporaryDirectory(
+            prefix="native-proc-recorder-", dir="/tmp"
+        ) as directory:
+            root = Path(directory)
+            recorder = root / "recorder.sh"
+            recorder.write_text(DRIVER_REMOVER)
+            child = subprocess.Popen(["/usr/bin/sleep", "20"], start_new_session=True)
+            try:
+                birth = fixture_birth({"pid": child.pid})[0]
+                identity = root / "grandchild.identity"
+                environment = {"PATH": "/usr/bin:/bin", "FIXTURE_PARENT": str(root)}
+                values, statuses = [], []
+                # Act: the same owned task is live, has a wrong identity, then is gone.
+                for expected_birth, terminate in (
+                    (birth, False),
+                    (str(int(birth) + 1), False),
+                    (birth, True),
+                ):
+                    identity.write_text(f"{child.pid} {expected_birth}\n")
+                    if terminate:
+                        child.terminate()
+                        child.wait(timeout=3)
+                    result = subprocess.run(
+                        ["/bin/bash", str(recorder), "--version"],
+                        env=environment,
+                        capture_output=True,
+                        text=True,
+                        timeout=3,
+                    )
+                    statuses.append(result.returncode)
+                    values.append(
+                        json.loads((root / "removal-witness.json").read_text())[
+                            "grandchild_live_before_rm"
+                        ]
+                    )
+                # Assert
+                assert (statuses, values) == ([0, 0, 0], [True, False, False])
+            finally:
+                if child.poll() is None:
+                    child.kill()
+                    child.wait(timeout=3)
+
     def test_reaped_task_proc_handle_is_gone_without_killing_the_observer(self):
         # Arrange: use the actual kernel proc descriptor, not a mocked errno.
         child = subprocess.Popen(["/usr/bin/sleep", "20"], start_new_session=True)
@@ -2583,14 +2643,11 @@ class ShellCancellation(unittest.TestCase):
             fixture = Path(directory)
             child_script, remover = fixture / "finite-child.py", fixture / "remover"
             child_script.write_text(DRIVER_CHILD)
-            remover.write_text("#!" + DRIVER_PYTHON + "\n" + DRIVER_REMOVER)
+            remover.write_text("#!/bin/bash\n" + DRIVER_REMOVER)
             remover.chmod(0o700)
             lifecycle = lifecycle.replace(
                 "/usr/bin/rm ",
-                shlex.quote(DRIVER_PYTHON)
-                + " -I -S "
-                + shlex.quote(str(remover))
-                + " ",
+                "/bin/bash " + shlex.quote(str(remover)) + " ",
             )
             if admission_phase is not None:
                 barrier = (
