@@ -2630,7 +2630,13 @@ class ShellCancellation(unittest.TestCase):
             raise RuntimeError("fixture subreaper state could not be restored")
 
     def exercise(
-        self, name, signum, stubborn, admission_phase=None, hostile_site=False
+        self,
+        name,
+        signum,
+        stubborn,
+        admission_phase=None,
+        hostile_site=False,
+        hold_cleanup=False,
     ):
         source = (DRIVER_SOURCE / name).read_text()
         start = source.index("# BEGIN owned temporary-root lifecycle")
@@ -2643,7 +2649,15 @@ class ShellCancellation(unittest.TestCase):
             fixture = Path(directory)
             child_script, remover = fixture / "finite-child.py", fixture / "remover"
             child_script.write_text(DRIVER_CHILD)
-            remover.write_text("#!/bin/bash\n" + DRIVER_REMOVER)
+            remover_source = DRIVER_REMOVER
+            if hold_cleanup:
+                remover_source = remover_source.replace(
+                    'exec /usr/bin/rm "$@"',
+                    'printf ready > "$base/cleanup-open"\n'
+                    'while [[ ! -f "$base/cleanup-release" ]]; do sleep .005; done\n'
+                    'exec /usr/bin/rm "$@"',
+                )
+            remover.write_text("#!/bin/bash\n" + remover_source)
             remover.chmod(0o700)
             lifecycle = lifecycle.replace(
                 "/usr/bin/rm ",
@@ -2790,11 +2804,66 @@ class ShellCancellation(unittest.TestCase):
                         ):
                             time.sleep(0.005)
                         self.assertTrue((fixture / "owner-admission-open").exists())
+                    signalled_at = time.monotonic()
                     os.kill(owner.pid, signum)
                     if admission_phase is not None:
                         (fixture / "owner-admission-release").write_text("release")
+                extinction_elapsed = None
+                if signum is not None:
+                    # The four-second fence concerns actual owned payloads, not
+                    # subsequent filesystem work in the independently bounded rm.
+                    deadline = signalled_at + 4
+                    while True:
+                        live = []
+                        for item in [body, *records]:
+                            state = fixture_birth(item)
+                            if (
+                                state
+                                and state[0] == item["fixture_birth"]
+                                and state[1] != "Z"
+                            ):
+                                live.append(item["pid"])
+                        if not live:
+                            # Include actual group descendants not named by the
+                            # fixture (e.g. the driver's cancellation-trap sleep).
+                            for task in Path("/proc").iterdir():
+                                if task.name.isdecimal():
+                                    state = fixture_process_fields(int(task.name))
+                                    if (
+                                        state
+                                        and int(state[2]) == body_pid
+                                        and state[0] != "Z"
+                                    ):
+                                        live.append(int(task.name))
+                        if not live or time.monotonic() >= deadline:
+                            break
+                        time.sleep(0.005)
+                    extinction_elapsed = time.monotonic() - signalled_at
+                    if live or extinction_elapsed > 4:
+                        stalled = {
+                            "phase": "payload-extinction",
+                            "live_owned_pids": live,
+                            "elapsed": extinction_elapsed,
+                        }
+                    if hold_cleanup:
+                        cleanup_deadline = time.monotonic() + 2
+                        while (
+                            not (fixture / "cleanup-open").exists()
+                            and time.monotonic() < cleanup_deadline
+                        ):
+                            time.sleep(0.005)
+                        self.assertTrue((fixture / "cleanup-open").exists())
+                        self.assertTrue(
+                            root.exists(), "held cleanup retains the actual scratch"
+                        )
+                        self.assertIsNone(unrelated.poll())
+                        while time.monotonic() - signalled_at < 4.1:
+                            time.sleep(0.005)
+                        (fixture / "cleanup-release").write_text("release")
                 try:
-                    stdout, stderr = owner.communicate(timeout=4)
+                    # Actual driver cleanup: group-drain 2s + rm 10s/kill-after2s.
+                    # Production bounds stay unchanged; payload death is checked above.
+                    stdout, stderr = owner.communicate(timeout=15 if signum else 4)
                 except subprocess.TimeoutExpired:
                     # Record only owned fixture identities, before forced fixture
                     # cleanup can hide a live holder or an already-gone leader.
@@ -2819,6 +2888,8 @@ class ShellCancellation(unittest.TestCase):
                             }
                         )
                     stalled = {
+                        "phase": "filesystem-teardown",
+                        "prior_extinction_failure": stalled or None,
                         "owner_status": owner.poll(),
                         "elapsed": round(time.monotonic() - started, 4),
                         "root_exists": root.exists(),
@@ -2833,7 +2904,12 @@ class ShellCancellation(unittest.TestCase):
                             and observed[1] != "Z"
                         ):
                             os.kill(item["pid"], signal.SIGKILL)
-                    stdout, stderr = owner.communicate(timeout=2)
+                    try:
+                        stdout, stderr = owner.communicate(timeout=2)
+                    except subprocess.TimeoutExpired as exc:
+                        raise AssertionError(
+                            "fixture teardown exceeded bound: " + json.dumps(stalled)
+                        ) from exc
                 deadline = time.monotonic() + 1
                 while time.monotonic() < deadline:
                     for item in records:
@@ -2908,6 +2984,8 @@ class ShellCancellation(unittest.TestCase):
                         "stubborn_grandchild": stubborn,
                         "exit": owner.returncode,
                         "elapsed_s": round(time.monotonic() - started, 4),
+                        "payload_extinction_s": round(extinction_elapsed, 4),
+                        "filesystem_cleanup_held": hold_cleanup,
                         "body": body,
                         "fixture_children": records,
                         "all_reaped": True,
@@ -2940,6 +3018,18 @@ class ShellCancellation(unittest.TestCase):
                     shutil.rmtree(root)
                 unrelated.terminate()
                 unrelated.wait(timeout=5)
+
+    def test_payload_extinction_precedes_separately_held_filesystem_cleanup(self):
+        # Arrange: exercise the real driver with its scratch retained by a barrier.
+        driver = "run-in-sif.sh"
+        # Act
+        self.exercise(driver, signal.SIGTERM, True, hold_cleanup=True)
+        # Assert
+        assert (
+            self.receipts[-1]["filesystem_cleanup_held"],
+            self.receipts[-1]["payload_extinction_s"] < 4,
+            self.receipts[-1]["elapsed_s"] >= 4,
+        ) == (True, True, True)
 
     def test_run_live_group_refuses_rm(self):
         # Arrange

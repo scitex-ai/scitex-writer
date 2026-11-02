@@ -73,3 +73,12 @@ External-network opt-ins, optional cross-package integrations and missing TeX
 tools can still produce explicit skips in a local suite. A passing local run
 must report those counts and the existing strict upstream citation-verification
 xfail; it is not evidence that every optional integration was exercised.
+
+Cancellation controls enforce the four-second payload-extinction fence directly
+against kernel birth identities and the actual process group. Filesystem teardown
+is observed separately under the existing group-drain (2s) and `rm` (10s plus
+2s kill-after) bounds. A real held-cleanup barrier proves scratch removal follows
+payload extinction even when the filesystem phase extends past four seconds.
+Nested private-PostgreSQL lifecycle probes permit the public helper's existing
+120s initdb, 120s start, 30s readiness and 60s stop bounds; these test observation
+budgets do not alter server or cancellation deadlines.
