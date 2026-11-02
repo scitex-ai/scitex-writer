@@ -168,7 +168,8 @@ python scripts/build_frontend.py --receipt /tmp/writer-frontend-build.json
 
 The tracked command discovers SDK and LivePaper through their public
 `get_frontend_package_dir()` helpers, copies their installed frontend packages
-into a temporary portable sibling layout, runs normal `npm ci` / `npm run build`,
+into a temporary portable sibling layout, runs normal `npm ci`, the mounted API client regressions via `npm test`, and
+`npm run build`,
 and copies only generated output back. No sibling source checkout, source alias,
 manual dependency edit or untracked staging directory is required. `--offline`
 uses an existing npm cache. The receipt lists every generated asset SHA-256.

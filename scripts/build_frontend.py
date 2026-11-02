@@ -56,6 +56,7 @@ def main() -> None:
         if args.offline:
             command.append("--offline")
         subprocess.run(command, cwd=frontend, check=True)
+        subprocess.run([npm, "test"], cwd=frontend, check=True)
         subprocess.run([npm, "run", "build"], cwd=frontend, check=True)
         output = frontend.parent / "static/writer"
         manifest = json.loads((output / ".vite/manifest.json").read_text())

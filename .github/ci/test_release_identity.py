@@ -13,6 +13,7 @@ import importlib.util
 import io
 import json
 import os
+import shlex
 import signal
 import stat
 import subprocess
@@ -346,7 +347,18 @@ def source_commit_with_project(project):
                 env=environment,
             ).stdout
 
-        command("clone", "--bare", "--shared", "--quiet", str(REPOSITORY), str(source))
+        # An isolated index/commit needs source objects, not every public ref.
+        # Git's shared object mechanism avoids cloning a busy CI checkout.
+        objects = (
+            command("-C", str(REPOSITORY), "rev-parse", "--git-path", "objects")
+            .decode()
+            .strip()
+        )
+        object_root = (REPOSITORY / objects).resolve()
+        if not object_root.is_dir() or "\n" in str(object_root):
+            raise ValueError("Source Git object directory is unavailable")
+        command("init", "--bare", "--quiet", "--template=", str(source))
+        (source / "objects/info/alternates").write_text(str(object_root) + "\n")
         blob = command("-C", str(source), "hash-object", "-w", "--stdin", body=project)
         command("-C", str(source), "read-tree", SOURCE)
         command(
@@ -2481,17 +2493,44 @@ os.execv('/usr/bin/rm',['/usr/bin/rm',*sys.argv[1:]])
 """
 
 
-def fixture_birth(metadata):
+def fixture_fields_from_stream(stream):
+    """A proc file may vanish after open; ESRCH and ENOENT both mean gone."""
     try:
-        raw = (
-            (Path("/proc") / str(metadata["pid"]) / "stat")
-            .read_text()
-            .rsplit(") ", 1)[1]
-            .split()
-        )
-    except FileNotFoundError:
+        return stream.read().rsplit(") ", 1)[1].split()
+    except (FileNotFoundError, ProcessLookupError):
         return None
-    return raw[19], raw[0]
+
+
+def fixture_process_fields(pid):
+    try:
+        with (Path("/proc") / str(pid) / "stat").open() as stream:
+            return fixture_fields_from_stream(stream)
+    except (FileNotFoundError, ProcessLookupError):
+        return None
+
+
+def fixture_birth(metadata):
+    fields = fixture_process_fields(metadata["pid"])
+    return (fields[19], fields[0]) if fields is not None else None
+
+
+class OwnedProcessObservation(unittest.TestCase):
+    def test_reaped_task_proc_handle_is_gone_without_killing_the_observer(self):
+        # Arrange: use the actual kernel proc descriptor, not a mocked errno.
+        child = subprocess.Popen(["/usr/bin/sleep", "20"], start_new_session=True)
+        try:
+            alive = fixture_birth({"pid": child.pid})
+            with (Path("/proc") / str(child.pid) / "stat").open() as stream:
+                # Act: reap after opening; Linux reports ESRCH when this fd reads.
+                child.terminate()
+                child.wait(timeout=3)
+                gone = fixture_fields_from_stream(stream)
+            # Assert
+            assert (alive is not None, gone) == (True, None)
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.wait(timeout=3)
 
 
 def fixture_reap(metadata):
@@ -2499,6 +2538,17 @@ def fixture_reap(metadata):
         os.waitpid(metadata["pid"], os.WNOHANG)
     except ChildProcessError:
         pass
+
+
+def signal_fixture_parent():
+    """Keep timing-sensitive helpers off a different CI workspace filesystem.
+
+    A SIF driver's inherited private /tmp parent stays in use, preserving its
+    outer cleanup containment. Ordinary runner scratch may be another device.
+    """
+    local = Path("/tmp")
+    inherited = Path(os.environ.get("TMPDIR", "/tmp"))
+    return inherited if inherited.stat().st_dev == local.stat().st_dev else local
 
 
 class ShellCancellation(unittest.TestCase):
@@ -2519,21 +2569,53 @@ class ShellCancellation(unittest.TestCase):
         if cls._libc.prctl(36, cls._previous_subreaper, 0, 0, 0) != 0:
             raise RuntimeError("fixture subreaper state could not be restored")
 
-    def exercise(self, name, signum, stubborn):
+    def exercise(
+        self, name, signum, stubborn, admission_phase=None, hostile_site=False
+    ):
         source = (DRIVER_SOURCE / name).read_text()
         start = source.index("# BEGIN owned temporary-root lifecycle")
         end = source.index("driver_body() {", start)
         # Use the entire actual lifecycle plus allocation; only rm is instrumented.
         lifecycle = source[start:end]
         with tempfile.TemporaryDirectory(
-            prefix="shell-signal-fixture-", dir=os.environ.get("TMPDIR")
+            prefix="shell-signal-fixture-", dir=signal_fixture_parent()
         ) as directory:
             fixture = Path(directory)
             child_script, remover = fixture / "finite-child.py", fixture / "remover"
             child_script.write_text(DRIVER_CHILD)
             remover.write_text("#!" + DRIVER_PYTHON + "\n" + DRIVER_REMOVER)
             remover.chmod(0o700)
-            lifecycle = lifecycle.replace("/usr/bin/rm ", str(remover) + " ")
+            lifecycle = lifecycle.replace(
+                "/usr/bin/rm ",
+                shlex.quote(DRIVER_PYTHON)
+                + " -I -S "
+                + shlex.quote(str(remover))
+                + " ",
+            )
+            if admission_phase is not None:
+                barrier = (
+                    '    printf ready > "$FIXTURE_PARENT/owner-admission-open"\n'
+                    '    while [[ ! -f "$FIXTURE_PARENT/owner-admission-release" ]]; do sleep .005; done\n'
+                )
+                if admission_phase == "before-pid":
+                    marker = "    OWNED_CHILD_PID=$!\n"
+                    replacement = barrier + marker
+                elif admission_phase == "before-birth":
+                    marker = '    OWNED_CHILD_BIRTH="$(owned_birth "$OWNED_CHILD_PID" 2>/dev/null || true)"\n'
+                    replacement = barrier + marker
+                elif admission_phase == "during-birth":
+                    marker = "owned_birth() {\n"
+                    replacement = (
+                        marker
+                        + '    if [[ ! -f "$FIXTURE_PARENT/owner-admission-open" ]]; then\n'
+                        + barrier
+                        + "    fi\n"
+                    )
+                else:
+                    raise AssertionError("Unknown admission barrier")
+                self.assertEqual(lifecycle.count(marker), 1)
+                lifecycle = lifecycle.replace(marker, replacement, 1)
+
             script = fixture / "driver.sh"
             script.write_text(
                 'set -euo pipefail\nSCRATCH_PREFIX="/tmp/ci-scitex_writer-7000002-1-3.12-"\n'
@@ -2549,6 +2631,16 @@ class ShellCancellation(unittest.TestCase):
                 "FIXTURE_PYTHON": DRIVER_PYTHON,
                 "STUBBORN": "1" if stubborn else "0",
             }
+            if hostile_site:
+                external_site = fixture / "external-site"
+                external_site.mkdir()
+                (external_site / "sitecustomize.py").write_text(
+                    "from pathlib import Path\nimport os\n"
+                    "Path(os.environ['SITE_WITNESS']).write_text('unexpected startup')\n"
+                    "raise SystemExit(97)\n"
+                )
+                env["PYTHONPATH"] = str(external_site)
+                env["SITE_WITNESS"] = str(fixture / "external-site-ran")
             if signum is None:
                 env["LEAK_SUCCESS"] = "1"
             unrelated = subprocess.Popen(
@@ -2610,18 +2702,19 @@ class ShellCancellation(unittest.TestCase):
                         )
                         for raw_pid in children.read_text().split():
                             try:
-                                state = (
-                                    (Path("/proc") / raw_pid / "stat")
-                                    .read_text()
-                                    .rsplit(") ", 1)[1]
-                                    .split()
-                                )
+                                state = fixture_process_fields(int(raw_pid))
+                                if state is None:
+                                    continue
                                 if (
                                     int(state[1]) == os.getpid()
                                     and int(state[2]) == body_pid
                                 ):
                                     os.waitpid(int(raw_pid), os.WNOHANG)
-                            except (FileNotFoundError, ChildProcessError):
+                            except (
+                                FileNotFoundError,
+                                ProcessLookupError,
+                                ChildProcessError,
+                            ):
                                 pass
                         time.sleep(0.005)
 
@@ -2631,11 +2724,50 @@ class ShellCancellation(unittest.TestCase):
                 if signum is None:
                     (fixture / "release-normal").write_text("release")
                 else:
+                    if admission_phase is not None:
+                        deadline = time.monotonic() + 3
+                        while (
+                            not (fixture / "owner-admission-open").exists()
+                            and owner.poll() is None
+                            and time.monotonic() < deadline
+                        ):
+                            time.sleep(0.005)
+                        self.assertTrue((fixture / "owner-admission-open").exists())
                     os.kill(owner.pid, signum)
+                    if admission_phase is not None:
+                        (fixture / "owner-admission-release").write_text("release")
                 try:
                     stdout, stderr = owner.communicate(timeout=4)
                 except subprocess.TimeoutExpired:
-                    stalled = True
+                    # Record only owned fixture identities, before forced fixture
+                    # cleanup can hide a live holder or an already-gone leader.
+                    observed = []
+                    owned = {owner.pid, body_pid, *(item["pid"] for item in records)}
+                    for _ in range(2):
+                        for pid in tuple(owned):
+                            try:
+                                children = Path(f"/proc/{pid}/task/{pid}/children")
+                                owned.update(map(int, children.read_text().split()))
+                            except (FileNotFoundError, ProcessLookupError):
+                                pass
+                    for pid in sorted(owned):
+                        state = fixture_process_fields(pid)
+                        observed.append(
+                            {
+                                "pid": pid,
+                                "state": state[0] if state else "gone",
+                                "ppid": state[1] if state else None,
+                                "pgrp": state[2] if state else None,
+                                "birth": state[19] if state else None,
+                            }
+                        )
+                    stalled = {
+                        "owner_status": owner.poll(),
+                        "elapsed": round(time.monotonic() - started, 4),
+                        "root_exists": root.exists(),
+                        "removal_witness": (fixture / "removal-witness.json").exists(),
+                        "owned_processes": observed,
+                    }
                     for item in records:
                         observed = fixture_birth(item)
                         if (
@@ -2681,11 +2813,13 @@ class ShellCancellation(unittest.TestCase):
                         }
                     )
                     return
-                witness = json.loads((fixture / "removal-witness.json").read_text())
                 self.assertFalse(
                     stalled,
-                    "stubborn descendant kept fixture pipes alive after cancellation",
+                    "owned cancellation exceeded its deadline: " + json.dumps(stalled),
                 )
+                witness = json.loads((fixture / "removal-witness.json").read_text())
+                if hostile_site:
+                    self.assertFalse((fixture / "external-site-ran").exists())
                 self.assertEqual(
                     owner.returncode,
                     130 if signum == signal.SIGINT else 143,
@@ -2765,6 +2899,26 @@ class ShellCancellation(unittest.TestCase):
         self.exercise(driver, signal.SIGTERM, False)
         # Assert
         assert self.receipts[-1]["driver"] == driver
+
+    def test_control_helpers_ignore_external_python_startup_hooks(self):
+        # Arrange: a real sitecustomize hook would abort the recorder at startup.
+        driver = "run-in-sif.sh"
+        # Act: actual process cleanup must remain a stdlib-only observation.
+        self.exercise(driver, signal.SIGTERM, True, hostile_site=True)
+        # Assert
+        assert self.receipts[-1]["driver"] == driver
+
+    def test_cancellation_waits_for_complete_child_ownership_admission(self):
+        # Arrange: preempt the actual lifecycle at each ownership admission edge.
+        for driver in ("run-in-sif.sh", "build-in-sif.sh", "publish-in-sif.sh"):
+            for phase in ("before-pid", "before-birth", "during-birth"):
+                for signum in (signal.SIGINT, signal.SIGTERM):
+                    with self.subTest(driver=driver, phase=phase, signal=signum):
+                        # Act: signal only the owner, with a real stubborn descendant.
+                        self.exercise(driver, signum, True, admission_phase=phase)
+                        # Assert: all existing birth/group/cleanup/unrelated-process
+                        # assertions run; the cancellation deadline is unchanged.
+                        assert self.receipts[-1]["driver"] == driver
 
     def test_run_term_grandchild(self):
         # Arrange

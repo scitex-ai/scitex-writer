@@ -7,7 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Inherit shared semantic text colors instead of cyclic self-references, and remove leaf header sizing/picker palette overrides. Updated assets use automatic content versions.
 
 ## [2.43.19]
 
@@ -24,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Defer release-driver cancellation until the owned child PID, group and kernel
+  birth token are fully registered, preventing early interrupts from leaving
+  live descendants or held output pipes.
+- Inherit shared semantic text colors instead of cyclic self-references, and remove leaf header sizing/picker palette overrides. Updated assets use automatic content versions.
 - Serve packaged global, document and recursive help before configuration,
   dependency checks, initialization or filesystem writes. Real compilation
   still refuses missing yq.
@@ -33,8 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   missing, and preserve the canonical manuscript title across TeX groups.
 - Activate the PDF pane initially, combine PDF tools into one menu, distinguish
   Monaco gutter edges and require explicit or dragged reference insertion.
-
-
 - Build figure/table thumbnail links from the mounted request path and authorized project identity, preserving standalone working-directory context. Mounted panes no longer request an unscoped root `/api/thumbnail`.
 
 ## [2.43.18] - 2026-11-01
@@ -157,6 +158,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Vendored shell completion as a drop-in module (contract v1) (#435).
+## [2.43.11] - 2026-10-17
+
+### Added
+
+- Leaf migration Slices 1+2: SDK-only Django running, jail declaration
+  (CCT 2786) — content requests keep project access and CSRF checks.
+- Release pipeline pins the writer-release-sif to the qualified ci-cpu
+  image with prebuilt venvs.
+
+### Fixed
+
+- Runtime state stays local-only: `.gitkeep`/README untracked, star
+  gitignore with no exceptions, session fixture ensures the runtime
+  gitignore (PS-234), function-scoped fixture isolation (STX-TQ004).
+- One assertion per test in the header title pin (STX-TQ007).
+
+## [2.43.10] - 2026-10-03
+
+### Fixed
+
+- Show Hints once inside the Details panel's Compilation group alongside Draft and Full, preserving hint callbacks and document state.
+- Declare the pytest-testmon prerequisite used by the canonical pre-push gate and isolate archive-pipeline fixtures from inherited Git environment variables.
+
+### Added
+
+- Expose a guarded, leaf-owned Writer workspace renderer and v2 routes for generic SDK hosts. Content requests retain project access and CSRF checks without changing navigation's selected project.
 
 ## [2.43.9] - 2026-10-03
 
