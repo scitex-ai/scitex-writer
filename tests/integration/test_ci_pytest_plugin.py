@@ -69,7 +69,9 @@ def test_ci_pytest_bootstrap_requires_one_private_cluster_and_cleans_it(
         env=environment,
         capture_output=True,
         text=True,
-        timeout=60,
+        # Same real private-PG initdb/start/readiness/stop budget as the wrapper,
+        # plus the already bounded nested two-test pytest process.
+        timeout=120 + 120 + 30 + 60 + 60,
     )
     reports = [json.loads(path.read_text()) for path in tmp_path.glob("report-*.json")]
     roots = {row["root"] for row in reports}

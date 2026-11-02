@@ -14,6 +14,12 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 DRIVER = ROOT / ".github/ci/with-test-postgres.py"
+# Public ephemeral_cluster_dsn bounds initdb120s, pg_ctl120s, writable30s,
+# and stop60s. These outer lifecycle observations must permit owned teardown;
+# they do not change the helper's production deadlines or SQL requirements.
+STARTUP_BOUND = 120 + 120 + 30
+TEARDOWN_BOUND = 60
+LIFECYCLE_BOUND = STARTUP_BOUND + TEARDOWN_BOUND + 15
 PROBE = r"""
 import json,os,sys,time
 from pathlib import Path
@@ -77,7 +83,7 @@ def test_ci_postgres_preserves_child_status_and_removes_its_private_cluster(
         env=environment,
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=LIFECYCLE_BOUND,
     )
     observed = json.loads(report.read_text())
     # Assert
@@ -105,7 +111,7 @@ def test_ci_postgres_cancellation_cleans_the_owned_database(tmp_path):
     )
     # Act
     try:
-        deadline = time.monotonic() + 20
+        deadline = time.monotonic() + STARTUP_BOUND
         while (
             not report.exists()
             and process.poll() is None
@@ -114,7 +120,7 @@ def test_ci_postgres_cancellation_cleans_the_owned_database(tmp_path):
             time.sleep(0.05)
         observed = json.loads(report.read_text())
         os.killpg(process.pid, signal.SIGTERM)
-        process.communicate(timeout=20)
+        process.communicate(timeout=TEARDOWN_BOUND + 15)
     finally:
         if process.poll() is None:
             os.killpg(process.pid, signal.SIGKILL)

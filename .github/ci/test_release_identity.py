@@ -1982,7 +1982,8 @@ body=sys.stdin.read() if a and a[0]=='-' else ''
 stage='uv' if name=='uv' else ('pytest' if (a[:2]==['-m','pytest'] or a[:1]==['.github/ci/with-test-postgres.py']) else 'twine' if a[:2]==['-m','twine'] else 'build' if a[:2]==['-m','build'] else 'mint' if body else 'proof-first' if 'verify-proof' in a and '--revalidate' in a else 'proof-final' if 'verify-proof' in a else 'python')
 root=Path(os.environ['TMPDIR'])
 with open(os.environ['FIXTURE_LOG'],'a') as f:
- f.write(json.dumps({'stage':stage,'root':str(root),'minted_fixture_only':os.environ.get('TWINE_PASSWORD')=='fixture-token'})+'\n')
+ fields=Path('/proc/self/stat').read_text().rsplit(') ',1)[1].split()
+ f.write(json.dumps({'stage':stage,'root':str(root),'pid':os.getpid(),'birth':fields[19],'isolated':sys.flags.isolated,'no_site':sys.flags.no_site, 'pgrp':int(fields[2]),'minted_fixture_only':os.environ.get('TWINE_PASSWORD')=='fixture-token'})+'\n')
 if os.environ.get('REPLACE_STAGE')==stage:
  displaced=root.with_name(root.name+'-displaced')
  root.rename(displaced)
@@ -2006,14 +2007,14 @@ class DriverCleanup(unittest.TestCase):
 
     def exercise(self, name, mode="success"):
         with tempfile.TemporaryDirectory(
-            prefix="writer-driver-fixture-", dir=os.environ.get("TMPDIR")
+            prefix="writer-driver-fixture-", dir=signal_fixture_parent()
         ) as directory:
             fixture = Path(directory)
             bin_dir = fixture / "fake-bin"
             bin_dir.mkdir()
             for executable in ("python", "uv"):
                 path = bin_dir / executable
-                path.write_text("#!" + DRIVER_PYTHON + "\n" + DRIVER_STUB)
+                path.write_text("#!" + DRIVER_PYTHON + " -IS\n" + DRIVER_STUB)
                 path.chmod(0o700)
             source_path = DRIVER_SOURCE / name
             source = source_path.read_text()
@@ -2031,6 +2032,13 @@ class DriverCleanup(unittest.TestCase):
                 "set -euo pipefail",
                 'unset() { builtin unset "$@"; if [[ "${1-}" = MINTED ]] && ! declare -p MINTED >/dev/null 2>&1; then printf \'cleared\\n\' >> "$MINT_CLEAR_LOG"; fi; }\nset -euo pipefail',
                 1,
+            )
+            phase_file = fixture / "cleanup-entered"
+            # Observe phase entry after the real trap captured its incoming status.
+            marker = "    local result=$? cleanup_result=0 current_id='' attempt=0\n"
+            self.assertEqual(source.count(marker), 1)
+            source = source.replace(
+                marker, marker + '    printf cleanup > "$FIXTURE_CLEANUP_PHASE"\n', 1
             )
             driver = fixture / name
             driver.write_text(source)
@@ -2068,6 +2076,7 @@ class DriverCleanup(unittest.TestCase):
                 "FIXTURE_LOG": str(log),
                 "BLOCK_READY": str(ready),
                 "MINT_CLEAR_LOG": str(minted_log),
+                "FIXTURE_CLEANUP_PHASE": str(phase_file),
                 "TMPDIR": str(unrelated),
                 "UNRELATED": str(unrelated),
                 "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "fixture-only",
@@ -2116,6 +2125,8 @@ class DriverCleanup(unittest.TestCase):
                 stderr=subprocess.PIPE,
                 start_new_session=True,
             )
+            cancelled_at = None
+            failure_report = None
             try:
                 if mode in (
                     "term",
@@ -2134,6 +2145,7 @@ class DriverCleanup(unittest.TestCase):
                     self.assertTrue(
                         ready.exists(), "real finite child must reach interrupted stage"
                     )
+                    cancelled_at = time.monotonic()
                     os.kill(
                         child.pid,
                         signal.SIGINT
@@ -2142,11 +2154,100 @@ class DriverCleanup(unittest.TestCase):
                     ) if mode.endswith("-shell") else os.killpg(
                         child.pid, signal.SIGTERM
                     )
-                stdout, stderr = child.communicate(timeout=4)
+                if cancelled_at is not None:
+                    rows = [json.loads(line) for line in log.read_text().splitlines()]
+                    groups = {row["pgrp"] for row in rows}
+                    deadline = cancelled_at + 4
+                    while True:
+                        live = []
+                        for row in rows:
+                            state = fixture_birth({"pid": row["pid"]})
+                            if state and state[0] == row["birth"] and state[1] != "Z":
+                                live.append(row["pid"])
+                        if not live:
+                            for task in Path("/proc").iterdir():
+                                if task.name.isdecimal():
+                                    state = fixture_process_fields(int(task.name))
+                                    if (
+                                        state
+                                        and int(state[2]) in groups
+                                        and state[0] != "Z"
+                                    ):
+                                        live.append(int(task.name))
+                        now = time.monotonic()
+                        if not live or now >= deadline:
+                            break
+                        time.sleep(0.005)
+                    self.assertTrue(
+                        not live and now <= deadline,
+                        "cancellation payload fence exceeded: " + json.dumps(live),
+                    )
+                # Each finite stub retains a four-second live-payload fence.
+                # Multiple interpreter invocations and later filesystem teardown
+                # are separate phases, not a single four-second budget.
+                phase_deadline = time.monotonic() + 30
+                while not phase_file.exists() and child.poll() is None:
+                    now = time.monotonic()
+                    lines = (
+                        log.read_text().splitlines(keepends=True)
+                        if log.exists()
+                        else []
+                    )
+                    for line in lines:
+                        if not line.endswith("\n"):
+                            continue
+                        row = json.loads(line)
+                        state = fixture_birth({"pid": row["pid"]})
+                        if state and state[0] == row["birth"] and state[1] != "Z":
+                            self.assertLess(
+                                time.clock_gettime(time.CLOCK_BOOTTIME)
+                                - int(row["birth"]) / os.sysconf("SC_CLK_TCK"),
+                                4,
+                                "finite payload exceeded four seconds: "
+                                + json.dumps(row),
+                            )
+                    self.assertLess(
+                        now,
+                        phase_deadline,
+                        "finite driver phases did not reach cleanup",
+                    )
+                    time.sleep(0.005)
+                # Actual cleanup's existing group-drain2s + rm10s/kill-after2s.
+                stdout, stderr = child.communicate(timeout=15)
+            except (subprocess.TimeoutExpired, AssertionError) as failure:
+                states = []
+                for row in (
+                    [json.loads(line) for line in log.read_text().splitlines()]
+                    if log.exists()
+                    else []
+                ):
+                    fields = fixture_process_fields(row["pid"])
+                    states.append(
+                        {
+                            "stage": row["stage"],
+                            "pid": row["pid"],
+                            "expected_birth": row["birth"],
+                            "state": fields[0] if fields else "gone",
+                            "birth": fields[19] if fields else None,
+                        }
+                    )
+                failure_report = json.dumps(
+                    {
+                        "cleanup_entered": phase_file.exists(),
+                        "owned_phases": states,
+                    }
+                )
+                raise AssertionError(failure_report) from failure
             finally:
                 if child.poll() is None:
                     os.killpg(child.pid, signal.SIGKILL)
-                    child.communicate()
+                    try:
+                        child.communicate(timeout=5)
+                    except subprocess.TimeoutExpired as secondary:
+                        raise AssertionError(
+                            "fixture secondary teardown exceeded bound: "
+                            + str(failure_report)
+                        ) from secondary
             rows = (
                 [json.loads(line) for line in log.read_text().splitlines()]
                 if log.exists()
@@ -2471,7 +2572,9 @@ if os.environ['STUBBORN']=='1':
    fd=os.open('/dev/null',os.O_WRONLY);os.dup2(fd,1);os.dup2(fd,2);os.close(fd)
   with (root/'grandchild-held-file').open('w') as held:
    held.write('fixture');held.flush()
-   (base/'grandchild.json').write_text(json.dumps(metadata()))
+   identity=metadata()
+   (base/'grandchild.identity').write_text(str(identity['pid'])+' '+identity['fixture_birth']+'\n')
+   (base/'grandchild.json').write_text(json.dumps(identity))
    time.sleep(20)
   os._exit(0)
  while not (base/'grandchild.json').exists():time.sleep(.005)
@@ -2481,15 +2584,29 @@ if os.environ.get('LEAK_SUCCESS')=='1':
  sys.exit(0)
 time.sleep(20)
 """
-DRIVER_REMOVER = r"""from pathlib import Path
-import json,os,sys
-base=Path(os.environ['FIXTURE_PARENT']);p=base/'grandchild.json';live=False
-if p.exists():
- old=json.loads(p.read_text());s=Path('/proc')/str(old['pid'])/'stat'
- if s.exists():
-  raw=s.read_text().rsplit(') ',1)[1].split();live=raw[19]==old['fixture_birth'] and raw[0]!='Z'
-(base/'removal-witness.json').write_text(json.dumps({'grandchild_live_before_rm':live}))
-os.execv('/usr/bin/rm',['/usr/bin/rm',*sys.argv[1:]])
+DRIVER_REMOVER = r"""set -euo pipefail
+base="${FIXTURE_PARENT:?}"
+live=false
+if [[ -f "$base/grandchild.identity" ]]; then
+    read -r child_pid child_birth < "$base/grandchild.identity"
+    [[ "$child_pid" =~ ^[0-9]+$ && "$child_birth" =~ ^[0-9]+$ ]] || exit 92
+    task="/proc/$child_pid/stat"
+    if [[ -e "$task" ]]; then
+        if IFS= read -r row < "$task"; then
+            row="${row##*) }"
+            read -r -a fields <<< "$row"
+            [[ "${#fields[@]}" -ge 20 ]] || exit 92
+            if [[ "${fields[19]}" == "$child_birth" && "${fields[0]}" != Z ]]; then
+                live=true
+            fi
+        elif [[ -e "$task" ]]; then
+            # Unknown/read-denied state must never become a false death witness.
+            exit 93
+        fi
+    fi
+fi
+printf '{"grandchild_live_before_rm":%s}\n' "$live" > "$base/removal-witness.json"
+exec /usr/bin/rm "$@"
 """
 
 
@@ -2515,6 +2632,82 @@ def fixture_birth(metadata):
 
 
 class OwnedProcessObservation(unittest.TestCase):
+    def test_finite_stubs_skip_real_operator_site_startup(self):
+        # Arrange: an actual hostile startup module, never a patched import.
+        with tempfile.TemporaryDirectory(
+            prefix="writer-stub-startup-", dir="/tmp"
+        ) as directory:
+            root = Path(directory)
+            marker = root / "site-ran"
+            (root / "sitecustomize.py").write_text(
+                "from pathlib import Path\nPath("
+                + repr(str(marker))
+                + ").write_text('ran')\n"
+            )
+            stub = root / "python"
+            stub.write_text("#!" + DRIVER_PYTHON + " -IS\n" + DRIVER_STUB)
+            stub.chmod(0o700)
+            log = root / "events"
+            environment = {
+                "PATH": "/usr/bin:/bin",
+                "TMPDIR": str(root),
+                "PYTHONPATH": str(root),
+                "FIXTURE_LOG": str(log),
+            }
+            observed = []
+            # Act: the old interpreter path loads site; the actual shebang skips it.
+            for command in ([DRIVER_PYTHON, str(stub)], [str(stub)]):
+                subprocess.run(command, env=environment, check=True, timeout=5)
+                event = json.loads(log.read_text().splitlines()[-1])
+                observed.append((event["isolated"], event["no_site"], marker.exists()))
+                marker.unlink(missing_ok=True)
+            # Assert
+            assert observed == [(0, 0, True), (1, 1, False)]
+
+    def test_native_recorder_observes_live_wrong_birth_and_gone_children(self):
+        # Arrange: real proc state and real rm --version; no filesystem remover stub.
+        with tempfile.TemporaryDirectory(
+            prefix="native-proc-recorder-", dir="/tmp"
+        ) as directory:
+            root = Path(directory)
+            recorder = root / "recorder.sh"
+            recorder.write_text(DRIVER_REMOVER)
+            child = subprocess.Popen(["/usr/bin/sleep", "20"], start_new_session=True)
+            try:
+                birth = fixture_birth({"pid": child.pid})[0]
+                identity = root / "grandchild.identity"
+                environment = {"PATH": "/usr/bin:/bin", "FIXTURE_PARENT": str(root)}
+                values, statuses = [], []
+                # Act: the same owned task is live, has a wrong identity, then is gone.
+                for expected_birth, terminate in (
+                    (birth, False),
+                    (str(int(birth) + 1), False),
+                    (birth, True),
+                ):
+                    identity.write_text(f"{child.pid} {expected_birth}\n")
+                    if terminate:
+                        child.terminate()
+                        child.wait(timeout=3)
+                    result = subprocess.run(
+                        ["/bin/bash", str(recorder), "--version"],
+                        env=environment,
+                        capture_output=True,
+                        text=True,
+                        timeout=3,
+                    )
+                    statuses.append(result.returncode)
+                    values.append(
+                        json.loads((root / "removal-witness.json").read_text())[
+                            "grandchild_live_before_rm"
+                        ]
+                    )
+                # Assert
+                assert (statuses, values) == ([0, 0, 0], [True, False, False])
+            finally:
+                if child.poll() is None:
+                    child.kill()
+                    child.wait(timeout=3)
+
     def test_reaped_task_proc_handle_is_gone_without_killing_the_observer(self):
         # Arrange: use the actual kernel proc descriptor, not a mocked errno.
         child = subprocess.Popen(["/usr/bin/sleep", "20"], start_new_session=True)
@@ -2570,7 +2763,13 @@ class ShellCancellation(unittest.TestCase):
             raise RuntimeError("fixture subreaper state could not be restored")
 
     def exercise(
-        self, name, signum, stubborn, admission_phase=None, hostile_site=False
+        self,
+        name,
+        signum,
+        stubborn,
+        admission_phase=None,
+        hostile_site=False,
+        hold_cleanup=False,
     ):
         source = (DRIVER_SOURCE / name).read_text()
         start = source.index("# BEGIN owned temporary-root lifecycle")
@@ -2583,14 +2782,19 @@ class ShellCancellation(unittest.TestCase):
             fixture = Path(directory)
             child_script, remover = fixture / "finite-child.py", fixture / "remover"
             child_script.write_text(DRIVER_CHILD)
-            remover.write_text("#!" + DRIVER_PYTHON + "\n" + DRIVER_REMOVER)
+            remover_source = DRIVER_REMOVER
+            if hold_cleanup:
+                remover_source = remover_source.replace(
+                    'exec /usr/bin/rm "$@"',
+                    'printf ready > "$base/cleanup-open"\n'
+                    'while [[ ! -f "$base/cleanup-release" ]]; do sleep .005; done\n'
+                    'exec /usr/bin/rm "$@"',
+                )
+            remover.write_text("#!/bin/bash\n" + remover_source)
             remover.chmod(0o700)
             lifecycle = lifecycle.replace(
                 "/usr/bin/rm ",
-                shlex.quote(DRIVER_PYTHON)
-                + " -I -S "
-                + shlex.quote(str(remover))
-                + " ",
+                "/bin/bash " + shlex.quote(str(remover)) + " ",
             )
             if admission_phase is not None:
                 barrier = (
@@ -2733,11 +2937,66 @@ class ShellCancellation(unittest.TestCase):
                         ):
                             time.sleep(0.005)
                         self.assertTrue((fixture / "owner-admission-open").exists())
+                    signalled_at = time.monotonic()
                     os.kill(owner.pid, signum)
                     if admission_phase is not None:
                         (fixture / "owner-admission-release").write_text("release")
+                extinction_elapsed = None
+                if signum is not None:
+                    # The four-second fence concerns actual owned payloads, not
+                    # subsequent filesystem work in the independently bounded rm.
+                    deadline = signalled_at + 4
+                    while True:
+                        live = []
+                        for item in [body, *records]:
+                            state = fixture_birth(item)
+                            if (
+                                state
+                                and state[0] == item["fixture_birth"]
+                                and state[1] != "Z"
+                            ):
+                                live.append(item["pid"])
+                        if not live:
+                            # Include actual group descendants not named by the
+                            # fixture (e.g. the driver's cancellation-trap sleep).
+                            for task in Path("/proc").iterdir():
+                                if task.name.isdecimal():
+                                    state = fixture_process_fields(int(task.name))
+                                    if (
+                                        state
+                                        and int(state[2]) == body_pid
+                                        and state[0] != "Z"
+                                    ):
+                                        live.append(int(task.name))
+                        if not live or time.monotonic() >= deadline:
+                            break
+                        time.sleep(0.005)
+                    extinction_elapsed = time.monotonic() - signalled_at
+                    if live or extinction_elapsed > 4:
+                        stalled = {
+                            "phase": "payload-extinction",
+                            "live_owned_pids": live,
+                            "elapsed": extinction_elapsed,
+                        }
+                    if hold_cleanup:
+                        cleanup_deadline = time.monotonic() + 2
+                        while (
+                            not (fixture / "cleanup-open").exists()
+                            and time.monotonic() < cleanup_deadline
+                        ):
+                            time.sleep(0.005)
+                        self.assertTrue((fixture / "cleanup-open").exists())
+                        self.assertTrue(
+                            root.exists(), "held cleanup retains the actual scratch"
+                        )
+                        self.assertIsNone(unrelated.poll())
+                        while time.monotonic() - signalled_at < 4.1:
+                            time.sleep(0.005)
+                        (fixture / "cleanup-release").write_text("release")
                 try:
-                    stdout, stderr = owner.communicate(timeout=4)
+                    # Actual driver cleanup: group-drain 2s + rm 10s/kill-after2s.
+                    # Production bounds stay unchanged; payload death is checked above.
+                    stdout, stderr = owner.communicate(timeout=15 if signum else 4)
                 except subprocess.TimeoutExpired:
                     # Record only owned fixture identities, before forced fixture
                     # cleanup can hide a live holder or an already-gone leader.
@@ -2762,6 +3021,8 @@ class ShellCancellation(unittest.TestCase):
                             }
                         )
                     stalled = {
+                        "phase": "filesystem-teardown",
+                        "prior_extinction_failure": stalled or None,
                         "owner_status": owner.poll(),
                         "elapsed": round(time.monotonic() - started, 4),
                         "root_exists": root.exists(),
@@ -2776,7 +3037,12 @@ class ShellCancellation(unittest.TestCase):
                             and observed[1] != "Z"
                         ):
                             os.kill(item["pid"], signal.SIGKILL)
-                    stdout, stderr = owner.communicate(timeout=2)
+                    try:
+                        stdout, stderr = owner.communicate(timeout=2)
+                    except subprocess.TimeoutExpired as exc:
+                        raise AssertionError(
+                            "fixture teardown exceeded bound: " + json.dumps(stalled)
+                        ) from exc
                 deadline = time.monotonic() + 1
                 while time.monotonic() < deadline:
                     for item in records:
@@ -2851,6 +3117,8 @@ class ShellCancellation(unittest.TestCase):
                         "stubborn_grandchild": stubborn,
                         "exit": owner.returncode,
                         "elapsed_s": round(time.monotonic() - started, 4),
+                        "payload_extinction_s": round(extinction_elapsed, 4),
+                        "filesystem_cleanup_held": hold_cleanup,
                         "body": body,
                         "fixture_children": records,
                         "all_reaped": True,
@@ -2883,6 +3151,18 @@ class ShellCancellation(unittest.TestCase):
                     shutil.rmtree(root)
                 unrelated.terminate()
                 unrelated.wait(timeout=5)
+
+    def test_payload_extinction_precedes_separately_held_filesystem_cleanup(self):
+        # Arrange: exercise the real driver with its scratch retained by a barrier.
+        driver = "run-in-sif.sh"
+        # Act
+        self.exercise(driver, signal.SIGTERM, True, hold_cleanup=True)
+        # Assert
+        assert (
+            self.receipts[-1]["filesystem_cleanup_held"],
+            self.receipts[-1]["payload_extinction_s"] < 4,
+            self.receipts[-1]["elapsed_s"] >= 4,
+        ) == (True, True, True)
 
     def test_run_live_group_refuses_rm(self):
         # Arrange

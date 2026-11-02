@@ -37,9 +37,10 @@ cancellation path. Scheduling-barrier regressions cover INT and TERM before PID
 registration, before birth capture and during birth capture for all three release
 drivers; unrelated processes and the existing deadlines remain protected.
 Timed signal fixtures keep scripts and witnesses on the /tmp filesystem,
-preserving an already-local inherited private parent. Their stdlib-only recorder
-runs with isolated Python startup, so runner-workspace disk stalls and unrelated
-site hooks do not become false descendant-liveness failures.
+preserving an already-local inherited private parent. Their recorder uses Bash builtin proc reads and a builtin JSON witness before
+executing the real rm. It needs no Python/import startup, so recorder overhead
+and unrelated site hooks do not become false descendant-liveness failures.
+Real live-task, wrong-birth and gone-task probes verify the witness semantics.
 Real integration tests exercise SQL writes, success/failure/signal status,
 closed TCP listening and cleanup. A local developer with server tools can use:
 
@@ -72,3 +73,22 @@ External-network opt-ins, optional cross-package integrations and missing TeX
 tools can still produce explicit skips in a local suite. A passing local run
 must report those counts and the existing strict upstream citation-verification
 xfail; it is not evidence that every optional integration was exercised.
+
+Cancellation controls enforce the four-second payload-extinction fence directly
+against kernel birth identities and the actual process group. Filesystem teardown
+is observed separately under the existing group-drain (2s) and `rm` (10s plus
+2s kill-after) bounds. A real held-cleanup barrier proves scratch removal follows
+payload extinction even when the filesystem phase extends past four seconds.
+Nested private-PostgreSQL lifecycle probes permit the public helper's existing
+120s initdb, 120s start, 30s readiness and 60s stop bounds; these test observation
+budgets do not alter server or cancellation deadlines.
+
+Ordinary pytest discovers every actual unittest class from the native controls,
+checks its complete unique case inventory, and executes each class as its own
+owned subprocess. Each class keeps a 300s observation limit; this changes
+aggregate scheduling/runtime allowance from the former single 300s envelope.
+Every expected test identity, count and plain OK footer is checked, so missing,
+duplicated or skipped controls fail. Outer timeout diagnostics retain captured
+stderr and owned kernel states through a secondary cleanup timeout. Finite
+installer/OIDC stand-ins use isolated, no-site Python; their real kernel birth
+tokens are recorded and checked separately from the unchanged driver cleanup.
