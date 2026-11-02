@@ -121,3 +121,19 @@ def test_ci_postgres_cancellation_cleans_the_owned_database(tmp_path):
             process.communicate(timeout=10)
     # Assert
     assert (process.returncode, Path(observed["root"]).exists()) == (143, False)
+
+
+def test_scoped_fixture_preserves_private_socket_and_isolates_writes(pg_schema):
+    # Arrange
+    import psycopg
+
+    target = os.environ["SCITEX_STORE_DSN"]
+    # Act
+    with psycopg.connect(target, autocommit=True) as connection:
+        connection.execute("CREATE TABLE private_scope_probe(value integer)")
+        connection.execute("INSERT INTO private_scope_probe VALUES (42)")
+        observed = connection.execute(
+            "SELECT current_schema(), value FROM private_scope_probe"
+        ).fetchone()
+    # Assert
+    assert observed == (pg_schema, 42)
