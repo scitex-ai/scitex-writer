@@ -1,6 +1,6 @@
 """Run the tracked contributor build with real installed frontend packages.
 
-Requires .[frontend-build] and Node/npm. No mocks, sibling checkouts or live data.
+Requires .[dev] and Node/npm. No mocks, sibling checkouts or live data.
 """
 
 from __future__ import annotations

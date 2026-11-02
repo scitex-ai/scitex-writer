@@ -49,9 +49,20 @@ def test_figtable_drag_carries_the_shared_insert_mime():
 
 
 def test_figtable_insertion_requires_the_explicit_action():
+    # Arrange
     source = _INSERT_TS.read_text(encoding="utf-8")
+    # Act
     listed = source[source.index("private renderList(") :]
+    # Assert
     assert 'action?.addEventListener("click"' in listed
+
+
+def test_figtable_row_click_does_not_insert_into_the_editor():
+    # Arrange
+    source = _INSERT_TS.read_text(encoding="utf-8")
+    # Act
+    listed = source[source.index("private renderList(") :]
+    # Assert
     assert 'el.addEventListener("click"' not in listed
 
 

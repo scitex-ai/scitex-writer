@@ -78,10 +78,8 @@ def test_workspace_shell_has_one_required_sdk_distribution_requires_sdk_dependen
     # Arrange: pytest fixtures and local setup.
     # Act: exercise the real scenario.
     data = tomllib.loads(_PYPROJECT.read_text())['project']
-    requirements = data['dependencies'] + [requirement for extra in data['optional-dependencies'].values() for requirement in extra]
     # Assert
-    assert 'scitex-sdk>=0.3.9' in data['dependencies']
-
+    assert 'scitex-sdk>=0.3.17' in data['dependencies']
 
 def test_workspace_shell_has_one_required_sdk_distribution_excludes_retired_distributions():
     # Arrange: pytest fixtures and local setup.

@@ -49,6 +49,27 @@ git clone https://github.com/ywatanabe1989/scitex-writer.git my-paper
 cd my-paper && make manuscript   # or: ./compile.sh manuscript
 ```
 
+## Mounted editor and frontend builds
+
+The editor previews the current section separately from explicit full-manuscript
+compilation. Its PDF pane uses LivePaper's public rich provider through Writer's
+own annotation adapter; the SDK owns PDF rendering. Clicking a figure or table
+row does not insert text: use drag and drop or the explicit insert action.
+Caption-only tables have no data thumbnail.
+
+Contributor builds require SDK>=0.3.17, LivePaper>=0.2.20 and Node/npm. From the
+checkout, install the declared developer dependencies and run the tracked build:
+
+```bash
+python -m pip install -e '.[dev]'
+python scripts/build_frontend.py --receipt /tmp/writer-frontend-build.json
+```
+
+The build discovers both frontend packages from installed Python distributions,
+runs normal npm installation and produces the complete asset closure without
+sibling source checkouts. See [the host boundary](docs/GUI_HOST_BOUNDARY.md) for
+project authorization, CSRF and disposable browser qualification.
+
 ## Demo
 
 <p align="center">

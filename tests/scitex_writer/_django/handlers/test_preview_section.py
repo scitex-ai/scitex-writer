@@ -5,7 +5,10 @@ import json
 import pytest
 from django.test import RequestFactory
 
-from scitex_writer._django.handlers.preview import handle_section_pdf, handle_section_preview
+from scitex_writer._django.handlers.preview import (
+    handle_section_pdf,
+    handle_section_preview,
+)
 from scitex_writer._django.services import ProjectState
 
 

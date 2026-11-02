@@ -9,9 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Inherit shared semantic text colors instead of cyclic self-references, and remove leaf header sizing/picker palette overrides. Updated assets use automatic content versions.
 
-## [2.43.19] - 2026-11-01
+## [2.43.19]
+
+### Added
+
+- LivePaper public rich-PDF consumer adapter with Writer-owned project/CSRF
+  translation, locked-target checks and single persistence per box gesture.
+- Reproducible contributor frontend builds using public SDK and LivePaper
+  wheel helpers, with SDK>=0.3.17 and LivePaper>=0.2.20 requirements.
 
 ### Fixed
+
+- Preview the current section using the existing snippet compiler, preserving
+  explicit full-manuscript compilation and separate PDF artifacts.
+- Launch packaged compilation scripts through Bash when execute bits are
+  missing, and preserve the canonical manuscript title across TeX groups.
+- Activate the PDF pane initially, combine PDF tools into one menu, distinguish
+  Monaco gutter edges and require explicit or dragged reference insertion.
+
 
 - Build figure/table thumbnail links from the mounted request path and authorized project identity, preserving standalone working-directory context. Mounted panes no longer request an unscoped root `/api/thumbnail`.
 

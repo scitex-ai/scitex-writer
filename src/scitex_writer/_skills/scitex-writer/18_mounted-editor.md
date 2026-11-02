@@ -49,9 +49,10 @@ persists once. Section previews and explicit full PDF mode remain distinct.
 This source adoption does not establish deployment or Journal adoption. Shared `example-project-mnist` claims
 may be labeled demo/registered and are not evidence of scientific verification.
 
-The rich PDF source preview is qualified against SDK 0.3.17 and LivePaper
-0.2.20 frontend packages; those preview builds are not official releases.
+The rich PDF build requires SDK>=0.3.17 and LivePaper>=0.2.20 frontend
+packages. Verify the required distributions before rebuilding; a source
+checkout or preview wheel does not establish public availability.
 
-Clean frontend rebuild: install `.[frontend-build]` with the qualified SDK/
-LivePaper wheels, then run `python scripts/build_frontend.py`. This tracked
+Clean frontend rebuild: install `.[dev]` with the required SDK/
+LivePaper packages, then run `python scripts/build_frontend.py`. This tracked
 command uses both public frontend helpers and needs no sibling source checkout.

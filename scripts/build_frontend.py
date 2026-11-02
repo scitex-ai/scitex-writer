@@ -1,6 +1,6 @@
 """Build Writer assets from installed SDK/LivePaper public frontend packages.
 
-Install .[frontend-build], then run python scripts/build_frontend.py.
+Install .[dev], then run python scripts/build_frontend.py.
 Node/npm are external build tools. No sibling source checkouts are required.
 """
 
@@ -30,7 +30,7 @@ def main() -> None:
         from scitex_sdk import get_frontend_package_dir as sdk_frontend
     except ImportError as error:
         raise SystemExit(
-            "Install the provider-capable wheels and scitex-writer[frontend-build]"
+            "Install the provider-capable wheels and scitex-writer[dev]"
         ) from error
 
     root = Path(__file__).resolve().parents[1]

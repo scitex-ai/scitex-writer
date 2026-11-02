@@ -13,18 +13,15 @@ the run_compile seam to capture the constructed command.
 import inspect
 import re
 import subprocess
+from pathlib import Path
 
 import pytest
-
-pytest.importorskip("git")
-from pathlib import Path
 
 from scitex_writer._compile._runner import (
     _find_output_files,
     _get_compile_script,
     run_compile,
 )
-from scitex_writer._compile._validator import validate_before_compile
 
 
 class _RecordingCommandRunner:

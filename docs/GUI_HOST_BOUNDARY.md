@@ -29,7 +29,7 @@ before mutation callbacks. Box gestures persist once despite the SDK emitting
 both pen and region events. Section previews retain their separate PDF route,
 cache and download identity; explicit full-manuscript compilation is unchanged.
 
-Rebuilding this source preview requires provider-capable SDK and LivePaper
+Rebuilding the frontend requires provider-capable SDK and LivePaper
 frontend packages from their Python wheels. The public helper
 `scitex_live_paper.get_frontend_package_dir()` validates the wheel's exported
 provider module, types and CSS. Use normal npm file dependencies or npm pack;
@@ -43,8 +43,8 @@ live host annotation credentials or persistence.
 The GUI requires SDK >=0.3.17 for the rich PDF page/text/link contract. The SDK physically owns
 `scitex_sdk.app` and `scitex_sdk.ui`, their Django registrations and the resources
 under `scitex_sdk/app/` and `scitex_sdk/ui/`. Writer requires the SDK directly and
-has no App/UI distribution dependency. The rich-PDF source preview uses qualified SDK 0.3.17 and LivePaper 0.2.20
-wheels and is not an official release. Manifest
+has no App/UI distribution dependency. The build contract requires SDK>=0.3.17 and LivePaper>=0.2.20. A source
+checkout or preview wheel does not establish public availability. Manifest
 versions come from installed metadata, not hard-coded JSON.
 
 Standalone settings explicitly declare `SCITEX_APP_MODE = "standalone"`.
@@ -160,7 +160,7 @@ retain every file referenced by the Vite manifest, including hashed chunks,
 worker and CSS assets. Never replace a wheel package with a source alias.
 
 For a clean contributor build, install the qualified preview wheels plus
-`.[frontend-build]` (Node/npm required), then run:
+`.[dev]` (Node/npm required), then run:
 
 ```sh
 python scripts/build_frontend.py --receipt /tmp/writer-frontend-build.json
