@@ -7,7 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Inherit shared semantic text colors instead of cyclic self-references, and remove leaf header sizing/picker palette overrides. Updated assets use automatic content versions.
 
 ## [2.43.19]
 
@@ -24,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Defer release-driver cancellation until the owned child PID, group and kernel
+  birth token are fully registered, preventing early interrupts from leaving
+  live descendants or held output pipes.
+- Inherit shared semantic text colors instead of cyclic self-references, and remove leaf header sizing/picker palette overrides. Updated assets use automatic content versions.
 - Serve packaged global, document and recursive help before configuration,
   dependency checks, initialization or filesystem writes. Real compilation
   still refuses missing yq.
@@ -33,8 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   missing, and preserve the canonical manuscript title across TeX groups.
 - Activate the PDF pane initially, combine PDF tools into one menu, distinguish
   Monaco gutter edges and require explicit or dragged reference insertion.
-
-
 - Build figure/table thumbnail links from the mounted request path and authorized project identity, preserving standalone working-directory context. Mounted panes no longer request an unscoped root `/api/thumbnail`.
 
 ## [2.43.18] - 2026-11-01

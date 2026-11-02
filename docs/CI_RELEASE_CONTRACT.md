@@ -31,6 +31,11 @@ The production-system-ID refusal in `tests/conftest.py` stays unchanged.
 The public context removes the cluster on success, failure and cancellation.
 The existing SIF runner owns the test process group, propagates signals and
 checks that its children are gone before deleting its outer scratch directory.
+Cancellation arriving during child admission is retained until PID, process
+group and kernel birth registration finish, then follows the same guarded
+cancellation path. Scheduling-barrier regressions cover INT and TERM before PID
+registration, before birth capture and during birth capture for all three release
+drivers; unrelated processes and the existing deadlines remain protected.
 Real integration tests exercise SQL writes, success/failure/signal status,
 closed TCP listening and cleanup. A local developer with server tools can use:
 

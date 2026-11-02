@@ -2530,7 +2530,7 @@ class ShellCancellation(unittest.TestCase):
         if cls._libc.prctl(36, cls._previous_subreaper, 0, 0, 0) != 0:
             raise RuntimeError("fixture subreaper state could not be restored")
 
-    def exercise(self, name, signum, stubborn):
+    def exercise(self, name, signum, stubborn, admission_phase=None):
         source = (DRIVER_SOURCE / name).read_text()
         start = source.index("# BEGIN owned temporary-root lifecycle")
         end = source.index("driver_body() {", start)
@@ -2545,6 +2545,30 @@ class ShellCancellation(unittest.TestCase):
             remover.write_text("#!" + DRIVER_PYTHON + "\n" + DRIVER_REMOVER)
             remover.chmod(0o700)
             lifecycle = lifecycle.replace("/usr/bin/rm ", str(remover) + " ")
+            if admission_phase is not None:
+                barrier = (
+                    '    printf ready > "$FIXTURE_PARENT/owner-admission-open"\n'
+                    '    while [[ ! -f "$FIXTURE_PARENT/owner-admission-release" ]]; do sleep .005; done\n'
+                )
+                if admission_phase == "before-pid":
+                    marker = "    OWNED_CHILD_PID=$!\n"
+                    replacement = barrier + marker
+                elif admission_phase == "before-birth":
+                    marker = '    OWNED_CHILD_BIRTH="$(owned_birth "$OWNED_CHILD_PID" 2>/dev/null || true)"\n'
+                    replacement = barrier + marker
+                elif admission_phase == "during-birth":
+                    marker = "owned_birth() {\n"
+                    replacement = (
+                        marker
+                        + '    if [[ ! -f "$FIXTURE_PARENT/owner-admission-open" ]]; then\n'
+                        + barrier
+                        + "    fi\n"
+                    )
+                else:
+                    raise AssertionError("Unknown admission barrier")
+                self.assertEqual(lifecycle.count(marker), 1)
+                lifecycle = lifecycle.replace(marker, replacement, 1)
+
             script = fixture / "driver.sh"
             script.write_text(
                 'set -euo pipefail\nSCRATCH_PREFIX="/tmp/ci-scitex_writer-7000002-1-3.12-"\n'
@@ -2642,7 +2666,18 @@ class ShellCancellation(unittest.TestCase):
                 if signum is None:
                     (fixture / "release-normal").write_text("release")
                 else:
+                    if admission_phase is not None:
+                        deadline = time.monotonic() + 3
+                        while (
+                            not (fixture / "owner-admission-open").exists()
+                            and owner.poll() is None
+                            and time.monotonic() < deadline
+                        ):
+                            time.sleep(0.005)
+                        self.assertTrue((fixture / "owner-admission-open").exists())
                     os.kill(owner.pid, signum)
+                    if admission_phase is not None:
+                        (fixture / "owner-admission-release").write_text("release")
                 try:
                     stdout, stderr = owner.communicate(timeout=4)
                 except subprocess.TimeoutExpired:
@@ -2776,6 +2811,18 @@ class ShellCancellation(unittest.TestCase):
         self.exercise(driver, signal.SIGTERM, False)
         # Assert
         assert self.receipts[-1]["driver"] == driver
+
+    def test_cancellation_waits_for_complete_child_ownership_admission(self):
+        # Arrange: preempt the actual lifecycle at each ownership admission edge.
+        for driver in ("run-in-sif.sh", "build-in-sif.sh", "publish-in-sif.sh"):
+            for phase in ("before-pid", "before-birth", "during-birth"):
+                for signum in (signal.SIGINT, signal.SIGTERM):
+                    with self.subTest(driver=driver, phase=phase, signal=signum):
+                        # Act: signal only the owner, with a real stubborn descendant.
+                        self.exercise(driver, signum, True, admission_phase=phase)
+                        # Assert: all existing birth/group/cleanup/unrelated-process
+                        # assertions run; the cancellation deadline is unchanged.
+                        assert self.receipts[-1]["driver"] == driver
 
     def test_run_term_grandchild(self):
         # Arrange
