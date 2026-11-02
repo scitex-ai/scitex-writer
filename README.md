@@ -424,7 +424,7 @@ SCITEX_WRITER_DARK_MODE=true make manuscript
 
 **GUI Editor** — Standalone browser-based editor with file tree, PDF preview, and compilation controls.
 
-The default preview renders only the selected section (for example, Abstract), using the package snippet compiler. Selecting another section updates the preview. Choose the document name (for example, Manuscript) in the compile-mode selector to view or compile the full document. Section previews use separate `.preview/` PDFs and never replace the full manuscript PDF.
+The default preview renders only the selected section (for example, Abstract), using the package snippet compiler. Selecting another section updates the preview. Choose the document name (for example, Manuscript) in the compile-mode selector to view or compile the full document. Section previews use separate `.preview/` PDFs and never replace the full manuscript PDF. Writer-generated snippets use Latin Modern outline fonts and Unicode mappings so ligatures remain searchable/copyable; complete documents retain their own font policy. See [snippet PDF requirements](docs/SNIPPET_PDFS.md).
 
 <p align="center">
 <p align="center">

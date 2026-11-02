@@ -11,6 +11,8 @@ from django.http import FileResponse, JsonResponse
 
 from .files import _resolve_safe
 
+# Bump when Writer-generated snippet rendering changes. Do not delete old PDFs.
+_PREVIEW_FORMAT_REVISION = "unicode-outline-v1"
 _PREVIEW_ID = re.compile(r"[a-f0-9]{32}")
 
 
@@ -43,7 +45,7 @@ def handle_section_preview(request, project):
         return JsonResponse({"error": "Section preview is too large"}, status=413)
     color = "dark" if data.get("dark_mode") else "light"
     preview_id = hashlib.sha256(
-        json.dumps([path, content, color, __version__], ensure_ascii=False).encode()
+        json.dumps([path, content, color, __version__, _PREVIEW_FORMAT_REVISION], ensure_ascii=False).encode()
     ).hexdigest()[:32]
     artifact = _artifact(project, preview_id)
     if artifact is None:

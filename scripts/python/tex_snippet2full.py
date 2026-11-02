@@ -54,6 +54,9 @@ DOCUMENT_TEMPLATE = """\
 % Essential packages
 \\usepackage[english]{{babel}}
 \\usepackage[T1]{{fontenc}}
+\\usepackage{{lmodern}}
+\\input{{glyphtounicode}}
+\\pdfgentounicode=1
 \\usepackage[utf8]{{inputenc}}
 \\usepackage[table,svgnames]{{xcolor}}
 \\usepackage{{amsmath, amssymb}}

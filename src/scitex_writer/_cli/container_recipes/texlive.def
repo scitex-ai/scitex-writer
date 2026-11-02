@@ -143,6 +143,7 @@ From: ubuntu:22.04
         texlive-latex-recommended \
         texlive-latex-extra \
         texlive-fonts-recommended \
+        lmodern \
         texlive-fonts-extra \
         texlive-science \
         texlive-pictures \
@@ -221,6 +222,7 @@ From: ubuntu:22.04
     # resolves via ``kpsewhich``. A missing one trips CI red.
     for pkg in \
         elsarticle.cls \
+        lmodern.sty glyphtounicode.tex lmr10.pfb \
         natbib.sty \
         booktabs.sty longtable.sty tabularx.sty xltabular.sty \
         colortbl.sty xcolor.sty csvsimple.sty makecell.sty \
@@ -237,5 +239,5 @@ From: ubuntu:22.04
         fi
     done
 
-    echo "scitex-writer texlive.sif: all 24 required TeX packages present"
+    echo "scitex-writer texlive.sif: all required TeX packages and outline-font resources present"
     echo "scitex-writer texlive.sif: all 12 commands verified"

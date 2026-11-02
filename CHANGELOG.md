@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Generate section snippets with Latin Modern outline fonts and Unicode maps,
+  preserving searchable/copyable ligatures. Author-supplied complete documents
+  retain their font policy. A render-format cache revision selects new previews
+  without deleting previous PDFs. Native installers declare `lmodern`.
 
 ## [2.43.19]
 
