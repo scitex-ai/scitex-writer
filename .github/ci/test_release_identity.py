@@ -2492,17 +2492,44 @@ os.execv('/usr/bin/rm',['/usr/bin/rm',*sys.argv[1:]])
 """
 
 
-def fixture_birth(metadata):
+def fixture_fields_from_stream(stream):
+    """A proc file may vanish after open; ESRCH and ENOENT both mean gone."""
     try:
-        raw = (
-            (Path("/proc") / str(metadata["pid"]) / "stat")
-            .read_text()
-            .rsplit(") ", 1)[1]
-            .split()
-        )
-    except FileNotFoundError:
+        return stream.read().rsplit(") ", 1)[1].split()
+    except (FileNotFoundError, ProcessLookupError):
         return None
-    return raw[19], raw[0]
+
+
+def fixture_process_fields(pid):
+    try:
+        with (Path("/proc") / str(pid) / "stat").open() as stream:
+            return fixture_fields_from_stream(stream)
+    except (FileNotFoundError, ProcessLookupError):
+        return None
+
+
+def fixture_birth(metadata):
+    fields = fixture_process_fields(metadata["pid"])
+    return (fields[19], fields[0]) if fields is not None else None
+
+
+class OwnedProcessObservation(unittest.TestCase):
+    def test_reaped_task_proc_handle_is_gone_without_killing_the_observer(self):
+        # Arrange: use the actual kernel proc descriptor, not a mocked errno.
+        child = subprocess.Popen(["/usr/bin/sleep", "20"], start_new_session=True)
+        try:
+            alive = fixture_birth({"pid": child.pid})
+            with (Path("/proc") / str(child.pid) / "stat").open() as stream:
+                # Act: reap after opening; Linux reports ESRCH when this fd reads.
+                child.terminate()
+                child.wait(timeout=3)
+                gone = fixture_fields_from_stream(stream)
+            # Assert
+            assert (alive is not None, gone) == (True, None)
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.wait(timeout=3)
 
 
 def fixture_reap(metadata):
@@ -2645,18 +2672,19 @@ class ShellCancellation(unittest.TestCase):
                         )
                         for raw_pid in children.read_text().split():
                             try:
-                                state = (
-                                    (Path("/proc") / raw_pid / "stat")
-                                    .read_text()
-                                    .rsplit(") ", 1)[1]
-                                    .split()
-                                )
+                                state = fixture_process_fields(int(raw_pid))
+                                if state is None:
+                                    continue
                                 if (
                                     int(state[1]) == os.getpid()
                                     and int(state[2]) == body_pid
                                 ):
                                     os.waitpid(int(raw_pid), os.WNOHANG)
-                            except (FileNotFoundError, ChildProcessError):
+                            except (
+                                FileNotFoundError,
+                                ProcessLookupError,
+                                ChildProcessError,
+                            ):
                                 pass
                         time.sleep(0.005)
 
@@ -2681,7 +2709,35 @@ class ShellCancellation(unittest.TestCase):
                 try:
                     stdout, stderr = owner.communicate(timeout=4)
                 except subprocess.TimeoutExpired:
-                    stalled = True
+                    # Record only owned fixture identities, before forced fixture
+                    # cleanup can hide a live holder or an already-gone leader.
+                    observed = []
+                    owned = {owner.pid, body_pid, *(item["pid"] for item in records)}
+                    for _ in range(2):
+                        for pid in tuple(owned):
+                            try:
+                                children = Path(f"/proc/{pid}/task/{pid}/children")
+                                owned.update(map(int, children.read_text().split()))
+                            except (FileNotFoundError, ProcessLookupError):
+                                pass
+                    for pid in sorted(owned):
+                        state = fixture_process_fields(pid)
+                        observed.append(
+                            {
+                                "pid": pid,
+                                "state": state[0] if state else "gone",
+                                "ppid": state[1] if state else None,
+                                "pgrp": state[2] if state else None,
+                                "birth": state[19] if state else None,
+                            }
+                        )
+                    stalled = {
+                        "owner_status": owner.poll(),
+                        "elapsed": round(time.monotonic() - started, 4),
+                        "root_exists": root.exists(),
+                        "removal_witness": (fixture / "removal-witness.json").exists(),
+                        "owned_processes": observed,
+                    }
                     for item in records:
                         observed = fixture_birth(item)
                         if (
@@ -2727,11 +2783,11 @@ class ShellCancellation(unittest.TestCase):
                         }
                     )
                     return
-                witness = json.loads((fixture / "removal-witness.json").read_text())
                 self.assertFalse(
                     stalled,
-                    "stubborn descendant kept fixture pipes alive after cancellation",
+                    "owned cancellation exceeded its deadline: " + json.dumps(stalled),
                 )
+                witness = json.loads((fixture / "removal-witness.json").read_text())
                 self.assertEqual(
                     owner.returncode,
                     130 if signum == signal.SIGINT else 143,
