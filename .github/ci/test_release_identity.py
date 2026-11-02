@@ -13,6 +13,7 @@ import importlib.util
 import io
 import json
 import os
+import shlex
 import signal
 import stat
 import subprocess
@@ -2539,6 +2540,17 @@ def fixture_reap(metadata):
         pass
 
 
+def signal_fixture_parent():
+    """Keep timing-sensitive helpers off a different CI workspace filesystem.
+
+    A SIF driver's inherited private /tmp parent stays in use, preserving its
+    outer cleanup containment. Ordinary runner scratch may be another device.
+    """
+    local = Path("/tmp")
+    inherited = Path(os.environ.get("TMPDIR", "/tmp"))
+    return inherited if inherited.stat().st_dev == local.stat().st_dev else local
+
+
 class ShellCancellation(unittest.TestCase):
     receipts = []
 
@@ -2557,21 +2569,29 @@ class ShellCancellation(unittest.TestCase):
         if cls._libc.prctl(36, cls._previous_subreaper, 0, 0, 0) != 0:
             raise RuntimeError("fixture subreaper state could not be restored")
 
-    def exercise(self, name, signum, stubborn, admission_phase=None):
+    def exercise(
+        self, name, signum, stubborn, admission_phase=None, hostile_site=False
+    ):
         source = (DRIVER_SOURCE / name).read_text()
         start = source.index("# BEGIN owned temporary-root lifecycle")
         end = source.index("driver_body() {", start)
         # Use the entire actual lifecycle plus allocation; only rm is instrumented.
         lifecycle = source[start:end]
         with tempfile.TemporaryDirectory(
-            prefix="shell-signal-fixture-", dir=os.environ.get("TMPDIR")
+            prefix="shell-signal-fixture-", dir=signal_fixture_parent()
         ) as directory:
             fixture = Path(directory)
             child_script, remover = fixture / "finite-child.py", fixture / "remover"
             child_script.write_text(DRIVER_CHILD)
             remover.write_text("#!" + DRIVER_PYTHON + "\n" + DRIVER_REMOVER)
             remover.chmod(0o700)
-            lifecycle = lifecycle.replace("/usr/bin/rm ", str(remover) + " ")
+            lifecycle = lifecycle.replace(
+                "/usr/bin/rm ",
+                shlex.quote(DRIVER_PYTHON)
+                + " -I -S "
+                + shlex.quote(str(remover))
+                + " ",
+            )
             if admission_phase is not None:
                 barrier = (
                     '    printf ready > "$FIXTURE_PARENT/owner-admission-open"\n'
@@ -2611,6 +2631,16 @@ class ShellCancellation(unittest.TestCase):
                 "FIXTURE_PYTHON": DRIVER_PYTHON,
                 "STUBBORN": "1" if stubborn else "0",
             }
+            if hostile_site:
+                external_site = fixture / "external-site"
+                external_site.mkdir()
+                (external_site / "sitecustomize.py").write_text(
+                    "from pathlib import Path\nimport os\n"
+                    "Path(os.environ['SITE_WITNESS']).write_text('unexpected startup')\n"
+                    "raise SystemExit(97)\n"
+                )
+                env["PYTHONPATH"] = str(external_site)
+                env["SITE_WITNESS"] = str(fixture / "external-site-ran")
             if signum is None:
                 env["LEAK_SUCCESS"] = "1"
             unrelated = subprocess.Popen(
@@ -2788,6 +2818,8 @@ class ShellCancellation(unittest.TestCase):
                     "owned cancellation exceeded its deadline: " + json.dumps(stalled),
                 )
                 witness = json.loads((fixture / "removal-witness.json").read_text())
+                if hostile_site:
+                    self.assertFalse((fixture / "external-site-ran").exists())
                 self.assertEqual(
                     owner.returncode,
                     130 if signum == signal.SIGINT else 143,
@@ -2865,6 +2897,14 @@ class ShellCancellation(unittest.TestCase):
         driver = "run-in-sif.sh"
         # Act
         self.exercise(driver, signal.SIGTERM, False)
+        # Assert
+        assert self.receipts[-1]["driver"] == driver
+
+    def test_control_helpers_ignore_external_python_startup_hooks(self):
+        # Arrange: a real sitecustomize hook would abort the recorder at startup.
+        driver = "run-in-sif.sh"
+        # Act: actual process cleanup must remain a stdlib-only observation.
+        self.exercise(driver, signal.SIGTERM, True, hostile_site=True)
         # Assert
         assert self.receipts[-1]["driver"] == driver
 

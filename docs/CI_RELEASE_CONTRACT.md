@@ -36,6 +36,10 @@ group and kernel birth registration finish, then follows the same guarded
 cancellation path. Scheduling-barrier regressions cover INT and TERM before PID
 registration, before birth capture and during birth capture for all three release
 drivers; unrelated processes and the existing deadlines remain protected.
+Timed signal fixtures keep scripts and witnesses on the /tmp filesystem,
+preserving an already-local inherited private parent. Their stdlib-only recorder
+runs with isolated Python startup, so runner-workspace disk stalls and unrelated
+site hooks do not become false descendant-liveness failures.
 Real integration tests exercise SQL writes, success/failure/signal status,
 closed TCP listening and cleanup. A local developer with server tools can use:
 
