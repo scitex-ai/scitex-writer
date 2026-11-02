@@ -82,3 +82,13 @@ payload extinction even when the filesystem phase extends past four seconds.
 Nested private-PostgreSQL lifecycle probes permit the public helper's existing
 120s initdb, 120s start, 30s readiness and 60s stop bounds; these test observation
 budgets do not alter server or cancellation deadlines.
+
+Ordinary pytest discovers every actual unittest class from the native controls,
+checks its complete unique case inventory, and executes each class as its own
+owned subprocess. Each class keeps a 300s observation limit; this changes
+aggregate scheduling/runtime allowance from the former single 300s envelope.
+Every expected test identity, count and plain OK footer is checked, so missing,
+duplicated or skipped controls fail. Outer timeout diagnostics retain captured
+stderr and owned kernel states through a secondary cleanup timeout. Finite
+installer/OIDC stand-ins use isolated, no-site Python; their real kernel birth
+tokens are recorded and checked separately from the unchanged driver cleanup.
