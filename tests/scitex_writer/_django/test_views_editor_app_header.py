@@ -23,6 +23,8 @@ from pathlib import Path
 import pytest
 from django.template.loader import render_to_string
 from django.test import RequestFactory
+from scitex_sdk import get_frontend_package_dir
+from scitex_sdk.ui.templatetags.scitex_static import versioned_static
 
 from scitex_writer._django import views
 
@@ -87,7 +89,6 @@ def test_installed_version_matches_pyproject():
 
 def test_manifest_delegates_version_to_installed_package_omits_manifest_version():
     # Arrange: pytest fixtures and local setup.
-    placeholder = '0.0.0'
     # Act: exercise the real scenario.
     manifest = json.loads(_MANIFEST.read_text(encoding='utf-8'))
     # Assert
@@ -98,7 +99,6 @@ def test_manifest_delegates_version_to_installed_package_resolves_installed_vers
     # Arrange: pytest fixtures and local setup.
     placeholder = '0.0.0'
     # Act: exercise the real scenario.
-    manifest = json.loads(_MANIFEST.read_text(encoding='utf-8'))
     # Assert
     assert _installed_version() != placeholder
 
@@ -297,7 +297,7 @@ def test_the_header_stylesheet_is_loaded(project_dir):
     # Act
     body = _editor_html(project_dir)
     # Assert
-    assert f'href="/static/{stylesheet}"' in body
+    assert f'href="{versioned_static(stylesheet)}"' in body
 
 
 def test_the_shared_header_stylesheet_is_loaded(project_dir):
@@ -307,7 +307,7 @@ def test_the_shared_header_stylesheet_is_loaded(project_dir):
     # Act
     body = _editor_html(project_dir)
     # Assert
-    assert f'href="/static/{stylesheet}"' in body
+    assert f'href="{versioned_static(stylesheet)}"' in body
 
 
 def test_the_leaf_no_longer_redefines_the_shared_header_row():
@@ -328,17 +328,18 @@ def test_the_leaf_no_longer_redefines_the_shared_header_row():
     )
 
 
-def test_host_picker_controls_are_phone_sized():
+def test_shared_picker_controls_are_phone_sized():
     # Arrange
-    css = _HEADER_CSS.read_text(encoding="utf-8")
+    stylesheet = get_frontend_package_dir() / "ui/static/scitex_sdk/ui/css/app/project-selector.css"
+    css = stylesheet.read_text(encoding="utf-8")
     # Act
-    phone = css[css.index("@media (max-width: 768px)") :]
-    # Assert
-    assert re.search(
-        r"\.writer-app-header (select|button|a)[^{]*\{[^}]*"
-        r"min-height:\s*var\(--writer-touch-target-min",
-        phone,
+    phone = css[css.index("@media (max-width: 600px)") :]
+    observed = (
+        bool(re.search(r"\.stx-app-project-selector__trigger,[^{]*\{[^}]*height:\s*44px", phone)),
+        bool(re.search(r"\.stx-app-project-selector__option\s*\{[^}]*min-height:\s*44px", phone)),
     )
+    # Assert
+    assert observed == (True, True)
 
 
 # EOF

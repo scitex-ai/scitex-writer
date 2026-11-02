@@ -42,7 +42,7 @@ export default defineConfig({
             return "monaco-base";
         },
         entryFileNames: "assets/[name].js",
-        chunkFileNames: "assets/[name].js",
+        chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: (asset) =>
           asset.name === "style.css"
             ? "assets/index.css"

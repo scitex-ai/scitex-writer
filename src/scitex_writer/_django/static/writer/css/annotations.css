@@ -284,12 +284,12 @@
   flex-wrap: wrap;
   gap: 2px;
 }
-.annot-menu-list .annot-btn {
+:is(.annot-menu-list, .pdf-menu-list) .annot-btn {
   justify-content: flex-start;
   gap: 6px;
   font-size: 12px;
 }
-.annot-menu-list .annot-btn kbd {
+:is(.annot-menu-list, .pdf-menu-list) .annot-btn kbd {
   font-family: inherit;
   font-size: 11px;
   color: var(--text-secondary);
@@ -300,3 +300,6 @@
   white-space: nowrap;
   margin-left: auto;
 }
+
+/* Annotation actions share the PDF menu; no empty toolbar strip. */
+.annot-toolbar:empty { display: none; }

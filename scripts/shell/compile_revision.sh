@@ -12,6 +12,18 @@
 export ORIG_DIR
 ORIG_DIR="$(pwd)"
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Help reads packaged text only: no config, project writes or external tools.
+for help_arg in "$@"; do
+    case "$help_arg" in
+    -h | --help)
+        PROJECT_ROOT="${SCITEX_WRITER_PROJECT_ROOT:-${PROJECT_ROOT:-$(cd "$THIS_DIR/../.." && pwd)}}"
+        source "$THIS_DIR/modules/usage_revision.sh"
+        usage
+        ;;
+    esac
+done
+
 LOG_PATH="$THIS_DIR/.$(basename "$0").log"
 
 # Resolve project root from script location (safe for nested repos)
@@ -91,92 +103,7 @@ clew_overlay=false
 # Set when the PDF stage promoted a real PDF despite a non-zero engine exit.
 compile_warned=false
 
-usage() {
-    echo ""
-    echo -e "${BOLD_CYAN}━━━ compile_revision.sh ━━━${NC}"
-    echo -e "${GRAY}Compile revision response letter${NC}"
-    echo ""
-    echo -e "${BOLD_CYAN}━━━ Structure ━━━${NC}"
-    echo -e "  ${GREEN}03_revision/${NC}"
-    echo -e "    contents/"
-    echo -e "      ${YELLOW}introduction.tex${NC}    ${GRAY}# Response letter introduction${NC}"
-    echo -e "      ${YELLOW}conclusion.tex${NC}      ${GRAY}# Response letter conclusion${NC}"
-    echo -e "      editor/               ${GRAY}# Editor comments & responses${NC}"
-    echo -e "        ${YELLOW}E_01_comments.tex${NC}   ${GRAY}# Copy of editor's email/comment${NC}"
-    echo -e "        ${YELLOW}E_01_response.tex${NC}   ${GRAY}# Author's response${NC}"
-    echo -e "        ${YELLOW}E_01_revision.tex${NC}   ${GRAY}# Actual manuscript changes (with \\\\DIFadd{}, \\\\DIFdel{})${NC}"
-    echo -e "      reviewer1/            ${GRAY}# Reviewer 1 comments & responses${NC}"
-    echo -e "        ${YELLOW}R1_01_comments.tex${NC}  ${GRAY}# Copy of reviewer's comment${NC}"
-    echo -e "        ${YELLOW}R1_01_response.tex${NC}  ${GRAY}# Author's response${NC}"
-    echo -e "        ${YELLOW}R1_01_revision.tex${NC}  ${GRAY}# Actual manuscript changes${NC}"
-    echo -e "      reviewer2/            ${GRAY}# Reviewer 2 comments & responses${NC}"
-    echo -e "        ${YELLOW}R2_01_comments.tex${NC}  ${GRAY}# Copy of reviewer's comment${NC}"
-    echo -e "        ${YELLOW}R2_01_response.tex${NC}  ${GRAY}# Author's response${NC}"
-    echo -e "        ${YELLOW}R2_01_revision.tex${NC}  ${GRAY}# Actual manuscript changes${NC}"
-    echo -e "    ${GRAY}revision.pdf${NC}        ${GRAY}# Output${NC}"
-    echo ""
-    echo -e "${BOLD_CYAN}━━━ File Types ━━━${NC}"
-    echo -e "  ${GREEN}*_comments.tex${NC}  Copy of reviewer/editor email or comment"
-    echo -e "  ${GREEN}*_response.tex${NC}  Author's response explaining changes"
-    echo -e "  ${GREEN}*_revision.tex${NC}  Actual manuscript changes with diff markup:"
-    echo -e "    ${GRAY}\\\\DIFadd{added text}${NC}     ${GRAY}# Shows added text${NC}"
-    echo -e "    ${GRAY}\\\\DIFdel{deleted text}${NC}   ${GRAY}# Shows deleted text${NC}"
-    echo ""
-    echo -e "${BOLD_CYAN}━━━ Editable Files ━━━${NC}"
-    echo -e "${GREEN}00_shared:${NC}"
-    echo -e "  ${GRAY}$PROJECT_ROOT/00_shared/${NC}title.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/00_shared/${NC}authors.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/00_shared/${NC}keywords.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/00_shared/${NC}journal_name.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/00_shared/bib_files/${NC}*.bib"
-    echo ""
-    echo -e "${GREEN}03_revision:${NC}"
-    echo -e "  ${GRAY}$PROJECT_ROOT/03_revision/contents/${NC}introduction.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/03_revision/contents/${NC}conclusion.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/03_revision/contents/editor/${NC}E_*_comments.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/03_revision/contents/editor/${NC}E_*_response.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/03_revision/contents/editor/${NC}E_*_revision.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/03_revision/contents/reviewer1/${NC}R1_*_comments.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/03_revision/contents/reviewer1/${NC}R1_*_response.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/03_revision/contents/reviewer1/${NC}R1_*_revision.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/03_revision/contents/reviewer2/${NC}R2_*_comments.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/03_revision/contents/reviewer2/${NC}R2_*_response.tex"
-    echo -e "  ${GRAY}$PROJECT_ROOT/03_revision/contents/reviewer2/${NC}R2_*_revision.tex"
-    echo ""
-    echo -e "${BOLD_CYAN}━━━ Options ━━━${NC}"
-    echo "  -nf,  --no_figs       Skip figure processing (~4s faster)"
-    echo "  -nt,  --no_tables     Skip table processing (~4s faster)"
-    echo "  -d,   --draft         Single-pass compilation (~5s faster)"
-    echo "  -dm,  --dark_mode     Dark mode: black background, white text"
-    echo "  -q,   --quiet         Minimal output"
-    echo "  --clew-overlay        Color \\vclaim values by clew provenance status"
-    echo "  -h,   --help          Show this help"
-    echo ""
-    echo -e "${GRAY}Note: Options accept both hyphens and underscores${NC}"
-    echo -e "${GRAY}Note: Revision documents skip diff generation (changes shown inline)${NC}"
-    echo ""
-    echo -e "${BOLD_CYAN}━━━ Document Structure (base.tex) ━━━${NC}"
-    echo -e "  ${GRAY}$PROJECT_ROOT/03_revision/${NC}base.tex"
-    echo -e "  Controls section order via \\\\input{} commands:"
-    echo -e "    ${GRAY}\\\\input{./03_revision/contents/${NC}introduction${GRAY}}${NC}"
-    echo -e "    ${GRAY}\\\\input{./03_revision/contents/editor/${NC}E_01_comments${GRAY}}${NC}   ${GRAY}# Reviewer's comment${NC}"
-    echo -e "    ${GRAY}\\\\input{./03_revision/contents/editor/${NC}E_01_response${GRAY}}${NC}   ${GRAY}# Your response${NC}"
-    echo -e "    ${GRAY}\\\\input{./03_revision/contents/editor/${NC}E_01_revision${GRAY}}${NC}   ${GRAY}# Manuscript changes${NC}"
-    echo -e "    ${GRAY}\\\\input{./03_revision/contents/reviewer1/${NC}R1_01_comments${GRAY}}${NC}"
-    echo -e "    ${GRAY}\\\\input{./03_revision/contents/reviewer1/${NC}R1_01_response${GRAY}}${NC}"
-    echo -e "    ${GRAY}\\\\input{./03_revision/contents/reviewer1/${NC}R1_01_revision${GRAY}}${NC}"
-    echo -e "    ${GRAY}\\\\input{./03_revision/contents/${NC}conclusion${GRAY}}${NC}"
-    echo -e "  To add/remove sections: edit base.tex \\\\input{} lines"
-    echo -e "  Comment out with %% to disable a section"
-    echo ""
-    echo -e "${BOLD_CYAN}━━━ Managing Bibliography ━━━${NC}"
-    echo -e "  Place .bib files in: ${YELLOW}$PROJECT_ROOT/00_shared/bib_files/${NC}"
-    echo -e "  Multiple .bib files auto-merge with deduplication"
-    echo -e "  Citation style: ${YELLOW}$PROJECT_ROOT/config/config_revision.yaml${NC}"
-    echo -e "  Styles: ${GREEN}unsrtnat${NC}, ${GREEN}plainnat${NC}, ${GREEN}apalike${NC}, ${GREEN}IEEEtran${NC}, ${GREEN}naturemag${NC}"
-    echo ""
-    exit 0
-}
+source "$PROJECT_ROOT/scripts/shell/modules/usage_revision.sh"
 
 parse_arguments() {
     while [[ "$#" -gt 0 ]]; do

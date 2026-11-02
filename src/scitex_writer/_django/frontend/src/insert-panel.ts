@@ -1,7 +1,7 @@
 /**
  * Icon-bar insert panel — Cite / Fig / Table / History tabs between the
- * Monaco editor and the PDF preview. Clicking an entry inserts LaTeX at
- * the cursor in Monaco.
+ * Monaco editor and the PDF preview. Drag an entry into Monaco or use its
+ * explicit Insert reference action; clicking its thumbnail never edits text.
  */
 
 import { listFigures, listTables } from "./api";
@@ -253,8 +253,9 @@ export class InsertPanel {
           ${thumb}
           <div class="insert-item-meta">
             <div class="insert-item-label">${escapeHtml(item.label)}</div>
-            <div class="insert-item-sub">${escapeHtml(item.sub)}</div>
+            ${item.sub && item.sub !== item.insert ? `<div class="insert-item-sub">${escapeHtml(item.sub)}</div>` : ""}
             <div class="insert-item-snippet">${escapeHtml(item.insert)}</div>
+            <button type="button" class="insert-item-action" draggable="false">Insert reference</button>
           </div>
         </div>`;
       })
@@ -263,7 +264,7 @@ export class InsertPanel {
     // selector already names the view, so a second heading is redundant.
     // The drag hint stays: it is functional guidance, not a title.
     this.opts.panel.innerHTML = `
-      <div class="insert-panel-drag-hint">Drag an item into the editor to insert its reference.</div>
+      <div class="insert-panel-drag-hint">Drag into the editor or use Insert reference.</div>
       <div class="insert-panel-body insert-panel-body--${anyThumbnail ? "grid" : "list"}">${listHtml}</div>
     `;
     // Operator 2026-10-24: no surprise insertion — clicking an item does
@@ -271,6 +272,13 @@ export class InsertPanel {
     this.opts.panel
       .querySelectorAll<HTMLElement>(".insert-item")
       .forEach((el) => {
+        const action = el.querySelector<HTMLButtonElement>(".insert-item-action");
+        action?.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const snippet = el.dataset.insert;
+          if (snippet) this.opts.insertAtCursor(snippet);
+        });
+        action?.addEventListener("dragstart", (event) => event.preventDefault());
         el.addEventListener("dragstart", (e) => {
           const snippet = el.dataset.insert || "";
           if (!snippet || !e.dataTransfer) return;

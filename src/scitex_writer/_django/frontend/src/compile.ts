@@ -1,5 +1,5 @@
 /**
- * Compile workflow — POST /api/compile, poll /api/compile/status, load PDF.
+ * Compile workflow — selected-section snippet previews or explicit full jobs.
  * Status lamp (green/yellow/red), log drawer, preview-full toggle.
  */
 
@@ -46,6 +46,7 @@ interface CompileOptions {
   modeSelect?: HTMLSelectElement | null;
   pdf: PDFViewer;
   getDocType: () => string;
+  getSection: () => { path: string; content: string } | null;
   /** Optional observer — Details panel subscribes to live lamp state. */
   onStatusChange?: (mode: CompileMode, status: LampStatus) => void;
 }
@@ -55,6 +56,7 @@ export class CompileController {
   private mode: CompileMode = "preview";
   private polling: number | null = null;
   private status: LampStatus = "idle";
+  private previewSequence = 0;
   private afterCompileListeners: Array<(success: boolean) => void> = [];
 
   /** Subscribe to "compile finished" (success or error). */
@@ -111,6 +113,7 @@ export class CompileController {
   }
 
   async compile(): Promise<void> {
+    if (this.mode === "preview") { await this.compilePreview(); return; }
     if (this.status === "compiling") return;
     const docType = this.opts.getDocType();
     this.updateLamp("compiling");
@@ -120,12 +123,58 @@ export class CompileController {
       const { effectivePdfDarkMode } = await import("./pdf-theme");
       await apiPost("api/compile", {
         doc_type: docType,
-        draft: this.mode === "preview",
+        draft: false,
         dark_mode: effectivePdfDarkMode(),
       });
       this.pollStatus(docType);
     } catch (err) {
       this.showRequestFailure(err);
+    }
+  }
+
+  sectionPending(): void {
+    this.previewSequence += 1;
+    if (this.mode === "preview") {
+      this.opts.pdf.clear();
+      this.updateLamp("idle");
+    }
+  }
+
+  get isSectionPreview(): boolean { return this.mode === "preview"; }
+
+  /** Section navigation replaces the preview; full mode retains its artifact. */
+  async sectionChanged(): Promise<void> {
+    if (this.mode === "preview") await this.compilePreview();
+    else await this.opts.pdf.load(this.opts.getDocType());
+  }
+
+  private async compilePreview(): Promise<void> {
+    const section = this.opts.getSection();
+    if (!section) return;
+    const sequence = ++this.previewSequence;
+    this.opts.pdf.clear();
+    this.updateLamp("compiling");
+    this.setLog("");
+    try {
+      const { effectivePdfDarkMode } = await import("./pdf-theme");
+      const result = await apiPost<{success: boolean; preview_id: string; section_path: string; error?: string; log?: string}>("api/preview", {
+        section_path: section.path, content: section.content,
+        dark_mode: effectivePdfDarkMode(),
+      });
+      if (sequence !== this.previewSequence || this.mode !== "preview" || this.opts.getSection()?.path !== section.path) return;
+      if (!result.success) {
+        this.showRequestFailure(result.error || "Section preview failed");
+        if (result.log) this.setLog(result.log);
+        return;
+      }
+      const loaded = await this.opts.pdf.loadPreview(result.preview_id);
+      if (sequence !== this.previewSequence) return;
+      if (!loaded) throw new Error("Section PDF could not be loaded");
+      this.updateLamp("ok");
+      this.showDiagnostics(null, true);
+      this.setLogOpen(false);
+    } catch (err) {
+      if (sequence === this.previewSequence) this.showRequestFailure(err);
     }
   }
 
@@ -178,7 +227,7 @@ export class CompileController {
           (item) => item.severity === "error",
         );
         if (!success || hasErrors) this.setLogOpen(true);
-        if (success) await this.opts.pdf.load(docType);
+        if (success && this.mode === "full" && this.opts.getDocType() === docType) await this.opts.pdf.load(docType);
         for (const cb of this.afterCompileListeners) {
           try {
             cb(success);
@@ -261,8 +310,10 @@ export class CompileController {
   private selectMode(mode: CompileMode): void {
     // Keep the mode attributed to the in-flight compile until it completes.
     if (this.status === "compiling") return;
+    this.previewSequence += 1;
     this.mode = mode;
     this.updateModeButton();
+    void this.sectionChanged();
   }
 
   private updateModeButton(): void {

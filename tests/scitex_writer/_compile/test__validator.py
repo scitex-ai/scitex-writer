@@ -6,10 +6,9 @@ Tests for pre-compile validation.
 Tests validate_before_compile function for project structure validation.
 """
 
-import pytest
-
-pytest.importorskip("git")
 from pathlib import Path
+
+import pytest
 
 from scitex_writer._compile._validator import (
     _validate_provenance,

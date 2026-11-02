@@ -15,6 +15,7 @@ ROOTDIR conftest, so both reach `tests/integration/`, `tests/develop/` and
 `tests/examples/` as well as `tests/scitex_writer/`; putting them one level
 down would leave those siblings unprotected.
 """
+
 from __future__ import annotations
 
 import getpass
@@ -311,7 +312,8 @@ def pg_schema(_no_accidental_fleet_store_writes: None) -> Iterator[str]:
     # fall back to `$SCITEX_CARDS_DB` (measured 2026-08-29), so a tmp YAML path
     # cannot isolate the notify rail — only repointing the variable can.
     keys = ("SCITEX_STORE_DSN", _CARDS_DB_KEY)
-    scoped = f"{PG_BASE_DSN}?options=-csearch_path%3D{schema}"
+    separator = "&" if "?" in PG_BASE_DSN else "?"
+    scoped = f"{PG_BASE_DSN}{separator}options=-csearch_path%3D{schema}"
     saved = {key: os.environ.get(key) for key in keys}
     for key in keys:
         os.environ[key] = scoped

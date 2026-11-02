@@ -118,14 +118,17 @@ def test_get_does_not_see_another_manuscripts_annotation(pg_schema: str, tmp_pat
     # Arrange
     mine, theirs = str(tmp_path / "mine"), str(tmp_path / "theirs")
     for p in (mine, theirs):
-        (Path(p) / "01_manuscript" / "contents").mkdir(parents=True)
-    _post(theirs, _text_body("not mine"))
+        (Path(p) / "00_shared").mkdir(parents=True)
+        contents = Path(p) / "01_manuscript" / "contents"
+        contents.mkdir(parents=True)
+        (contents / "01_intro.tex").write_text(r"\section{Valid isolated manuscript}")
+    foreign_response = _post(theirs, _text_body("not mine"))
     rf = RequestFactory()
     request = rf.get(f"/api/annotations?working_dir={mine}")
     # Act
     data = json.loads(views.api_dispatch(request, "api/annotations").content)
     # Assert
-    assert data["count"] == 0
+    assert (foreign_response.status_code, data["count"]) == (200, 0)
 
 
 def test_post_emit_seam_notifies_owning_card(seeded_card: str, project_dir):

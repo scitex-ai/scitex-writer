@@ -34,11 +34,10 @@ standalone mode, where no host enforcement exists.
 from __future__ import annotations
 
 import json
-import tomllib
 from pathlib import Path
 
 import pytest
-
+import tomllib
 from scitex_sdk.app import jail
 from scitex_sdk.app.plugins import LeafContractError
 
@@ -157,4 +156,6 @@ def test_the_sdk_floor_covers_the_jail_contract():
     # Act
     dependencies = project["dependencies"]
     # Assert
-    assert "scitex-sdk>=0.3.9" in dependencies
+    from packaging.requirements import Requirement
+    sdk = next(Requirement(item) for item in dependencies if Requirement(item).name == 'scitex-sdk')
+    assert ('0.3.17' in sdk.specifier, '0.3.16' in sdk.specifier) == (True, False)

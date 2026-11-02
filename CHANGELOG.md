@@ -7,9 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.43.19] - 2026-11-01
+- Inherit shared semantic text colors instead of cyclic self-references, and remove leaf header sizing/picker palette overrides. Updated assets use automatic content versions.
+
+## [2.43.19]
+
+### Added
+
+- Mandatory private Unix-socket PostgreSQL for ordinary, nightly and SIF test
+  runs, retaining the production-system-ID refusal and owned cleanup.
+- Release-boundary controls in ordinary test space, with metadata fixtures
+  generated from a real wheel of the current tracked source.
+- LivePaper public rich-PDF consumer adapter with Writer-owned project/CSRF
+  translation, locked-target checks and single persistence per box gesture.
+- Reproducible contributor frontend builds using public SDK and LivePaper
+  wheel helpers, with SDK>=0.3.17 and LivePaper>=0.2.20 requirements.
 
 ### Fixed
+
+- Serve packaged global, document and recursive help before configuration,
+  dependency checks, initialization or filesystem writes. Real compilation
+  still refuses missing yq.
+- Preview the current section using the existing snippet compiler, preserving
+  explicit full-manuscript compilation and separate PDF artifacts.
+- Launch packaged compilation scripts through Bash when execute bits are
+  missing, and preserve the canonical manuscript title across TeX groups.
+- Activate the PDF pane initially, combine PDF tools into one menu, distinguish
+  Monaco gutter edges and require explicit or dragged reference insertion.
+
 
 - Build figure/table thumbnail links from the mounted request path and authorized project identity, preserving standalone working-directory context. Mounted panes no longer request an unscoped root `/api/thumbnail`.
 
@@ -52,6 +76,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (#475).
 
 ### Changed
+
+- Compile and Log toolbar buttons use the shared extra-small spacing token
+  between their icon and label.
+- Version the editor stylesheet URL with the leaf version so reloads fetch the
+  current release's styles.
 
 - Editor toolbar condenses into the overflow hamburger with aligned 32px
   row heights; Draft/Full compile labels read the live section title

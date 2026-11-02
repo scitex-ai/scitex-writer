@@ -10,8 +10,6 @@
 ORIG_DIR="$(pwd)"
 export ORIG_DIR
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_PATH="$THIS_DIR/.$(basename "$0").log"
-echo >"$LOG_PATH"
 
 # Early parsing for --project-root (must be done before PROJECT_ROOT is set)
 for arg in "$@"; do
@@ -27,16 +25,6 @@ done
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$THIS_DIR" && pwd)}"
 export PROJECT_ROOT
 
-# Change to project root to ensure all relative paths work (Issue #13)
-cd "$PROJECT_ROOT" || exit 1
-
-# Auto-initialize project if preprocessing artifacts are missing (Issue #12)
-if [ ! -f "01_manuscript/contents/wordcounts/figure_count.txt" ]; then
-    if [ -x "$PROJECT_ROOT/scripts/installation/init_project.sh" ]; then
-        echo "Initializing project (missing preprocessing artifacts)..."
-        "$PROJECT_ROOT/scripts/installation/init_project.sh" >/dev/null 2>&1 || true
-    fi
-fi
 
 GRAY='\033[0;90m'
 GREEN='\033[0;32m'
@@ -158,21 +146,21 @@ show_help_recursive() {
     echo -e "${BOLD_CYAN}━━━ compile.sh manuscript ━━━${NC}"
     echo -e "${GRAY}./scripts/shell/compile_manuscript.sh${NC}"
     echo ""
-    "$PROJECT_ROOT/scripts/shell/compile_manuscript.sh" --help 2>/dev/null || echo "(No help available)"
+    bash "$THIS_DIR/scripts/shell/compile_manuscript.sh" --help 2>/dev/null || echo "(No help available)"
     echo ""
     echo -e "${CYAN}────────────────────────────────────────────────────────────────────${NC}"
     echo ""
     echo -e "${BOLD_CYAN}━━━ compile.sh supplementary ━━━${NC}"
     echo -e "${GRAY}./scripts/shell/compile_supplementary.sh${NC}"
     echo ""
-    "$PROJECT_ROOT/scripts/shell/compile_supplementary.sh" --help 2>/dev/null || echo "(No help available)"
+    bash "$THIS_DIR/scripts/shell/compile_supplementary.sh" --help 2>/dev/null || echo "(No help available)"
     echo ""
     echo -e "${CYAN}────────────────────────────────────────────────────────────────────${NC}"
     echo ""
     echo -e "${BOLD_CYAN}━━━ compile.sh revision ━━━${NC}"
     echo -e "${GRAY}./scripts/shell/compile_revision.sh${NC}"
     echo ""
-    "$PROJECT_ROOT/scripts/shell/compile_revision.sh" --help 2>/dev/null || echo "(No help available)"
+    bash "$THIS_DIR/scripts/shell/compile_revision.sh" --help 2>/dev/null || echo "(No help available)"
     echo ""
 }
 
@@ -229,9 +217,12 @@ while [ $# -gt 0 ]; do
         if [ -z "$DOC_TYPE" ]; then
             show_usage
             exit 0
+        elif [ "$DOC_TYPE" = "all" ]; then
+            show_help_recursive
+            exit 0
         else
-            REMAINING_ARGS="$REMAINING_ARGS $1"
-            shift
+            bash "$THIS_DIR/scripts/shell/compile_${DOC_TYPE}.sh" --help
+            exit $?
         fi
         ;;
     *)
@@ -248,6 +239,22 @@ while [ $# -gt 0 ]; do
         ;;
     esac
 done
+
+# Help is handled before project writes, initialization or dependency checks.
+LOG_PATH="$THIS_DIR/.$(basename "$0").log"
+echo >"$LOG_PATH"
+
+# Change to project root to ensure all relative paths work (Issue #13)
+cd "$PROJECT_ROOT" || exit 1
+
+# Auto-initialize project if preprocessing artifacts are missing (Issue #12)
+if [ ! -f "01_manuscript/contents/wordcounts/figure_count.txt" ]; then
+    if [ -x "$PROJECT_ROOT/scripts/installation/init_project.sh" ]; then
+        echo "Initializing project (missing preprocessing artifacts)..."
+        "$PROJECT_ROOT/scripts/installation/init_project.sh" >/dev/null 2>&1 || true
+    fi
+fi
+
 
 # Default to manuscript if no type specified
 if [ -z "$DOC_TYPE" ]; then
