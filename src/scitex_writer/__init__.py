@@ -110,7 +110,10 @@ def __getattr__(name):
 
 
 def __dir__():
-    return sorted(set(globals()) | set(__all__) | set(_LAZY_SUBMODULES))
+    # Importing a lazy symbol also binds its backing module on the package.
+    # Advertise the declared API consistently before and after those imports.
+    private_names = {name for name in globals() if name.startswith("_")}
+    return sorted(private_names | set(__all__) | set(_LAZY_SUBMODULES))
 
 
 def ensure_workspace(project_dir, git_strategy="child", **kwargs):
