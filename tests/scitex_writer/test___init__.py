@@ -6,7 +6,10 @@ package-level resolver default.
 
 from __future__ import annotations
 
+import json
 import os
+import subprocess
+import sys
 import tempfile
 
 import pytest
@@ -38,3 +41,47 @@ def test_resolve_paper_symlink_level_defaults_to_warn(tmp_path, clean_paper_env)
     level = _resolve_paper_symlink_level(project_dir)
     # Assert
     assert level == "warn"
+
+
+_PUBLIC_CATALOG_SCRIPT = """
+import importlib
+import inspect
+import json
+import scitex_writer as writer
+
+warm_first = WARM_FIRST
+if warm_first:
+    from scitex_writer.writer import Writer
+before = {name for name in dir(writer) if not name.startswith('_')}
+first = {name for name, value in inspect.getmembers(writer)
+         if not name.startswith('_')}
+from scitex_writer.writer import Writer
+second = {name for name, value in inspect.getmembers(writer)
+          if not name.startswith('_')}
+print(json.dumps({
+    'before': sorted(before), 'first': sorted(first), 'second': sorted(second),
+    'declared': sorted(set(writer.__all__) | set(writer._LAZY_SUBMODULES)),
+    'same_class': writer.Writer is Writer,
+    'submodule_accessible': importlib.import_module('scitex_writer.writer').Writer is Writer,
+}))
+"""
+
+
+@pytest.mark.parametrize("warm_first", [False, True])
+def test_public_catalog_is_stable_across_lazy_writer_loading(warm_first):
+    """A lazy class import must not advertise its incidental backing module."""
+    # Arrange
+    script = _PUBLIC_CATALOG_SCRIPT.replace("WARM_FIRST", repr(warm_first))
+    # Act
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True,
+        check=True, timeout=30,
+    )
+    catalog = json.loads(result.stdout)
+    declared = [name for name in catalog["declared"] if not name.startswith("_")]
+    # Assert
+    assert catalog == {
+        "before": declared, "first": declared, "second": declared,
+        "declared": catalog["declared"], "same_class": True,
+        "submodule_accessible": True,
+    }

@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [2.43.20] - 2026-11-04
+
+### Fixed
+
+- Keep the public Python API catalog stable before and after lazy `Writer`
+  imports by advertising declared exports instead of incidental backing modules.
+  Direct submodule imports and the public `Writer` class retain their identity.
+- Give each artifact-import CI run fresh owned build and clean-install virtual
+  environments, preserving the source-to-sdist-to-wheel and shipped-recipe checks.
+
+
 ## [2.43.19]
 
 ### Added
