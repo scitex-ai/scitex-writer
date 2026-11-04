@@ -53,26 +53,29 @@ jobs:
         run: |
           # PEP-668-safe on the self-hosted pool (uv-managed Python): build
           # tooling lives in its own venv, never the system interpreter.
-          python -m venv /tmp/build-venv
-          /tmp/build-venv/bin/pip install --upgrade pip build
+          # A fixed /tmp path can retain another run's incomplete environment.
+          import_root="$(mktemp -d "${RUNNER_TEMP}/writer-import-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-XXXXXX")"
+          echo "WRITER_IMPORT_ROOT=$import_root" >> "$GITHUB_ENV"
+          python -m venv "$import_root/build-venv"
+          "$import_root/build-venv/bin/pip" install --upgrade pip build
           rm -rf dist
           # `python -m build` builds the sdist, then builds the wheel from that
           # sdist in isolation — so an sdist exclude that drops files also drops
           # them from the wheel, exactly reproducing the published-wheel bug.
-          /tmp/build-venv/bin/python -m build --outdir dist
+          "$import_root/build-venv/bin/python" -m build --outdir dist
           echo "=== built artifacts ==="
           ls -l dist
       - name: Install the wheel into a clean venv and import the entrypoint
         run: |
-          python -m venv /tmp/clean
-          /tmp/clean/bin/pip install --upgrade pip
+          python -m venv "$WRITER_IMPORT_ROOT/clean"
+          "$WRITER_IMPORT_ROOT/clean/bin/pip" install --upgrade pip
           # Install the BUILT wheel (not `-e .`) so only what the sdist shipped
           # is importable.
-          /tmp/clean/bin/pip install dist/*.whl
-          /tmp/clean/bin/python -c "import scitex_writer.writer; print('import scitex_writer.writer OK')"
+          "$WRITER_IMPORT_ROOT/clean/bin/pip" install dist/*.whl
+          "$WRITER_IMPORT_ROOT/clean/bin/python" -c "import scitex_writer.writer; print('import scitex_writer.writer OK')"
           # Guard the exact submodule the outage dropped, so a regression is
           # named rather than surfacing as a generic ImportError elsewhere.
-          /tmp/clean/bin/python -c "from scitex_writer._dataclasses.config import WriterConfig; print('WriterConfig OK')"
+          "$WRITER_IMPORT_ROOT/clean/bin/python" -c "from scitex_writer._dataclasses.config import WriterConfig; print('WriterConfig OK')"
       - name: Resolve every shipped container recipe from the installed wheel
         # The 2026-08-18 outage: `scitex-writer containers install texlive` was
         # dead for every pip-installed user because the .def recipes sat at the
@@ -82,7 +85,7 @@ jobs:
         # gate that cannot fail. This step is the only honest place to ask
         # whether the DATA shipped, because only here is the tree unavailable.
         run: |
-          /tmp/clean/bin/python - <<'PY'
+          "$WRITER_IMPORT_ROOT/clean/bin/python" - <<'PY'
           from scitex_writer._cli.install import _SUB_TOOLS, _resolve_recipe
           missing = [t for t in _SUB_TOOLS if not _resolve_recipe(t).is_file()]
           if missing:
