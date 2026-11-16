@@ -70,19 +70,25 @@ def test_patch_replays_changed_new_binary_and_deleted_files_without_staging(
     output.mkdir()
     # Act
     result = REVIEW.write_review(root, output, base, generated)
-    # Assert
-    assert result["update_required"] is True
-    assert git(root, "diff", "--cached") == b""
-    assert git(root, "rev-parse", "HEAD").decode().strip() == base
     replay = tmp_path / "replay"
     git(root, "worktree", "add", "--detach", str(replay), base)
     git(replay, "apply", "--check", str(output / "bundle.patch"))
     git(replay, "apply", str(output / "bundle.patch"))
-    assert receipt(replay)["files"] == generated["files"]
-    assert (replay / "README.md").read_text() == "Preserve unrelated source\n"
+    # Assert
     assert (
-        result["patch_sha256"]
-        == hashlib.sha256((output / "bundle.patch").read_bytes()).hexdigest()
+        result["update_required"],
+        git(root, "diff", "--cached"),
+        git(root, "rev-parse", "HEAD").decode().strip(),
+        receipt(replay)["files"],
+        (replay / "README.md").read_text(),
+        result["patch_sha256"],
+    ) == (
+        True,
+        b"",
+        base,
+        generated["files"],
+        "Preserve unrelated source\n",
+        hashlib.sha256((output / "bundle.patch").read_bytes()).hexdigest(),
     )
 
 
@@ -94,9 +100,11 @@ def test_unchanged_bundle_produces_an_explicit_no_update_receipt(repository, tmp
     # Act
     result = REVIEW.write_review(repository, output, base, receipt(repository))
     # Assert
-    assert result["update_required"] is False
-    assert (output / "bundle.patch").read_bytes() == b""
-    assert json.loads((output / "manifest.json").read_text())["base_commit"] == base
+    assert (
+        result["update_required"],
+        (output / "bundle.patch").read_bytes(),
+        json.loads((output / "manifest.json").read_text())["base_commit"],
+    ) == (False, b"", base)
 
 
 def test_changed_commit_is_refused_without_writing_a_candidate(repository, tmp_path):
@@ -105,10 +113,18 @@ def test_changed_commit_is_refused_without_writing_a_candidate(repository, tmp_p
     output.mkdir()
     base = git(repository, "rev-parse", "HEAD").decode().strip()
     git(repository, "commit", "--allow-empty", "-qm", "new source")
-    # Act / Assert
-    with pytest.raises(ValueError, match="Source commit changed"):
+    # Act
+    try:
         REVIEW.write_review(repository, output, base, receipt(repository))
-    assert list(output.iterdir()) == []
+    except ValueError as error:
+        message = str(error)
+    else:
+        message = None
+    # Assert
+    assert (message, list(output.iterdir())) == (
+        "Source commit changed while generating documentation",
+        [],
+    )
 
 
 def test_unreceipted_generated_bytes_are_refused(repository, tmp_path):
@@ -118,10 +134,18 @@ def test_unreceipted_generated_bytes_are_refused(repository, tmp_path):
     base = git(repository, "rev-parse", "HEAD").decode().strip()
     generated = receipt(repository)
     (repository / REVIEW.BUNDLE / "index.html").write_text("changed after build")
-    # Act / Assert
-    with pytest.raises(ValueError, match="differs from the build receipt"):
+    # Act
+    try:
         REVIEW.write_review(repository, output, base, generated)
-    assert list(output.iterdir()) == []
+    except ValueError as error:
+        message = str(error)
+    else:
+        message = None
+    # Assert
+    assert (message, list(output.iterdir())) == (
+        "Generated documentation differs from the build receipt",
+        [],
+    )
 
 
 def test_workflow_uploads_candidate_before_the_fail_closed_source_gate():
@@ -139,14 +163,22 @@ def test_workflow_uploads_candidate_before_the_fail_closed_source_gate():
         i for i, s in enumerate(steps) if "git status --porcelain" in s.get("run", "")
     )
     # Assert
-    assert workflow["permissions"] == {"contents": "read"}
-    assert steps[0]["with"]["persist-credentials"] is False
-    assert upload < gate and "exit 1" in steps[gate]["run"]
-    assert "--untracked-files=all" in steps[gate]["run"]
-    assert all(
-        x not in source
-        for x in ("git push", "git commit", "continue-on-error", "pull-requests: write")
-    )
+    assert (
+        workflow["permissions"],
+        steps[0]["with"]["persist-credentials"],
+        upload < gate,
+        "exit 1" in steps[gate]["run"],
+        "--untracked-files=all" in steps[gate]["run"],
+        any(
+            x in source
+            for x in (
+                "git push",
+                "git commit",
+                "continue-on-error",
+                "pull-requests: write",
+            )
+        ),
+    ) == ({"contents": "read"}, False, True, True, True, False)
 
 
 def test_dirty_source_is_refused_without_changing_the_callers_staging(
@@ -172,7 +204,9 @@ def test_dirty_source_is_refused_without_changing_the_callers_staging(
         text=True,
     )
     # Assert
-    assert result.returncode != 0 and "dirty checkout" in result.stderr
-    assert git(repository, "diff", "--cached", "--binary") == staged
-    assert (repository / "README.md").read_text() == "Pending user work\n"
-    assert not output.exists()
+    assert (
+        result.returncode != 0 and "dirty checkout" in result.stderr,
+        git(repository, "diff", "--cached", "--binary"),
+        (repository / "README.md").read_text(),
+        output.exists(),
+    ) == (True, staged, "Pending user work\n", False)
