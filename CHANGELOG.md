@@ -23,7 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Clarify caption-based editor media discovery and distinguish missing media
   from unavailable previews in the owning skill, linked from the editor guide
   and README. Add an orphan-image behavioral regression.
-
+- Keep every generated offline HTML/CSS resource in normal source archives and
+  wheels; verify installed local references, including fonts, icons and source links.
 
 ## [2.43.20] - 2026-11-04
 

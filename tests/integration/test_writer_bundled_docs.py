@@ -51,3 +51,43 @@ def test_docs_builder_refuses_wrong_installed_version_before_replacing_files(tmp
         "Install this checkout" in result.stderr,
         sentinel.read_text(),
     ) == (True, True, "unchanged")
+
+
+def test_installed_offline_docs_keep_every_local_html_and_css_resource():
+    # Arrange
+    from html.parser import HTMLParser
+    from importlib.metadata import distribution
+    from urllib.parse import unquote, urlsplit
+
+    docs = Path(distribution("scitex-writer").locate_file("scitex_writer/_sphinx_html"))
+    missing = []
+
+    class References(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.urls = []
+
+        def handle_starttag(self, tag, attrs):
+            self.urls.extend(
+                value for key, value in attrs if key in {"href", "src"} and value
+            )
+
+    # Act
+    for page in sorted(docs.rglob("*")):
+        if page.suffix == ".html":
+            parser = References()
+            parser.feed(page.read_text())
+            urls = parser.urls
+        elif page.suffix == ".css":
+            urls = re.findall(r"url\(\s*['\"]?([^)'\"\s]+)", page.read_text())
+        else:
+            continue
+        for url in urls:
+            parsed = urlsplit(url)
+            if parsed.scheme or parsed.netloc or not parsed.path:
+                continue
+            target = page.parent / unquote(parsed.path)
+            if not target.is_file():
+                missing.append((page.relative_to(docs).as_posix(), url))
+    # Assert
+    assert missing == []
