@@ -5,15 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>scitex_writer.export._arxiv_categories &mdash; SciTeX Writer v2.17.5</title>
+  <title>scitex_writer.export._arxiv_categories &mdash; SciTeX Writer v2.43.21</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
 
   
       <script src="../../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../../_static/documentation_options.js?v=b1c06546"></script>
+      <script src="../../../_static/documentation_options.js?v=501ce1ad"></script>
       <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -89,6 +90,8 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.compile.supplementary"><code class="docutils literal notranslate"><span class="pre">supplementary()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.compile.revision"><code class="docutils literal notranslate"><span class="pre">revision()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.compile.content"><code class="docutils literal notranslate"><span class="pre">content()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.compile.diff"><code class="docutils literal notranslate"><span class="pre">diff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.compile.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/scitex_writer.html#module-scitex_writer.project">scitex_writer.project</a><ul>
@@ -114,6 +117,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.tables.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.tables.csv_to_latex"><code class="docutils literal notranslate"><span class="pre">csv_to_latex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.tables.latex_to_csv"><code class="docutils literal notranslate"><span class="pre">latex_to_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.tables.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/scitex_writer.html#module-scitex_writer.figures">scitex_writer.figures</a><ul>
@@ -123,6 +127,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.figures.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.figures.convert"><code class="docutils literal notranslate"><span class="pre">convert()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.figures.pdf_to_images"><code class="docutils literal notranslate"><span class="pre">pdf_to_images()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../api/scitex_writer.html#scitex_writer.figures.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../../api/scitex_writer.html#module-scitex_writer.export">scitex_writer.export</a><ul>
@@ -182,11 +187,11 @@
 <span class="c1"># -*- coding: utf-8 -*-</span>
 <span class="c1"># File: src/scitex_writer/export/_arxiv_categories.py</span>
 
-<span class="sd">&quot;&quot;&quot;arXiv category data and suggestion algorithm.</span>
+<span class="sd">"""arXiv category data and suggestion algorithm.</span>
 
 <span class="sd">Pure data structures and functions for arXiv subject classification.</span>
 <span class="sd">No Django or ORM dependencies.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
 
@@ -194,112 +199,112 @@
 <span class="n">ARXIV_CATEGORIES</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
     <span class="c1"># Computer Science</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;cs.AI&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Artificial Intelligence&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Covers all areas of AI&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"cs.AI"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Artificial Intelligence"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Covers all areas of AI"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;cs.CL&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Computation and Language&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Natural language processing, computational linguistics&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"cs.CL"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Computation and Language"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Natural language processing, computational linguistics"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;cs.CV&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Computer Vision and Pattern Recognition&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Image processing, computer vision&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"cs.CV"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Computer Vision and Pattern Recognition"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Image processing, computer vision"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;cs.LG&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Machine Learning&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Machine learning research&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"cs.LG"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Machine Learning"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Machine learning research"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;cs.NI&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Networking and Internet Architecture&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Network protocols, internet architecture&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"cs.NI"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Networking and Internet Architecture"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Network protocols, internet architecture"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;cs.SE&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Software Engineering&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Software development, engineering practices&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"cs.SE"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Software Engineering"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Software development, engineering practices"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="c1"># Mathematics</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;math.ST&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Statistics Theory&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Mathematical statistics&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"math.ST"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Statistics Theory"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Mathematical statistics"</span><span class="p">,</span>
     <span class="p">},</span>
-    <span class="p">{</span><span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;math.PR&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Probability&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Probability theory&quot;</span><span class="p">},</span>
+    <span class="p">{</span><span class="s2">"code"</span><span class="p">:</span> <span class="s2">"math.PR"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Probability"</span><span class="p">,</span> <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Probability theory"</span><span class="p">},</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;math.NA&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Numerical Analysis&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Numerical methods and analysis&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"math.NA"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Numerical Analysis"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Numerical methods and analysis"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="c1"># Physics</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;physics.comp-ph&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Computational Physics&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Computational methods in physics&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"physics.comp-ph"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Computational Physics"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Computational methods in physics"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;physics.data-an&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Data Analysis, Statistics and Probability&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Data analysis in physics&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"physics.data-an"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Data Analysis, Statistics and Probability"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Data analysis in physics"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="c1"># Quantitative Biology</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;q-bio.BM&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Biomolecules&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Molecular biology, biochemistry&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"q-bio.BM"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Biomolecules"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Molecular biology, biochemistry"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;q-bio.GN&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Genomics&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Genomics and bioinformatics&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"q-bio.GN"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Genomics"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Genomics and bioinformatics"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;q-bio.NC&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Neurons and Cognition&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Neuroscience, cognition&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"q-bio.NC"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Neurons and Cognition"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Neuroscience, cognition"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="c1"># Statistics</span>
-    <span class="p">{</span><span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;stat.AP&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Applications&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Applied statistics&quot;</span><span class="p">},</span>
+    <span class="p">{</span><span class="s2">"code"</span><span class="p">:</span> <span class="s2">"stat.AP"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Applications"</span><span class="p">,</span> <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Applied statistics"</span><span class="p">},</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;stat.ML&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Machine Learning&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Statistical machine learning&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"stat.ML"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Machine Learning"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Statistical machine learning"</span><span class="p">,</span>
     <span class="p">},</span>
     <span class="c1"># Electrical Engineering</span>
     <span class="p">{</span>
-        <span class="s2">&quot;code&quot;</span><span class="p">:</span> <span class="s2">&quot;eess.SP&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Signal Processing&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Signal processing, filtering, detection&quot;</span><span class="p">,</span>
+        <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"eess.SP"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Signal Processing"</span><span class="p">,</span>
+        <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Signal processing, filtering, detection"</span><span class="p">,</span>
     <span class="p">},</span>
 <span class="p">]</span>
 
 <span class="c1"># Keyword maps for category suggestion</span>
 <span class="n">CATEGORY_KEYWORDS</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;cs.AI&quot;</span><span class="p">:</span> <span class="p">[</span>
-        <span class="s2">&quot;artificial intelligence&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;ai&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;machine learning&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;deep learning&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;neural network&quot;</span><span class="p">,</span>
+    <span class="s2">"cs.AI"</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">"artificial intelligence"</span><span class="p">,</span>
+        <span class="s2">"ai"</span><span class="p">,</span>
+        <span class="s2">"machine learning"</span><span class="p">,</span>
+        <span class="s2">"deep learning"</span><span class="p">,</span>
+        <span class="s2">"neural network"</span><span class="p">,</span>
     <span class="p">],</span>
-    <span class="s2">&quot;cs.CL&quot;</span><span class="p">:</span> <span class="p">[</span>
-        <span class="s2">&quot;natural language&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;nlp&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;language model&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;text processing&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;linguistics&quot;</span><span class="p">,</span>
+    <span class="s2">"cs.CL"</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">"natural language"</span><span class="p">,</span>
+        <span class="s2">"nlp"</span><span class="p">,</span>
+        <span class="s2">"language model"</span><span class="p">,</span>
+        <span class="s2">"text processing"</span><span class="p">,</span>
+        <span class="s2">"linguistics"</span><span class="p">,</span>
     <span class="p">],</span>
-    <span class="s2">&quot;cs.CV&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;computer vision&quot;</span><span class="p">,</span> <span class="s2">&quot;image processing&quot;</span><span class="p">,</span> <span class="s2">&quot;object detection&quot;</span><span class="p">,</span> <span class="s2">&quot;recognition&quot;</span><span class="p">],</span>
-    <span class="s2">&quot;cs.LG&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;machine learning&quot;</span><span class="p">,</span> <span class="s2">&quot;learning algorithm&quot;</span><span class="p">,</span> <span class="s2">&quot;classification&quot;</span><span class="p">,</span> <span class="s2">&quot;regression&quot;</span><span class="p">],</span>
-    <span class="s2">&quot;stat.ML&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;statistical learning&quot;</span><span class="p">,</span> <span class="s2">&quot;bayesian&quot;</span><span class="p">,</span> <span class="s2">&quot;statistics&quot;</span><span class="p">,</span> <span class="s2">&quot;probabilistic&quot;</span><span class="p">],</span>
-    <span class="s2">&quot;math.ST&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;statistics&quot;</span><span class="p">,</span> <span class="s2">&quot;statistical theory&quot;</span><span class="p">,</span> <span class="s2">&quot;hypothesis testing&quot;</span><span class="p">],</span>
-    <span class="s2">&quot;q-bio.GN&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;genomics&quot;</span><span class="p">,</span> <span class="s2">&quot;bioinformatics&quot;</span><span class="p">,</span> <span class="s2">&quot;dna&quot;</span><span class="p">,</span> <span class="s2">&quot;rna&quot;</span><span class="p">,</span> <span class="s2">&quot;genome&quot;</span><span class="p">],</span>
-    <span class="s2">&quot;q-bio.NC&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;neuroscience&quot;</span><span class="p">,</span> <span class="s2">&quot;brain&quot;</span><span class="p">,</span> <span class="s2">&quot;neural&quot;</span><span class="p">,</span> <span class="s2">&quot;eeg&quot;</span><span class="p">,</span> <span class="s2">&quot;cognition&quot;</span><span class="p">,</span> <span class="s2">&quot;hippocampus&quot;</span><span class="p">],</span>
-    <span class="s2">&quot;eess.SP&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;signal processing&quot;</span><span class="p">,</span> <span class="s2">&quot;filtering&quot;</span><span class="p">,</span> <span class="s2">&quot;spectral&quot;</span><span class="p">,</span> <span class="s2">&quot;frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;wavelet&quot;</span><span class="p">],</span>
+    <span class="s2">"cs.CV"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"computer vision"</span><span class="p">,</span> <span class="s2">"image processing"</span><span class="p">,</span> <span class="s2">"object detection"</span><span class="p">,</span> <span class="s2">"recognition"</span><span class="p">],</span>
+    <span class="s2">"cs.LG"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"machine learning"</span><span class="p">,</span> <span class="s2">"learning algorithm"</span><span class="p">,</span> <span class="s2">"classification"</span><span class="p">,</span> <span class="s2">"regression"</span><span class="p">],</span>
+    <span class="s2">"stat.ML"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"statistical learning"</span><span class="p">,</span> <span class="s2">"bayesian"</span><span class="p">,</span> <span class="s2">"statistics"</span><span class="p">,</span> <span class="s2">"probabilistic"</span><span class="p">],</span>
+    <span class="s2">"math.ST"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"statistics"</span><span class="p">,</span> <span class="s2">"statistical theory"</span><span class="p">,</span> <span class="s2">"hypothesis testing"</span><span class="p">],</span>
+    <span class="s2">"q-bio.GN"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"genomics"</span><span class="p">,</span> <span class="s2">"bioinformatics"</span><span class="p">,</span> <span class="s2">"dna"</span><span class="p">,</span> <span class="s2">"rna"</span><span class="p">,</span> <span class="s2">"genome"</span><span class="p">],</span>
+    <span class="s2">"q-bio.NC"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"neuroscience"</span><span class="p">,</span> <span class="s2">"brain"</span><span class="p">,</span> <span class="s2">"neural"</span><span class="p">,</span> <span class="s2">"eeg"</span><span class="p">,</span> <span class="s2">"cognition"</span><span class="p">,</span> <span class="s2">"hippocampus"</span><span class="p">],</span>
+    <span class="s2">"eess.SP"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"signal processing"</span><span class="p">,</span> <span class="s2">"filtering"</span><span class="p">,</span> <span class="s2">"spectral"</span><span class="p">,</span> <span class="s2">"frequency"</span><span class="p">,</span> <span class="s2">"wavelet"</span><span class="p">],</span>
 <span class="p">}</span>
 
 
@@ -309,7 +314,7 @@
     <span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">max_suggestions</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Suggest arXiv categories based on text content.</span>
+<span class="w">    </span><span class="sd">"""Suggest arXiv categories based on text content.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        content: Text to analyse (typically title + abstract).</span>
@@ -317,11 +322,11 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        List of (code, name, score) tuples sorted by relevance score.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">content_lower</span> <span class="o">=</span> <span class="n">content</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
 
     <span class="c1"># Build a code -&gt; name lookup from ARXIV_CATEGORIES</span>
-    <span class="n">code_to_name</span> <span class="o">=</span> <span class="p">{</span><span class="n">cat</span><span class="p">[</span><span class="s2">&quot;code&quot;</span><span class="p">]:</span> <span class="n">cat</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">cat</span> <span class="ow">in</span> <span class="n">ARXIV_CATEGORIES</span><span class="p">}</span>
+    <span class="n">code_to_name</span> <span class="o">=</span> <span class="p">{</span><span class="n">cat</span><span class="p">[</span><span class="s2">"code"</span><span class="p">]:</span> <span class="n">cat</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="k">for</span> <span class="n">cat</span> <span class="ow">in</span> <span class="n">ARXIV_CATEGORIES</span><span class="p">}</span>
 
     <span class="n">suggestions</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">code</span><span class="p">,</span> <span class="n">keywords</span> <span class="ow">in</span> <span class="n">CATEGORY_KEYWORDS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>

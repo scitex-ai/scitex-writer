@@ -56,6 +56,9 @@ compilation. Its PDF pane uses LivePaper's public rich provider through Writer's
 own annotation adapter; the SDK owns PDF rendering. Clicking a figure or table
 row does not insert text: use drag and drop or the explicit insert action.
 Caption-only tables have no data thumbnail.
+The panes discover captions in the selected document, rather than every image
+in the project. See [editor media discovery](src/scitex_writer/_skills/scitex-writer/12_figures-and-tables.md#editor-media-discovery)
+for file pairing and missing-preview guidance.
 
 Contributor builds require SDK>=0.3.17, LivePaper>=0.2.20 and Node/npm. From the
 checkout, install the declared developer dependencies and run the tracked build:
@@ -64,6 +67,19 @@ checkout, install the declared developer dependencies and run the tracked build:
 python -m pip install -e '.[dev]'
 python scripts/build_frontend.py --receipt /tmp/writer-frontend-build.json
 ```
+
+Refresh the packaged offline documentation separately with Python 3.11+ and
+this checkout installed with its docs dependencies:
+
+```bash
+python -m pip install -e '.[docs,dev]'
+python scripts/build_docs.py --receipt /tmp/writer-offline-docs.json
+```
+
+The docs build refuses a mismatched installed Writer version, keeps strict
+Sphinx warnings enabled and checks the generated version before replacing the
+packaged HTML. Its receipt binds the generated files; this is separate from
+reviewing guide contents or deployment.
 
 The build discovers both frontend packages from installed Python distributions,
 runs normal npm installation and produces the complete asset closure without

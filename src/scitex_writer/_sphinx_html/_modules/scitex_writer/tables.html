@@ -5,15 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>scitex_writer.tables &mdash; SciTeX Writer v2.17.5</title>
+  <title>scitex_writer.tables &mdash; SciTeX Writer v2.43.21</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=b1c06546"></script>
+      <script src="../../_static/documentation_options.js?v=501ce1ad"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -89,6 +90,8 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.supplementary"><code class="docutils literal notranslate"><span class="pre">supplementary()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.revision"><code class="docutils literal notranslate"><span class="pre">revision()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.content"><code class="docutils literal notranslate"><span class="pre">content()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.diff"><code class="docutils literal notranslate"><span class="pre">diff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.project">scitex_writer.project</a><ul>
@@ -114,6 +117,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.csv_to_latex"><code class="docutils literal notranslate"><span class="pre">csv_to_latex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.latex_to_csv"><code class="docutils literal notranslate"><span class="pre">latex_to_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.figures">scitex_writer.figures</a><ul>
@@ -123,6 +127,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.convert"><code class="docutils literal notranslate"><span class="pre">convert()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.pdf_to_images"><code class="docutils literal notranslate"><span class="pre">pdf_to_images()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.export">scitex_writer.export</a><ul>
@@ -182,21 +187,24 @@
 <span class="c1"># Timestamp: 2026-01-27</span>
 <span class="c1"># File: src/scitex_writer/tables.py</span>
 
-<span class="sd">&quot;&quot;&quot;Table management functions.</span>
+<span class="sd">"""Table management functions.</span>
 
 <span class="sd">Usage::</span>
 
 <span class="sd">    import scitex_writer as sw</span>
 
 <span class="sd">    # List tables in project</span>
-<span class="sd">    result = sw.tables.list(&quot;./my-paper&quot;)</span>
+<span class="sd">    result = sw.tables.list("./my-paper")</span>
 
 <span class="sd">    # Add a table</span>
-<span class="sd">    sw.tables.add(&quot;./my-paper&quot;, &quot;results&quot;, &quot;col1,col2\\n1,2&quot;, &quot;Results summary&quot;)</span>
+<span class="sd">    sw.tables.add("./my-paper", "results", "col1,col2\\n1,2", "Results summary")</span>
 
 <span class="sd">    # Convert CSV to LaTeX</span>
-<span class="sd">    result = sw.tables.csv_to_latex(&quot;data.csv&quot;, &quot;table.tex&quot;)</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    result = sw.tables.csv_to_latex("data.csv", "table.tex")</span>
+
+<span class="sd">    # Run the whole engine pipeline (CSV/XLSX -&gt; compiled LaTeX -&gt; FINAL.tex)</span>
+<span class="sd">    result = sw.tables.render("./my-paper", doc_type="manuscript")</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_shutil</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span> <span class="k">as</span> <span class="n">_Literal</span>
@@ -204,6 +212,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">csv_to_latex</span> <span class="k">as</span> <span class="n">_csv_to_latex</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">latex_to_csv</span> <span class="k">as</span> <span class="n">_latex_to_csv</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.handlers._tables_pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">process</span> <span class="k">as</span> <span class="n">_process</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_project_path</span> <span class="k">as</span> <span class="n">_resolve_project_path</span>
 
 <span class="k">try</span><span class="p">:</span>
@@ -219,9 +228,9 @@
 <span class="nd">@_supports_return_as</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">list</span><span class="p">(</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">&quot;manuscript&quot;</span><span class="p">,</span> <span class="s2">&quot;supplementary&quot;</span><span class="p">,</span> <span class="s2">&quot;revision&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;manuscript&quot;</span><span class="p">,</span>
+    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">,</span> <span class="s2">"revision"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"manuscript"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;List all tables in a writer project.</span>
+<span class="w">    </span><span class="sd">"""List all tables in a writer project.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        project_dir: Path to scitex-writer project.</span>
@@ -229,42 +238,42 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with tables list and count.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">project_path</span> <span class="o">=</span> <span class="n">_resolve_project_path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
         <span class="n">doc_dirs</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;manuscript&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;01_manuscript&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;supplementary&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;02_supplementary&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;revision&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;03_revision&quot;</span><span class="p">,</span>
+            <span class="s2">"manuscript"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"01_manuscript"</span><span class="p">,</span>
+            <span class="s2">"supplementary"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"02_supplementary"</span><span class="p">,</span>
+            <span class="s2">"revision"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"03_revision"</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">doc_dir</span> <span class="o">=</span> <span class="n">doc_dirs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">doc_type</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">doc_dir</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">doc_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
             <span class="k">return</span> <span class="p">{</span>
-                <span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-                <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Document directory not found: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Document directory not found: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
             <span class="p">}</span>
 
-        <span class="n">table_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">&quot;contents&quot;</span> <span class="o">/</span> <span class="s2">&quot;tables&quot;</span> <span class="o">/</span> <span class="s2">&quot;caption_and_media&quot;</span>
+        <span class="n">table_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">"contents"</span> <span class="o">/</span> <span class="s2">"tables"</span> <span class="o">/</span> <span class="s2">"caption_and_media"</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">table_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;tables&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"tables"</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">"count"</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
 
         <span class="n">tables</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">csv_file</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">table_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;*.csv&quot;</span><span class="p">)):</span>
-            <span class="n">caption_file</span> <span class="o">=</span> <span class="n">csv_file</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.tex&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">csv_file</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">table_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*.csv"</span><span class="p">)):</span>
+            <span class="n">caption_file</span> <span class="o">=</span> <span class="n">csv_file</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">".tex"</span><span class="p">)</span>
             <span class="n">tables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                 <span class="p">{</span>
-                    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">csv_file</span><span class="o">.</span><span class="n">stem</span><span class="p">,</span>
-                    <span class="s2">&quot;csv_path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">csv_file</span><span class="p">),</span>
-                    <span class="s2">&quot;caption_path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">caption_file</span><span class="p">)</span>
+                    <span class="s2">"name"</span><span class="p">:</span> <span class="n">csv_file</span><span class="o">.</span><span class="n">stem</span><span class="p">,</span>
+                    <span class="s2">"csv_path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">csv_file</span><span class="p">),</span>
+                    <span class="s2">"caption_path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">caption_file</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">caption_file</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
                     <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-                    <span class="s2">&quot;has_caption&quot;</span><span class="p">:</span> <span class="n">caption_file</span><span class="o">.</span><span class="n">exists</span><span class="p">(),</span>
+                    <span class="s2">"has_caption"</span><span class="p">:</span> <span class="n">caption_file</span><span class="o">.</span><span class="n">exists</span><span class="p">(),</span>
                 <span class="p">}</span>
             <span class="p">)</span>
 
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;tables&quot;</span><span class="p">:</span> <span class="n">tables</span><span class="p">,</span> <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">tables</span><span class="p">)}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"tables"</span><span class="p">:</span> <span class="n">tables</span><span class="p">,</span> <span class="s2">"count"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">tables</span><span class="p">)}</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
 
 
 
@@ -277,9 +286,9 @@
     <span class="n">csv_content</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">caption</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">label</span><span class="p">:</span> <span class="n">_Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">&quot;manuscript&quot;</span><span class="p">,</span> <span class="s2">&quot;supplementary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;manuscript&quot;</span><span class="p">,</span>
+    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"manuscript"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add a new table (CSV + caption) to the project.</span>
+<span class="w">    </span><span class="sd">"""Add a new table (CSV + caption) to the project.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        project_dir: Path to scitex-writer project.</span>
@@ -291,37 +300,37 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with csv_path, caption_path, label.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">project_path</span> <span class="o">=</span> <span class="n">_resolve_project_path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
         <span class="n">doc_dirs</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;manuscript&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;01_manuscript&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;supplementary&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;02_supplementary&quot;</span><span class="p">,</span>
+            <span class="s2">"manuscript"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"01_manuscript"</span><span class="p">,</span>
+            <span class="s2">"supplementary"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"02_supplementary"</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">doc_dir</span> <span class="o">=</span> <span class="n">doc_dirs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">doc_type</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">doc_dir</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Invalid doc_type: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Invalid doc_type: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
 
-        <span class="n">table_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">&quot;contents&quot;</span> <span class="o">/</span> <span class="s2">&quot;tables&quot;</span> <span class="o">/</span> <span class="s2">&quot;caption_and_media&quot;</span>
+        <span class="n">table_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">"contents"</span> <span class="o">/</span> <span class="s2">"tables"</span> <span class="o">/</span> <span class="s2">"caption_and_media"</span>
         <span class="n">table_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-        <span class="n">csv_path</span> <span class="o">=</span> <span class="n">table_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.csv&quot;</span>
-        <span class="n">csv_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">csv_content</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+        <span class="n">csv_path</span> <span class="o">=</span> <span class="n">table_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.csv"</span>
+        <span class="n">csv_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">csv_content</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">label</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">label</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;tab:</span><span class="si">{</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;_&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="n">caption_content</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">caption</span><span class="se">{{</span><span class="si">{</span><span class="n">caption</span><span class="si">}</span><span class="se">}}\n\\</span><span class="s2">label</span><span class="se">{{</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="se">}}\n</span><span class="s2">&quot;</span>
-        <span class="n">caption_path</span> <span class="o">=</span> <span class="n">table_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.tex&quot;</span>
-        <span class="n">caption_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">caption_content</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"tab:</span><span class="si">{</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">' '</span><span class="p">,</span><span class="w"> </span><span class="s1">'_'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">caption_content</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\\</span><span class="s2">caption</span><span class="se">{{</span><span class="si">{</span><span class="n">caption</span><span class="si">}</span><span class="se">}}\n\\</span><span class="s2">label</span><span class="se">{{</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="se">}}\n</span><span class="s2">"</span>
+        <span class="n">caption_path</span> <span class="o">=</span> <span class="n">table_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.tex"</span>
+        <span class="n">caption_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">caption_content</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-            <span class="s2">&quot;csv_path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">csv_path</span><span class="p">),</span>
-            <span class="s2">&quot;caption_path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">caption_path</span><span class="p">),</span>
-            <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="n">label</span><span class="p">,</span>
+            <span class="s2">"success"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s2">"csv_path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">csv_path</span><span class="p">),</span>
+            <span class="s2">"caption_path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">caption_path</span><span class="p">),</span>
+            <span class="s2">"label"</span><span class="p">:</span> <span class="n">label</span><span class="p">,</span>
         <span class="p">}</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
 
 
 
@@ -331,9 +340,9 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">remove</span><span class="p">(</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">&quot;manuscript&quot;</span><span class="p">,</span> <span class="s2">&quot;supplementary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;manuscript&quot;</span><span class="p">,</span>
+    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"manuscript"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove a table (CSV + caption) from the project.</span>
+<span class="w">    </span><span class="sd">"""Remove a table (CSV + caption) from the project.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        project_dir: Path to scitex-writer project.</span>
@@ -342,20 +351,20 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with removed file paths.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">project_path</span> <span class="o">=</span> <span class="n">_resolve_project_path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
         <span class="n">doc_dirs</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;manuscript&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;01_manuscript&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;supplementary&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;02_supplementary&quot;</span><span class="p">,</span>
+            <span class="s2">"manuscript"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"01_manuscript"</span><span class="p">,</span>
+            <span class="s2">"supplementary"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"02_supplementary"</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">doc_dir</span> <span class="o">=</span> <span class="n">doc_dirs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">doc_type</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">doc_dir</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Invalid doc_type: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Invalid doc_type: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
 
-        <span class="n">table_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">&quot;contents&quot;</span> <span class="o">/</span> <span class="s2">&quot;tables&quot;</span> <span class="o">/</span> <span class="s2">&quot;caption_and_media&quot;</span>
-        <span class="n">csv_path</span> <span class="o">=</span> <span class="n">table_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.csv&quot;</span>
-        <span class="n">caption_path</span> <span class="o">=</span> <span class="n">table_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.tex&quot;</span>
+        <span class="n">table_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">"contents"</span> <span class="o">/</span> <span class="s2">"tables"</span> <span class="o">/</span> <span class="s2">"caption_and_media"</span>
+        <span class="n">csv_path</span> <span class="o">=</span> <span class="n">table_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.csv"</span>
+        <span class="n">caption_path</span> <span class="o">=</span> <span class="n">table_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.tex"</span>
 
         <span class="n">removed</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">csv_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
@@ -366,11 +375,11 @@
             <span class="n">removed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">caption_path</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">removed</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Table not found: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Table not found: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
 
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;removed&quot;</span><span class="p">:</span> <span class="n">removed</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"removed"</span><span class="p">:</span> <span class="n">removed</span><span class="p">}</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
 
 
 
@@ -380,9 +389,9 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">archive</span><span class="p">(</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">&quot;manuscript&quot;</span><span class="p">,</span> <span class="s2">&quot;supplementary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;manuscript&quot;</span><span class="p">,</span>
+    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"manuscript"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Move a table to legacy/ instead of deleting.</span>
+<span class="w">    </span><span class="sd">"""Move a table to legacy/ instead of deleting.</span>
 
 <span class="sd">    Moves CSV and caption files from caption_and_media/ to legacy/,</span>
 <span class="sd">    preserving them for potential reuse or supplementary materials.</span>
@@ -394,35 +403,35 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with archived file paths.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">project_path</span> <span class="o">=</span> <span class="n">_resolve_project_path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
         <span class="n">doc_dirs</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;manuscript&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;01_manuscript&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;supplementary&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;02_supplementary&quot;</span><span class="p">,</span>
+            <span class="s2">"manuscript"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"01_manuscript"</span><span class="p">,</span>
+            <span class="s2">"supplementary"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"02_supplementary"</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">doc_dir</span> <span class="o">=</span> <span class="n">doc_dirs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">doc_type</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">doc_dir</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Invalid doc_type: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Invalid doc_type: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
 
-        <span class="n">table_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">&quot;contents&quot;</span> <span class="o">/</span> <span class="s2">&quot;tables&quot;</span> <span class="o">/</span> <span class="s2">&quot;caption_and_media&quot;</span>
-        <span class="n">legacy_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">&quot;contents&quot;</span> <span class="o">/</span> <span class="s2">&quot;tables&quot;</span> <span class="o">/</span> <span class="s2">&quot;legacy&quot;</span>
+        <span class="n">table_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">"contents"</span> <span class="o">/</span> <span class="s2">"tables"</span> <span class="o">/</span> <span class="s2">"caption_and_media"</span>
+        <span class="n">legacy_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">"contents"</span> <span class="o">/</span> <span class="s2">"tables"</span> <span class="o">/</span> <span class="s2">"legacy"</span>
         <span class="n">legacy_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="n">archived</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;.tex&quot;</span><span class="p">]:</span>
-            <span class="n">src</span> <span class="o">=</span> <span class="n">table_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}{</span><span class="n">ext</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">".csv"</span><span class="p">,</span> <span class="s2">".tex"</span><span class="p">]:</span>
+            <span class="n">src</span> <span class="o">=</span> <span class="n">table_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}{</span><span class="n">ext</span><span class="si">}</span><span class="s2">"</span>
             <span class="k">if</span> <span class="n">src</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
                 <span class="n">dest</span> <span class="o">=</span> <span class="n">legacy_dir</span> <span class="o">/</span> <span class="n">src</span><span class="o">.</span><span class="n">name</span>
                 <span class="n">_shutil</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">dest</span><span class="p">))</span>
-                <span class="n">archived</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">),</span> <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">dest</span><span class="p">)})</span>
+                <span class="n">archived</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"from"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">src</span><span class="p">),</span> <span class="s2">"to"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">dest</span><span class="p">)})</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">archived</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Table not found: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Table not found: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
 
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;archived&quot;</span><span class="p">:</span> <span class="n">archived</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"archived"</span><span class="p">:</span> <span class="n">archived</span><span class="p">}</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
 
 
 
@@ -436,7 +445,7 @@
     <span class="n">label</span><span class="p">:</span> <span class="n">_Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">longtable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert CSV file to LaTeX table format.</span>
+<span class="w">    </span><span class="sd">"""Convert CSV file to LaTeX table format.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        csv_path: Path to CSV file.</span>
@@ -447,7 +456,7 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with latex_content and output_path.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_csv_to_latex</span><span class="p">(</span><span class="n">csv_path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">,</span> <span class="n">caption</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">longtable</span><span class="p">)</span></div>
 
 
@@ -460,7 +469,7 @@
     <span class="n">output_path</span><span class="p">:</span> <span class="n">_Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">table_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert LaTeX table to CSV format.</span>
+<span class="w">    </span><span class="sd">"""Convert LaTeX table to CSV format.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        latex_path: Path to LaTeX file.</span>
@@ -469,12 +478,45 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with preview and output_path.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_latex_to_csv</span><span class="p">(</span><span class="n">latex_path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">,</span> <span class="n">table_index</span><span class="p">)</span></div>
 
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;add&quot;</span><span class="p">,</span> <span class="s2">&quot;remove&quot;</span><span class="p">,</span> <span class="s2">&quot;archive&quot;</span><span class="p">,</span> <span class="s2">&quot;csv_to_latex&quot;</span><span class="p">,</span> <span class="s2">&quot;latex_to_csv&quot;</span><span class="p">]</span>
+<div class="viewcode-block" id="render">
+<a class="viewcode-back" href="../../api/scitex_writer.html#scitex_writer.tables.render">[docs]</a>
+<span class="nd">@_supports_return_as</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span>
+    <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">,</span> <span class="s2">"revision"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"manuscript"</span><span class="p">,</span>
+    <span class="n">no_tables</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Run the engine's table pipeline for ``doc_type``.</span>
+
+<span class="sd">    The pure-Python port of ``scripts/shell/modules/process_tables.sh``: refreshes</span>
+<span class="sd">    CSVs from newer Excel sources, writes a default caption for any table lacking</span>
+<span class="sd">    one, renders every ``NN_*.csv`` to LaTeX through the single pandas backend</span>
+<span class="sd">    (whole-cell verbatim passthrough for ``$``/``\\`` cells), and gathers the</span>
+<span class="sd">    results into the compiled ``FINAL.tex``. With no tables at all it emits a</span>
+<span class="sd">    comment-only fallback header -- never a placeholder float.</span>
+
+<span class="sd">    ``no_tables=True`` skips everything (the shell's ``--no_tables``). Returns</span>
+<span class="sd">    ``{success, tables_compiled, captions_created, xlsx_converted, tables,</span>
+<span class="sd">    compiled_file, fallback_header, skipped, error}``.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">_process</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">doc_type</span><span class="p">,</span> <span class="n">no_tables</span><span class="p">)</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"list"</span><span class="p">,</span>
+    <span class="s2">"add"</span><span class="p">,</span>
+    <span class="s2">"remove"</span><span class="p">,</span>
+    <span class="s2">"archive"</span><span class="p">,</span>
+    <span class="s2">"csv_to_latex"</span><span class="p">,</span>
+    <span class="s2">"latex_to_csv"</span><span class="p">,</span>
+    <span class="s2">"render"</span><span class="p">,</span>
+<span class="p">]</span>
 
 <span class="c1"># EOF</span>
 </pre></div>

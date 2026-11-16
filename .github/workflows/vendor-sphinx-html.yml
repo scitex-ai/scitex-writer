@@ -44,20 +44,10 @@ jobs:
       - name: Install package + docs deps
         run: pip install -e ".[docs]"
 
-      - name: Build Sphinx HTML
-        # Not -W here: the PR gate in `docs` is where warnings must fail. This
-        # job runs after the merge, where refusing to vendor over a warning
-        # would leave the shipped bundle stale with nothing to show for it.
-        run: sphinx-build -b html docs/sphinx docs/sphinx/_build/html
-
-      - name: Refresh src/scitex_writer/_sphinx_html/
-        run: |
-          rm -rf src/scitex_writer/_sphinx_html
-          cp -rf docs/sphinx/_build/html src/scitex_writer/_sphinx_html
-          touch src/scitex_writer/_sphinx_html/.nojekyll
+      - name: Build and refresh version-bound offline HTML
+        run: python scripts/build_docs.py --receipt "$RUNNER_TEMP/writer-offline-docs.json"
 
       - name: Commit refreshed HTML if it changed
-        continue-on-error: true
         run: |
           if [ -n "$(git status --porcelain src/scitex_writer/_sphinx_html)" ]; then
             git config user.name "github-actions[bot]"

@@ -6,15 +6,16 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quick Start &mdash; SciTeX Writer v2.17.5</title>
+  <title>Quick Start &mdash; SciTeX Writer v2.43.21</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx_autodoc_typehints.css?v=057ac668" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=b1c06546"></script>
+      <script src="_static/documentation_options.js?v=501ce1ad"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -92,6 +93,8 @@
 <li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.compile.supplementary"><code class="docutils literal notranslate"><span class="pre">supplementary()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.compile.revision"><code class="docutils literal notranslate"><span class="pre">revision()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.compile.content"><code class="docutils literal notranslate"><span class="pre">content()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.compile.diff"><code class="docutils literal notranslate"><span class="pre">diff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.compile.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="api/scitex_writer.html#module-scitex_writer.project">scitex_writer.project</a><ul>
@@ -117,6 +120,7 @@
 <li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.tables.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.tables.csv_to_latex"><code class="docutils literal notranslate"><span class="pre">csv_to_latex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.tables.latex_to_csv"><code class="docutils literal notranslate"><span class="pre">latex_to_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.tables.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="api/scitex_writer.html#module-scitex_writer.figures">scitex_writer.figures</a><ul>
@@ -126,6 +130,7 @@
 <li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.figures.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.figures.convert"><code class="docutils literal notranslate"><span class="pre">convert()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.figures.pdf_to_images"><code class="docutils literal notranslate"><span class="pre">pdf_to_images()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/scitex_writer.html#scitex_writer.figures.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="api/scitex_writer.html#module-scitex_writer.export">scitex_writer.export</a><ul>
@@ -189,7 +194,7 @@
 </div>
 <p>Or using Python:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">scitex_writer</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sw</span>
-<span class="n">sw</span><span class="o">.</span><span class="n">project</span><span class="o">.</span><span class="n">clone</span><span class="p">(</span><span class="s2">&quot;template&quot;</span><span class="p">,</span> <span class="s2">&quot;./my-manuscript&quot;</span><span class="p">)</span>
+<span class="n">sw</span><span class="o">.</span><span class="n">project</span><span class="o">.</span><span class="n">clone</span><span class="p">(</span><span class="s2">"template"</span><span class="p">,</span> <span class="s2">"./my-manuscript"</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -221,11 +226,11 @@
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">scitex_writer</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sw</span>
 
 <span class="c1"># Compile manuscript</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">compile</span><span class="o">.</span><span class="n">manuscript</span><span class="p">(</span><span class="s2">&quot;./my-manuscript&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PDF: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">pdf_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">compile</span><span class="o">.</span><span class="n">manuscript</span><span class="p">(</span><span class="s2">"./my-manuscript"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"PDF: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">pdf_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
 <span class="c1"># Compile all documents</span>
-<span class="n">results</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">compile</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="s2">&quot;./my-manuscript&quot;</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">compile</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="s2">"./my-manuscript"</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -236,14 +241,14 @@
 scitex-writer<span class="w"> </span>bib<span class="w"> </span>list<span class="w"> </span>./my-manuscript
 
 <span class="c1"># Add entry</span>
-scitex-writer<span class="w"> </span>bib<span class="w"> </span>add<span class="w"> </span>./my-manuscript<span class="w"> </span>--key<span class="w"> </span><span class="s2">&quot;smith2024&quot;</span><span class="w"> </span>--bibtex<span class="w"> </span><span class="s2">&quot;@article{...}&quot;</span>
+scitex-writer<span class="w"> </span>bib<span class="w"> </span>add<span class="w"> </span>./my-manuscript<span class="w"> </span>--key<span class="w"> </span><span class="s2">"smith2024"</span><span class="w"> </span>--bibtex<span class="w"> </span><span class="s2">"@article{...}"</span>
 </pre></div>
 </div>
 <p>Using Python:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">scitex_writer</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sw</span>
 
-<span class="n">entries</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">bib</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="s2">&quot;./my-manuscript&quot;</span><span class="p">)</span>
-<span class="n">sw</span><span class="o">.</span><span class="n">bib</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;./my-manuscript&quot;</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s2">&quot;smith2024&quot;</span><span class="p">,</span> <span class="n">bibtex</span><span class="o">=</span><span class="s2">&quot;@article{...}&quot;</span><span class="p">)</span>
+<span class="n">entries</span> <span class="o">=</span> <span class="n">sw</span><span class="o">.</span><span class="n">bib</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="s2">"./my-manuscript"</span><span class="p">)</span>
+<span class="n">sw</span><span class="o">.</span><span class="n">bib</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">"./my-manuscript"</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s2">"smith2024"</span><span class="p">,</span> <span class="n">bibtex</span><span class="o">=</span><span class="s2">"@article{...}"</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>

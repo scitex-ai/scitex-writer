@@ -5,15 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>scitex_writer.export &mdash; SciTeX Writer v2.17.5</title>
+  <title>scitex_writer.export &mdash; SciTeX Writer v2.43.21</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=b1c06546"></script>
+      <script src="../../_static/documentation_options.js?v=501ce1ad"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -89,6 +90,8 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.supplementary"><code class="docutils literal notranslate"><span class="pre">supplementary()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.revision"><code class="docutils literal notranslate"><span class="pre">revision()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.content"><code class="docutils literal notranslate"><span class="pre">content()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.diff"><code class="docutils literal notranslate"><span class="pre">diff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.project">scitex_writer.project</a><ul>
@@ -114,6 +117,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.csv_to_latex"><code class="docutils literal notranslate"><span class="pre">csv_to_latex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.latex_to_csv"><code class="docutils literal notranslate"><span class="pre">latex_to_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.figures">scitex_writer.figures</a><ul>
@@ -123,6 +127,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.convert"><code class="docutils literal notranslate"><span class="pre">convert()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.pdf_to_images"><code class="docutils literal notranslate"><span class="pre">pdf_to_images()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.export">scitex_writer.export</a><ul>
@@ -181,14 +186,14 @@
 <span class="c1"># -*- coding: utf-8 -*-</span>
 <span class="c1"># File: src/scitex_writer/export/__init__.py</span>
 
-<span class="sd">&quot;&quot;&quot;Export functions for manuscript packaging and arXiv compliance.</span>
+<span class="sd">"""Export functions for manuscript packaging and arXiv compliance.</span>
 
 <span class="sd">Usage::</span>
 
 <span class="sd">    import scitex_writer as sw</span>
 
 <span class="sd">    # Export manuscript as arXiv-ready tarball</span>
-<span class="sd">    result = sw.export.manuscript(&quot;./my-paper&quot;)</span>
+<span class="sd">    result = sw.export.manuscript("./my-paper")</span>
 
 <span class="sd">    # Clean LaTeX for arXiv compliance</span>
 <span class="sd">    cleaned = sw.export.clean_latex(raw_latex)</span>
@@ -197,11 +202,11 @@
 <span class="sd">    result = sw.export.check_compliance(title, abstract, latex_content)</span>
 
 <span class="sd">    # Validate file types in a directory</span>
-<span class="sd">    valid, invalid = sw.export.validate_file_types(Path(&quot;./my-paper&quot;))</span>
+<span class="sd">    valid, invalid = sw.export.validate_file_types(Path("./my-paper"))</span>
 
 <span class="sd">    # Suggest arXiv categories from text</span>
-<span class="sd">    suggestions = sw.export.suggest_categories(&quot;deep learning neural network&quot;)</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    suggestions = sw.export.suggest_categories("deep learning neural network")</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.._mcp.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">export_manuscript</span> <span class="k">as</span> <span class="n">_export_manuscript</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">._arxiv_categories</span><span class="w"> </span><span class="kn">import</span> <span class="n">suggest_categories</span>
@@ -221,18 +226,18 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">manuscript</span><span class="p">(</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;arxiv&quot;</span><span class="p">,</span>
+    <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"arxiv"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Export manuscript as arXiv-ready tarball.</span>
+<span class="w">    </span><span class="sd">"""Export manuscript as arXiv-ready tarball.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        project_dir: Path to scitex-writer project directory.</span>
 <span class="sd">        output_dir: Output directory (default: 01_manuscript/export/).</span>
-<span class="sd">        format: Export format (currently only &#39;arxiv&#39;).</span>
+<span class="sd">        format: Export format (currently only 'arxiv').</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        dict with keys: success, tarball_path, message/error.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_export_manuscript</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="nb">format</span><span class="p">)</span></div>
 
 
@@ -241,14 +246,14 @@
 <a class="viewcode-back" href="../../api/scitex_writer.html#scitex_writer.export.clean_latex">[docs]</a>
 <span class="nd">@_supports_return_as</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">clean_latex</span><span class="p">(</span><span class="n">latex_content</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Clean LaTeX content for arXiv compliance.</span>
+<span class="w">    </span><span class="sd">"""Clean LaTeX content for arXiv compliance.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        latex_content: Raw LaTeX content string.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Cleaned LaTeX content string.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">cleaner</span> <span class="o">=</span> <span class="n">_ArxivLatexCleaner</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">cleaner</span><span class="o">.</span><span class="n">clean_latex_for_arxiv</span><span class="p">(</span><span class="n">latex_content</span><span class="p">)</span></div>
 
@@ -257,9 +262,9 @@
 <span class="n">suggest_categories</span> <span class="o">=</span> <span class="n">_supports_return_as</span><span class="p">(</span><span class="n">suggest_categories</span><span class="p">)</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;manuscript&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;clean_latex&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;suggest_categories&quot;</span><span class="p">,</span>
+    <span class="s2">"manuscript"</span><span class="p">,</span>
+    <span class="s2">"clean_latex"</span><span class="p">,</span>
+    <span class="s2">"suggest_categories"</span><span class="p">,</span>
 <span class="p">]</span>
 
 <span class="c1"># EOF</span>

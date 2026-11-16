@@ -5,10 +5,11 @@ from __future__ import annotations
 import json
 from urllib.parse import parse_qs, urlsplit
 
+import pytest
 from django.test import RequestFactory
 from PIL import Image
-import pytest
 from scitex_sdk.host import ProjectAccess
+
 from scitex_writer._django.handlers.media import (
     handle_figures,
     handle_tables,
@@ -80,3 +81,43 @@ def test_listed_thumbnail_serves_real_png(media_project):
         response.close()
     # Assert
     assert response.status_code == 200 and payload.startswith(b"\x89PNG\r\n\x1a\n")
+
+
+def test_empty_document_has_no_figure_entries(tmp_path):
+    # Arrange
+    project = ProjectState(project_dir=tmp_path)
+    # Act
+    response = handle_figures(RequestFactory().get("/api/figures"), project)
+    # Assert
+    assert json.loads(response.content)["figures"] == []
+
+
+def test_caption_without_matching_image_has_explicit_missing_media(tmp_path):
+    # Arrange
+    folder = tmp_path / "01_manuscript/contents/figures/caption_and_media"
+    folder.mkdir(parents=True)
+    (folder / "caption_only.tex").write_text(
+        r"\caption{Missing image}\label{fig:missing}"
+    )
+    project = ProjectState(project_dir=tmp_path)
+    # Act
+    response = handle_figures(RequestFactory().get("/api/figures"), project)
+    figure = json.loads(response.content)["figures"][0]
+    # Assert
+    assert (figure["label"], figure["media_path"], figure["thumbnail_url"]) == (
+        "fig:missing",
+        None,
+        None,
+    )
+
+
+def test_image_without_caption_is_not_a_figure_entry(tmp_path):
+    # Arrange
+    folder = tmp_path / "01_manuscript/contents/figures/caption_and_media"
+    folder.mkdir(parents=True)
+    Image.new("RGB", (8, 8), "navy").save(folder / "orphan.png")
+    project = ProjectState(project_dir=tmp_path)
+    # Act
+    response = handle_figures(RequestFactory().get("/api/figures"), project)
+    # Assert
+    assert json.loads(response.content)["figures"] == []

@@ -727,3 +727,9 @@ Python-*.tgz
 # Writer's tracked brand assets must reach both the sdist and installed wheel.
 !/src/scitex_writer/_django/static/writer/favicon*.png
 !/src/scitex_writer/_django/static/writer/favicon.svg
+
+# Offline documentation is a shipped package resource. Manuscript/scratch
+# patterns above (including *old* matching Bold fonts) must not drop its assets.
+!/src/scitex_writer/_sphinx_html/**
+/src/scitex_writer/_sphinx_html/.buildinfo
+/src/scitex_writer/_sphinx_html/.doctrees/
