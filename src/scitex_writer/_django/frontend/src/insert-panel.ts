@@ -265,7 +265,7 @@ export class InsertPanel {
           ${thumb}
           <div class="insert-item-meta">
             <div class="insert-item-label">${escapeHtml(item.label)}</div>
-            ${item.notice ? `<div class="insert-item-sub" role="status">${escapeHtml(item.notice)}</div>` : ""}
+            ${item.notice ? `<div class="insert-item-sub" role="status" data-media-status>${escapeHtml(item.notice)}</div>` : ""}
             ${item.sub && item.sub !== item.insert ? `<div class="insert-item-sub">${escapeHtml(item.sub)}</div>` : ""}
             <div class="insert-item-snippet">${escapeHtml(item.insert)}</div>
             <button type="button" class="insert-item-action" draggable="false">Insert reference</button>
@@ -285,6 +285,20 @@ export class InsertPanel {
     this.opts.panel
       .querySelectorAll<HTMLElement>(".insert-item")
       .forEach((el) => {
+        const image = el.querySelector<HTMLImageElement>("img.insert-item-thumb");
+        image?.addEventListener("error", () => {
+          const placeholder = document.createElement("div");
+          placeholder.className = "insert-item-thumb insert-item-thumb--empty";
+          placeholder.setAttribute("aria-hidden", "true");
+          placeholder.textContent = "—";
+          image.replaceWith(placeholder);
+          const notice = el.querySelector<HTMLElement>("[data-media-status]") || document.createElement("div");
+          notice.className = "insert-item-sub";
+          notice.dataset.mediaStatus = "";
+          notice.setAttribute("role", "status");
+          notice.textContent = "Preview unavailable. Check that the source file exists and can be opened.";
+          (el.querySelector(".insert-item-meta") || el).appendChild(notice);
+        }, { once: true });
         const action = el.querySelector<HTMLButtonElement>(".insert-item-action");
         action?.addEventListener("click", (event) => {
           event.stopPropagation();

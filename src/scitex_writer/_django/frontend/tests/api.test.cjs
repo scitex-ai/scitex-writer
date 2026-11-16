@@ -239,3 +239,18 @@ test("an existing image without a thumbnail is not described as a missing image"
   assert.match(fixture.panel.textContent, /Preview unavailable/);
   assert.doesNotMatch(fixture.panel.textContent, /No matching figure image found/);
 });
+
+
+test("a failed thumbnail explains the unavailable preview without inserting text", async (t) => {
+  const fixture = insertClient("hub", "figures");
+  t.after(() => fixture.dom.window.close());
+  fixture.controller.open("fig");
+  await new Promise(resolve => setImmediate(resolve));
+  fixture.panel.querySelector("img").dispatchEvent(new fixture.dom.window.Event("error"));
+  assert.match(fixture.panel.textContent, /Preview unavailable.*source file/i);
+  assert.equal(fixture.panel.querySelectorAll("img").length, 0);
+  assert.equal(fixture.panel.querySelectorAll(".insert-item-thumb--empty").length, 1);
+  assert.deepEqual(fixture.insertions, []);
+  fixture.panel.querySelector(".insert-item-action").click();
+  assert.deepEqual(fixture.insertions, [fixture.entry.insert]);
+});
