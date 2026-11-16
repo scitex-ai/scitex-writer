@@ -338,6 +338,28 @@ def pg_schema(_no_accidental_fleet_store_writes: None) -> Iterator[str]:
 
 
 @pytest.fixture()
+def clew_store(pg_schema: str) -> Iterator[str]:
+    """The scitex-clew claim store, on the THROWAWAY schema.
+
+    Writer's claims live in scitex-clew (the one claim store), so every test
+    that adds/lists/renders claims needs a real, reachable store. clew caches
+    its session DB per process (``get_db``), so the cache is dropped on both
+    sides: a handle opened against the previous DSN would otherwise answer for
+    this test's schema. ``SCITEX_CLEW_AUTO_EXPORT_CLAIMS`` stays at clew's
+    default (on) so the runtime export a real compile reads is exercised too.
+    """
+    # A hard import: clew is in [dev], and a missing store package must FAIL
+    # these tests, not skip them into a green bar.
+    from scitex_clew._db import reset_db
+
+    reset_db()
+    try:
+        yield pg_schema
+    finally:
+        reset_db()
+
+
+@pytest.fixture()
 def seed_card(pg_schema: str):
     """Seed one card on the THROWAWAY board; skip if that board has no schema.
 

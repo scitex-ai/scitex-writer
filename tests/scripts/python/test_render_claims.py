@@ -5,6 +5,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+# Claims are stored in scitex-clew (the one claim store): every test here
+# needs the real store, on a throwaway schema.
+pytestmark = pytest.mark.usefixtures("clew_store")
+
+
 _SCRIPT = Path(__file__).resolve().parents[3] / "scripts/python/render_claims.py"
 
 

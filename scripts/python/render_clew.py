@@ -103,6 +103,22 @@ def _first(d, *keys):
             return v
     return None
 
+# scitex-writer registers its \vclaim values IN clew (one claim store); the
+# writer-only fields ride in claim_value as a JSON envelope whose `display`
+# member is the display-ready string. Show that, never the raw JSON.
+_WRITER_ENVELOPE = "scitex-writer-claim/1"
+
+
+def _unwrap_writer_envelope(value):
+    if isinstance(value, str) and value.lstrip().startswith("{"):
+        try:
+            payload = json.loads(value)
+        except ValueError:
+            return value
+        if isinstance(payload, dict) and payload.get("schema") == _WRITER_ENVELOPE:
+            return payload.get("display") or ""
+    return value
+
 
 def _claim_value(claim):
     """The display string for a claim. clew stores it display-ready; try the
@@ -116,6 +132,7 @@ def _claim_value(claim):
         "rendered_value",
         "text",
     )
+    v = _unwrap_writer_envelope(v)
     return "" if v is None else str(v)
 
 

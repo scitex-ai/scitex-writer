@@ -23,7 +23,7 @@ deliberately so submission-readiness is mechanically checkable.
 
 | Concern | Macro | Behaviour |
 |---|---|---|
-| Confirmed number from a registered claim | `\vclaim{<id>}` | resolves at compile-time from `claims.json` (a registered SHA-256-anchored value); compile fails / `[claim:<id>]` renders if unresolved |
+| Confirmed number from a registered claim | `\vclaim{<id>}` | resolves at compile-time from the scitex-clew claim store (a registered, SHA-256-anchored value; `00_shared/claims.json` is only its derived export); compile fails / `[claim:<id>]` renders if unresolved |
 | Prose / sentence not yet finalised | `\placeholder{...}` (alias `\ph{...}`) | red bold on yellow background in PDF — visually obvious; survives compile but flags the issue |
 | Reference (paper, table, figure) you intend to add later | `\hlref{XXX}` | renders highlighted; resolves only when you replace it with the real `\citep{}` / `\ref{}` |
 
@@ -43,13 +43,17 @@ registered:
   in one place; the manuscript follows automatically.
 - Pre-submission, every `\vclaim{}` is grep-able and traceable to a
   source file and SHA-256 hash.
+- Pass `output_file=` plus `source_keys=` (JSON Pointer / csv cell) so the
+  pre-compile `claim_values` check re-reads the number from its source and
+  fails the build if they drift apart (see 13_claims.md).
 
 ### Claim-type pitfall
 
 `sw.claim.add()` accepts `claim_type` ∈ {`value`, `statistic`,
-`text`, …}. **`text` claims are silently dropped from
-`claims.json`** — they don't render in the PDF and don't appear in
-`claims_rendered.tex`. Symptom: the manuscript shows
+`text`, …}. **`text` is not a writer claim type** (writer's types are
+`statistic`, `value`, `citation`, `figure`, `table`); older versions
+dropped such claims silently, current ones return `success: False` — check
+the return value. Symptom: the manuscript shows
 `[claim:<id>]` even though `register_claims.py` reported the claim
 was added.
 

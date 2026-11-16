@@ -19,6 +19,7 @@ from ._checks import (
 )
 from ._claim import (
     add_claim,
+    check_claim_values,
     format_claim,
     get_claim,
     list_claims,
@@ -36,6 +37,7 @@ from ._update import update_project  # noqa: F401 -- now a package
 
 __all__ = [
     "add_claim",
+    "check_claim_values",
     "check_caption_footnote",
     "check_citation_trust",
     "check_float_order",

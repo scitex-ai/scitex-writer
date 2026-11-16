@@ -25,12 +25,13 @@ tags: [scitex-writer-mcp-tools]
 | `writer_bib_remove` | Remove bibliography entry |
 | `writer_bib_list_files` | List .bib files |
 | `writer_bib_merge` | Merge bibliography files |
-| `writer_claim_add` | Add verifiable claim |
+| `writer_claim_add` | Register claim in the scitex-clew store |
 | `writer_claim_get` | Get claim |
 | `writer_claim_list` | List claims |
 | `writer_claim_remove` | Remove claim |
 | `writer_claim_render` | Render claims to LaTeX |
 | `writer_claim_format` | Format claim |
+| `writer_claim_check_values` | Compare claim values with their source files |
 | `writer_export_manuscript` | Export for submission |
 | `writer_migration_to_overleaf` | Export to Overleaf |
 | `writer_migration_from_overleaf` | Import from Overleaf |

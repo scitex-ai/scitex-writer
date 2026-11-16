@@ -649,8 +649,8 @@ function loadClaims() {
             if (data.count === 0) {
                 list.innerHTML = '<div class="claims-empty">' +
                     '<p>No claims defined yet.</p>' +
-                    '<p class="hint">Add claims to 00_shared/claims.json<br>' +
-                    'or use the MCP tool <code>writer_claim_add</code>.</p>' +
+                    '<p class="hint">Register claims with the MCP tool <code>writer_claim_add</code><br>' +
+                    'or <code>scitex_writer.claim.add()</code> (stored in scitex-clew).</p>' +
                     '</div>';
                 if (countEl) countEl.textContent = '';
                 return;

@@ -18,7 +18,13 @@ with no pointers is not a summary, it is a dead end.
 
 import json
 
+import pytest
+
 from scitex_writer._mcp.handlers._claim import list_claims
+
+# Claims are stored in scitex-clew (the one claim store): every test here
+# needs the real store, on a throwaway schema.
+pytestmark = pytest.mark.usefixtures("clew_store")
 
 
 def _project_with_claims(tmp_path, claims: dict):
