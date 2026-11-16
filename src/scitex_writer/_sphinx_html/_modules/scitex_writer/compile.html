@@ -5,15 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>scitex_writer.compile &mdash; SciTeX Writer v2.17.5</title>
+  <title>scitex_writer.compile &mdash; SciTeX Writer v2.43.22</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=b1c06546"></script>
+      <script src="../../_static/documentation_options.js?v=67e46bc7"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -89,6 +90,8 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.supplementary"><code class="docutils literal notranslate"><span class="pre">supplementary()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.revision"><code class="docutils literal notranslate"><span class="pre">revision()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.content"><code class="docutils literal notranslate"><span class="pre">content()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.diff"><code class="docutils literal notranslate"><span class="pre">diff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.project">scitex_writer.project</a><ul>
@@ -114,6 +117,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.csv_to_latex"><code class="docutils literal notranslate"><span class="pre">csv_to_latex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.latex_to_csv"><code class="docutils literal notranslate"><span class="pre">latex_to_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.figures">scitex_writer.figures</a><ul>
@@ -123,6 +127,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.convert"><code class="docutils literal notranslate"><span class="pre">convert()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.pdf_to_images"><code class="docutils literal notranslate"><span class="pre">pdf_to_images()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.export">scitex_writer.export</a><ul>
@@ -182,34 +187,46 @@
 <span class="c1"># Timestamp: 2026-01-27</span>
 <span class="c1"># File: src/scitex_writer/compile.py</span>
 
-<span class="sd">&quot;&quot;&quot;Compilation functions for LaTeX manuscripts.</span>
+<span class="sd">"""Compilation functions for LaTeX manuscripts.</span>
 
 <span class="sd">Usage::</span>
 
 <span class="sd">    import scitex_writer as sw</span>
 
 <span class="sd">    # Compile manuscript</span>
-<span class="sd">    result = sw.compile.manuscript(&quot;./my-paper&quot;)</span>
+<span class="sd">    result = sw.compile.manuscript("./my-paper")</span>
 
 <span class="sd">    # With options</span>
-<span class="sd">    result = sw.compile.manuscript(&quot;./my-paper&quot;, draft=True, no_figs=True)</span>
+<span class="sd">    result = sw.compile.manuscript("./my-paper", draft=True, no_figs=True)</span>
 
 <span class="sd">    # Compile other document types</span>
-<span class="sd">    result = sw.compile.supplementary(&quot;./my-paper&quot;)</span>
-<span class="sd">    result = sw.compile.revision(&quot;./my-paper&quot;, track_changes=True)</span>
+<span class="sd">    result = sw.compile.supplementary("./my-paper")</span>
+<span class="sd">    result = sw.compile.revision("./my-paper", track_changes=True)</span>
 
 <span class="sd">    # Compile raw LaTeX content with color mode support</span>
 <span class="sd">    result = sw.compile.content(</span>
 <span class="sd">        latex_content,</span>
-<span class="sd">        project_dir=&quot;./my-paper&quot;,  # Optional, for .preview/ output</span>
-<span class="sd">        color_mode=&quot;dark&quot;,         # &#39;light&#39; or &#39;dark&#39;</span>
+<span class="sd">        project_dir="./my-paper",  # Optional, for .preview/ output</span>
+<span class="sd">        color_mode="dark",         # 'light' or 'dark'</span>
 <span class="sd">    )</span>
-<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    # Version-diff PDF (latexdiff markup vs the previous committed version)</span>
+<span class="sd">    result = sw.compile.diff("./my-paper")</span>
+
+<span class="sd">    # Snapshot the compiled outputs into the versions directory</span>
+<span class="sd">    result = sw.compile.archive("./my-paper")</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span> <span class="k">as</span> <span class="n">_Literal</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span> <span class="k">as</span> <span class="n">_Optional</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">._dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">CompilationResult</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">compile_manuscript</span> <span class="k">as</span> <span class="n">_compile_manuscript</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">compile_revision</span> <span class="k">as</span> <span class="n">_compile_revision</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">compile_supplementary</span> <span class="k">as</span> <span class="n">_compile_supplementary</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">process_archive</span> <span class="k">as</span> <span class="n">_process_archive</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">process_diff</span> <span class="k">as</span> <span class="n">_process_diff</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._utils._latexmk</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_TIMEOUT_SEC</span> <span class="k">as</span> <span class="n">_DIFF_TIMEOUT_SEC</span>
 
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">scitex_dev.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">supports_return_as</span> <span class="k">as</span> <span class="n">_supports_return_as</span>
@@ -234,7 +251,7 @@
     <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">engine</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compile manuscript to PDF.</span>
+<span class="w">    </span><span class="sd">"""Compile manuscript to PDF.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        project_dir: Path to scitex-writer project directory.</span>
@@ -246,11 +263,11 @@
 <span class="sd">        dark_mode: Enable dark mode output.</span>
 <span class="sd">        quiet: Suppress output.</span>
 <span class="sd">        verbose: Verbose output.</span>
-<span class="sd">        engine: LaTeX engine override (&#39;tectonic&#39;, &#39;latexmk&#39;, &#39;3pass&#39;).</span>
+<span class="sd">        engine: LaTeX engine override ('tectonic', 'latexmk', '3pass').</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with success status, pdf_path, and any errors.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_compile_manuscript</span><span class="p">(</span>
         <span class="n">project_dir</span><span class="p">,</span>
         <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
@@ -278,8 +295,9 @@
     <span class="n">draft</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">quiet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">engine</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">dark_mode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compile supplementary materials to PDF.</span>
+<span class="w">    </span><span class="sd">"""Compile supplementary materials to PDF.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        project_dir: Path to scitex-writer project directory.</span>
@@ -289,11 +307,12 @@
 <span class="sd">        no_diff: Skip diff generation.</span>
 <span class="sd">        draft: Fast single-pass compilation.</span>
 <span class="sd">        quiet: Suppress output.</span>
-<span class="sd">        engine: LaTeX engine override (&#39;tectonic&#39;, &#39;latexmk&#39;, &#39;3pass&#39;).</span>
+<span class="sd">        engine: LaTeX engine override ('tectonic', 'latexmk', '3pass').</span>
+<span class="sd">        dark_mode: Enable dark mode output.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with success status, pdf_path, and any errors.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_compile_supplementary</span><span class="p">(</span>
         <span class="n">project_dir</span><span class="p">,</span>
         <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
@@ -303,6 +322,7 @@
         <span class="n">draft</span><span class="o">=</span><span class="n">draft</span><span class="p">,</span>
         <span class="n">quiet</span><span class="o">=</span><span class="n">quiet</span><span class="p">,</span>
         <span class="n">engine</span><span class="o">=</span><span class="n">engine</span><span class="p">,</span>
+        <span class="n">dark_mode</span><span class="o">=</span><span class="n">dark_mode</span><span class="p">,</span>
     <span class="p">)</span></div>
 
 
@@ -318,8 +338,9 @@
     <span class="n">draft</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">quiet</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">engine</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">dark_mode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compile revision document to PDF.</span>
+<span class="w">    </span><span class="sd">"""Compile revision document to PDF.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        project_dir: Path to scitex-writer project directory.</span>
@@ -328,11 +349,12 @@
 <span class="sd">        no_diff: Skip diff generation.</span>
 <span class="sd">        draft: Fast single-pass compilation.</span>
 <span class="sd">        quiet: Suppress output.</span>
-<span class="sd">        engine: LaTeX engine override (&#39;tectonic&#39;, &#39;latexmk&#39;, &#39;3pass&#39;).</span>
+<span class="sd">        engine: LaTeX engine override ('tectonic', 'latexmk', '3pass').</span>
+<span class="sd">        dark_mode: Enable dark mode output.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with success status, pdf_path, and any errors.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_compile_revision</span><span class="p">(</span>
         <span class="n">project_dir</span><span class="p">,</span>
         <span class="n">track_changes</span><span class="o">=</span><span class="n">track_changes</span><span class="p">,</span>
@@ -341,6 +363,7 @@
         <span class="n">draft</span><span class="o">=</span><span class="n">draft</span><span class="p">,</span>
         <span class="n">quiet</span><span class="o">=</span><span class="n">quiet</span><span class="p">,</span>
         <span class="n">engine</span><span class="o">=</span><span class="n">engine</span><span class="p">,</span>
+        <span class="n">dark_mode</span><span class="o">=</span><span class="n">dark_mode</span><span class="p">,</span>
     <span class="p">)</span></div>
 
 
@@ -351,12 +374,12 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">content</span><span class="p">(</span>
     <span class="n">latex_content</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">color_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;light&quot;</span><span class="p">,</span>
-    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;content&quot;</span><span class="p">,</span>
+    <span class="n">color_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"light"</span><span class="p">,</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"content"</span><span class="p">,</span>
     <span class="n">timeout</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">60</span><span class="p">,</span>
     <span class="n">keep_aux</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CompilationResult</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compile raw LaTeX content to PDF.</span>
+<span class="w">    </span><span class="sd">"""Compile raw LaTeX content to PDF.</span>
 
 <span class="sd">    Creates a standalone document from the provided LaTeX content and compiles</span>
 <span class="sd">    it to PDF. Supports light/dark color modes for comfortable viewing.</span>
@@ -366,8 +389,8 @@
 <span class="sd">            - A complete document (with \\documentclass)</span>
 <span class="sd">            - Document body only (will be wrapped automatically)</span>
 <span class="sd">        project_dir: Optional path to scitex-writer project. If provided,</span>
-<span class="sd">            PDF is copied to the project&#39;s .preview/ directory.</span>
-<span class="sd">        color_mode: Color theme: &#39;light&#39; (default) or &#39;dark&#39; (Monaco #1E1E1E).</span>
+<span class="sd">            PDF is copied to the project's .preview/ directory.</span>
+<span class="sd">        color_mode: Color theme: 'light' (default) or 'dark' (Monaco #1E1E1E).</span>
 <span class="sd">        name: Name for the output (used in filename).</span>
 <span class="sd">        timeout: Compilation timeout in seconds.</span>
 <span class="sd">        keep_aux: Keep auxiliary files (.aux, .log, etc.) after compilation.</span>
@@ -388,10 +411,10 @@
 
 <span class="sd">        # Compile simple content</span>
 <span class="sd">        result = sw.compile.content(</span>
-<span class="sd">            r&quot;\\section{Introduction}\\nThis is my introduction.&quot;,</span>
-<span class="sd">            color_mode=&quot;dark&quot;,</span>
+<span class="sd">            r"\\section{Introduction}\\nThis is my introduction.",</span>
+<span class="sd">            color_mode="dark",</span>
 <span class="sd">        )</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">._compile.content</span><span class="w"> </span><span class="kn">import</span> <span class="n">compile_content</span> <span class="k">as</span> <span class="n">_compile_content</span>
 
     <span class="k">return</span> <span class="n">_compile_content</span><span class="p">(</span>
@@ -405,7 +428,63 @@
 
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;manuscript&quot;</span><span class="p">,</span> <span class="s2">&quot;supplementary&quot;</span><span class="p">,</span> <span class="s2">&quot;revision&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">]</span>
+<div class="viewcode-block" id="diff">
+<a class="viewcode-back" href="../../api/scitex_writer.html#scitex_writer.compile.diff">[docs]</a>
+<span class="nd">@_supports_return_as</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">diff</span><span class="p">(</span>
+    <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">,</span> <span class="s2">"revision"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"manuscript"</span><span class="p">,</span>
+    <span class="n">no_diff</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">diff_from</span><span class="p">:</span> <span class="n">_Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">timeout_sec</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">_DIFF_TIMEOUT_SEC</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Build the version-diff PDF for ``doc_type`` (latexdiff markup).</span>
+
+<span class="sd">    The pure-Python port of ``scripts/shell/modules/process_diff.sh``: reads the</span>
+<span class="sd">    PREVIOUS version of the compiled ``.tex`` out of git history, runs latexdiff</span>
+<span class="sd">    against the current one, stamps a metadata + ``fancyhdr`` signature block, and</span>
+<span class="sd">    compiles the result with latexmk (bounded by ``timeout_sec``).</span>
+
+<span class="sd">    ``diff_from`` overrides the OLD version (default: the previous commit that</span>
+<span class="sd">    touched the compiled ``.tex``). With NO previous version this FAILS -- the</span>
+<span class="sd">    shell used to compile current-vs-current, whose unmarked PDF is</span>
+<span class="sd">    indistinguishable from "nothing changed". Missing ``latexdiff`` / ``latexmk``</span>
+<span class="sd">    likewise fail with an install hint rather than emitting a wrong PDF.</span>
+
+<span class="sd">    Returns ``{success, from_hash, to_hash, diff_tex, diff_pdf, pdf_bytes,</span>
+<span class="sd">    skipped, error}``.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">_process_diff</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">doc_type</span><span class="p">,</span> <span class="n">no_diff</span><span class="p">,</span> <span class="n">diff_from</span><span class="p">,</span> <span class="n">timeout_sec</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="archive">
+<a class="viewcode-back" href="../../api/scitex_writer.html#scitex_writer.compile.archive">[docs]</a>
+<span class="nd">@_supports_return_as</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">archive</span><span class="p">(</span>
+    <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">,</span> <span class="s2">"revision"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"manuscript"</span><span class="p">,</span>
+    <span class="n">no_archive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Snapshot the compiled outputs of ``doc_type`` into the versions directory.</span>
+
+<span class="sd">    The pure-Python port of ``scripts/shell/modules/process_archive.sh``: copies</span>
+<span class="sd">    the compiled PDF/TeX and the diff PDF/TeX to</span>
+<span class="sd">    ``&lt;archive_dir&gt;/&lt;stem&gt;_&lt;YYYYmmdd-HHMMSS&gt;_&lt;commit&gt;.&lt;ext&gt;``, plus an un-stamped</span>
+<span class="sd">    "current" copy of each.</span>
+
+<span class="sd">    Archives ONLY a clean working tree -- a snapshot stamped with a commit hash it</span>
+<span class="sd">    does not actually hold would be a lie -- so a dirty tree returns</span>
+<span class="sd">    ``skipped=True`` with a ``skip_reason``.</span>
+
+<span class="sd">    Returns ``{success, archive_id, archived, versions_dir, missing, skipped,</span>
+<span class="sd">    skip_reason, error}``.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">_process_archive</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">doc_type</span><span class="p">,</span> <span class="n">no_archive</span><span class="p">)</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">,</span> <span class="s2">"revision"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">,</span> <span class="s2">"diff"</span><span class="p">,</span> <span class="s2">"archive"</span><span class="p">]</span>
 
 <span class="c1"># EOF</span>
 </pre></div>

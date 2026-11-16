@@ -5,15 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>scitex_writer &mdash; SciTeX Writer v2.17.5</title>
+  <title>scitex_writer &mdash; SciTeX Writer v2.43.22</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx_autodoc_typehints.css?v=057ac668" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=b1c06546"></script>
+      <script src="../_static/documentation_options.js?v=67e46bc7"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -89,6 +90,8 @@
 <li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.compile.supplementary"><code class="docutils literal notranslate"><span class="pre">supplementary()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.compile.revision"><code class="docutils literal notranslate"><span class="pre">revision()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.compile.content"><code class="docutils literal notranslate"><span class="pre">content()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.compile.diff"><code class="docutils literal notranslate"><span class="pre">diff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.compile.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../api/scitex_writer.html#module-scitex_writer.project">scitex_writer.project</a><ul>
@@ -114,6 +117,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.tables.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.tables.csv_to_latex"><code class="docutils literal notranslate"><span class="pre">csv_to_latex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.tables.latex_to_csv"><code class="docutils literal notranslate"><span class="pre">latex_to_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.tables.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../api/scitex_writer.html#module-scitex_writer.figures">scitex_writer.figures</a><ul>
@@ -123,6 +127,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.figures.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.figures.convert"><code class="docutils literal notranslate"><span class="pre">convert()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.figures.pdf_to_images"><code class="docutils literal notranslate"><span class="pre">pdf_to_images()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../api/scitex_writer.html#scitex_writer.figures.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../api/scitex_writer.html#module-scitex_writer.export">scitex_writer.export</a><ul>
@@ -181,7 +186,7 @@
 <span class="c1"># Timestamp: 2026-01-27</span>
 <span class="c1"># File: src/scitex_writer/__init__.py</span>
 
-<span class="sd">&quot;&quot;&quot;SciTeX Writer - LaTeX manuscript compilation system with MCP server.</span>
+<span class="sd">"""SciTeX Writer - LaTeX manuscript compilation system with MCP server.</span>
 
 <span class="sd">Four Interfaces:</span>
 <span class="sd">    - Python API: import scitex_writer as sw</span>
@@ -201,7 +206,7 @@
 <span class="sd">    - guidelines: IMRAD writing tips</span>
 <span class="sd">    - prompts: AI2 Asta integration</span>
 <span class="sd">    - gui: Browser-based editor (Django)</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
@@ -209,48 +214,95 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">importlib.metadata</span><span class="w"> </span><span class="kn">import</span> <span class="n">version</span> <span class="k">as</span> <span class="n">_version</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="n">__version__</span> <span class="o">=</span> <span class="n">_version</span><span class="p">(</span><span class="s2">&quot;scitex-writer&quot;</span><span class="p">)</span>
+    <span class="n">__version__</span> <span class="o">=</span> <span class="n">_version</span><span class="p">(</span><span class="s2">"scitex-writer"</span><span class="p">)</span>
 <span class="k">except</span> <span class="n">_PackageNotFoundError</span><span class="p">:</span>
     <span class="c1"># Fallback: parse pyproject.toml (single source of truth)</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span> <span class="k">as</span> <span class="n">_Path</span>
 
-    <span class="n">_pyproject</span> <span class="o">=</span> <span class="n">_Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">&quot;pyproject.toml&quot;</span>
-    <span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;0.0.0+local&quot;</span>
+    <span class="n">_pyproject</span> <span class="o">=</span> <span class="n">_Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">"pyproject.toml"</span>
+    <span class="n">__version__</span> <span class="o">=</span> <span class="s2">"0.0.0+local"</span>
     <span class="k">if</span> <span class="n">_pyproject</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">_pyproject</span><span class="p">)</span> <span class="k">as</span> <span class="n">_f</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">_line</span> <span class="ow">in</span> <span class="n">_f</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">_line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">):</span>
-                    <span class="n">__version__</span> <span class="o">=</span> <span class="n">_line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">_line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"version"</span><span class="p">):</span>
+                    <span class="n">__version__</span> <span class="o">=</span> <span class="n">_line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"="</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">'"'</span><span class="p">)</span>
                     <span class="k">break</span>
 
-<span class="c1"># Import modules for convenient access</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">bib</span><span class="p">,</span>
-    <span class="n">checks</span><span class="p">,</span>
-    <span class="n">claim</span><span class="p">,</span>
-    <span class="nb">compile</span><span class="p">,</span>
-    <span class="n">export</span><span class="p">,</span>
-    <span class="n">figures</span><span class="p">,</span>
-    <span class="n">guidelines</span><span class="p">,</span>
-    <span class="n">migration</span><span class="p">,</span>
-    <span class="n">project</span><span class="p">,</span>
-    <span class="n">prompts</span><span class="p">,</span>
-    <span class="n">tables</span><span class="p">,</span>
-    <span class="n">update</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">._dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">CompilationResult</span> <span class="k">as</span> <span class="n">_CompilationResult</span>  <span class="c1"># noqa: F401</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">._dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">ManuscriptTree</span> <span class="k">as</span> <span class="n">_ManuscriptTree</span>  <span class="c1"># noqa: F401</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">._dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">RevisionTree</span> <span class="k">as</span> <span class="n">_RevisionTree</span>  <span class="c1"># noqa: F401</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">._dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">SupplementaryTree</span> <span class="k">as</span> <span class="n">_SupplementaryTree</span>  <span class="c1"># noqa: F401</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">._django._server</span><span class="w"> </span><span class="kn">import</span> <span class="n">run</span> <span class="k">as</span> <span class="n">gui</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">._usage</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_usage</span> <span class="k">as</span> <span class="n">usage</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.writer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Writer</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Lazy public surface (PEP 562 module __getattr__).</span>
+<span class="c1">#</span>
+<span class="c1"># `import scitex_writer` must stay cheap: a bare import that eagerly pulled in</span>
+<span class="c1"># every submodule (Django, fastmcp, scitex-dev, …) cost ~700ms over the</span>
+<span class="c1"># bare-interpreter baseline, tripping the audit-cli §10 startup-speed rule and</span>
+<span class="c1"># slowing Click tab-completion (the CLI re-runs the program once per Tab). We</span>
+<span class="c1"># defer each name to first access instead; `sw.Writer`, `sw.compile`,</span>
+<span class="c1"># `from scitex_writer import migration`, etc. all resolve on demand with no</span>
+<span class="c1"># change to the public API.</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<span class="c1"># Submodules exposed directly as attributes (`sw.&lt;name&gt;`); imported on demand.</span>
+<span class="c1"># Dict (name -&gt; relative module path) so the API auditor's PA-102 dispatch-</span>
+<span class="c1"># table detector recognises every key as a bound name (PEP 562 lazy-load).</span>
+<span class="n">_LAZY_SUBMODULES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"bib"</span><span class="p">:</span> <span class="s2">".bib"</span><span class="p">,</span>
+    <span class="s2">"checks"</span><span class="p">:</span> <span class="s2">".checks"</span><span class="p">,</span>
+    <span class="s2">"citation_style"</span><span class="p">:</span> <span class="s2">".citation_style"</span><span class="p">,</span>
+    <span class="s2">"cleanup"</span><span class="p">:</span> <span class="s2">".cleanup"</span><span class="p">,</span>
+    <span class="s2">"claim"</span><span class="p">:</span> <span class="s2">".claim"</span><span class="p">,</span>
+    <span class="s2">"compile"</span><span class="p">:</span> <span class="s2">".compile"</span><span class="p">,</span>
+    <span class="s2">"count_words"</span><span class="p">:</span> <span class="s2">".count_words"</span><span class="p">,</span>
+    <span class="s2">"export"</span><span class="p">:</span> <span class="s2">".export"</span><span class="p">,</span>
+    <span class="s2">"figures"</span><span class="p">:</span> <span class="s2">".figures"</span><span class="p">,</span>
+    <span class="s2">"guidelines"</span><span class="p">:</span> <span class="s2">".guidelines"</span><span class="p">,</span>
+    <span class="s2">"migration"</span><span class="p">:</span> <span class="s2">".migration"</span><span class="p">,</span>
+    <span class="s2">"project"</span><span class="p">:</span> <span class="s2">".project"</span><span class="p">,</span>
+    <span class="s2">"prompts"</span><span class="p">:</span> <span class="s2">".prompts"</span><span class="p">,</span>
+    <span class="s2">"tables"</span><span class="p">:</span> <span class="s2">".tables"</span><span class="p">,</span>
+    <span class="s2">"update"</span><span class="p">:</span> <span class="s2">".update"</span><span class="p">,</span>
+    <span class="s2">"workspace_layout"</span><span class="p">:</span> <span class="s2">".workspace_layout"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1"># Public symbols → (submodule, attribute-in-submodule).</span>
+<span class="n">_LAZY_SYMBOLS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"Writer"</span><span class="p">:</span> <span class="p">(</span><span class="s2">".writer"</span><span class="p">,</span> <span class="s2">"Writer"</span><span class="p">),</span>
+    <span class="s2">"gui"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"._django._server"</span><span class="p">,</span> <span class="s2">"run"</span><span class="p">),</span>
+    <span class="s2">"usage"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"._usage"</span><span class="p">,</span> <span class="s2">"get_usage"</span><span class="p">),</span>
+    <span class="c1"># Re-exported dataclasses (kept for introspection / back-compat).</span>
+    <span class="s2">"_CompilationResult"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"._dataclasses"</span><span class="p">,</span> <span class="s2">"CompilationResult"</span><span class="p">),</span>
+    <span class="s2">"_ManuscriptTree"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"._dataclasses"</span><span class="p">,</span> <span class="s2">"ManuscriptTree"</span><span class="p">),</span>
+    <span class="s2">"_RevisionTree"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"._dataclasses"</span><span class="p">,</span> <span class="s2">"RevisionTree"</span><span class="p">),</span>
+    <span class="s2">"_SupplementaryTree"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"._dataclasses"</span><span class="p">,</span> <span class="s2">"SupplementaryTree"</span><span class="p">),</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="fm">__getattr__</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">importlib</span>
+
+    <span class="n">submodule_path</span> <span class="o">=</span> <span class="n">_LAZY_SUBMODULES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">submodule_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">module</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">submodule_path</span><span class="p">,</span> <span class="vm">__name__</span><span class="p">)</span>
+        <span class="nb">globals</span><span class="p">()[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">module</span>  <span class="c1"># cache so subsequent access skips __getattr__</span>
+        <span class="k">return</span> <span class="n">module</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">_LAZY_SYMBOLS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">target</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">submodule</span><span class="p">,</span> <span class="n">attr</span> <span class="o">=</span> <span class="n">target</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">submodule</span><span class="p">,</span> <span class="vm">__name__</span><span class="p">),</span> <span class="n">attr</span><span class="p">)</span>
+        <span class="nb">globals</span><span class="p">()[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="n">value</span>
+    <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"module </span><span class="si">{</span><span class="vm">__name__</span><span class="si">!r}</span><span class="s2"> has no attribute </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="fm">__dir__</span><span class="p">():</span>
+    <span class="c1"># Importing a lazy symbol also binds its backing module on the package.</span>
+    <span class="c1"># Advertise the declared API consistently before and after those imports.</span>
+    <span class="n">private_names</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">globals</span><span class="p">()</span> <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)}</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">private_names</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">__all__</span><span class="p">)</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">_LAZY_SUBMODULES</span><span class="p">))</span>
 
 
 <div class="viewcode-block" id="ensure_workspace">
 <a class="viewcode-back" href="../api/scitex_writer.html#scitex_writer.ensure_workspace">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">ensure_workspace</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">git_strategy</span><span class="o">=</span><span class="s2">&quot;child&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Ensure writer workspace exists at {project_dir}/.scitex/writer/.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">ensure_workspace</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">git_strategy</span><span class="o">=</span><span class="s2">"child"</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Ensure writer workspace exists at {project_dir}/.scitex/writer/.</span>
 
 <span class="sd">    If the directory already exists, returns the path without modification.</span>
 <span class="sd">    If not, clones the full scitex-writer template.</span>
@@ -261,7 +313,7 @@
 <span class="sd">        Root project directory. Writer workspace will be at</span>
 <span class="sd">        ``{project_dir}/.scitex/writer/`` (hidden, dotfile convention).</span>
 <span class="sd">    git_strategy : str, optional</span>
-<span class="sd">        Git initialization strategy (&#39;child&#39;, &#39;parent&#39;, &#39;origin&#39;, None).</span>
+<span class="sd">        Git initialization strategy ('child', 'parent', 'origin', None).</span>
 <span class="sd">    **kwargs</span>
 <span class="sd">        Forwarded to Writer constructor (branch, tag, etc.).</span>
 
@@ -269,38 +321,133 @@
 <span class="sd">    -------</span>
 <span class="sd">    pathlib.Path</span>
 <span class="sd">        Path to the writer workspace directory.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
-    <span class="n">writer_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;.scitex&quot;</span> <span class="o">/</span> <span class="s2">&quot;writer&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.writer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Writer</span>
+
+    <span class="n">writer_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">".scitex"</span> <span class="o">/</span> <span class="s2">"writer"</span>
     <span class="k">if</span> <span class="n">writer_path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">writer_path</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
+        <span class="n">_maybe_scaffold_paper_symlink</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">))</span>
+        <span class="n">_refresh_workspace_scripts</span><span class="p">(</span><span class="n">writer_path</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">writer_path</span>
     <span class="n">Writer</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">writer_path</span><span class="p">),</span> <span class="n">git_strategy</span><span class="o">=</span><span class="n">git_strategy</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">_maybe_scaffold_paper_symlink</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">))</span>
+    <span class="n">_refresh_workspace_scripts</span><span class="p">(</span><span class="n">writer_path</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">writer_path</span></div>
 
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_refresh_workspace_scripts</span><span class="p">(</span><span class="n">writer_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Overwrite the workspace's package-owned ``scripts/`` from the installed</span>
+<span class="sd">    package where they differ (idempotent).</span>
+
+<span class="sd">    A workspace is a template clone and would otherwise keep stale vendored</span>
+<span class="sd">    scripts forever; this makes the workspace's ``scripts/`` match the</span>
+<span class="sd">    installed ``scitex_writer`` version (see</span>
+<span class="sd">    :mod:`scitex_writer.workspace_layout`). Never touches user content</span>
+<span class="sd">    (``01_manuscript/``/``00_shared/``). A missing source (stripped install)</span>
+<span class="sd">    is a no-op, not an error.</span>
+<span class="sd">    """</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">scitex_logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">getLogger</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.workspace_layout</span><span class="w"> </span><span class="kn">import</span> <span class="n">refresh_vendored_scripts</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">refresh_vendored_scripts</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">writer_path</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover - defensive: never break a load</span>
+        <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span>
+            <span class="s2">"Failed to refresh vendored scripts for </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">writer_path</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_paper_symlink_level</span><span class="p">(</span><span class="n">project_dir</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Resolve the paper-symlink severity level (env + config; default ``off``).</span>
+
+<span class="sd">    Mirrors the precedence used by scripts/python/check_paper_symlink.py but</span>
+<span class="sd">    is kept dependency-free here to avoid an import cycle: env</span>
+<span class="sd">    ``SCITEX_WRITER_PAPER_SYMLINK`` then ``~/.scitex/writer/config.yaml``'s</span>
+<span class="sd">    ``paper_symlink.level``, defaulting to ``warn``.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+    <span class="n">levels</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"off"</span><span class="p">,</span> <span class="s2">"warn"</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">,</span> <span class="s2">"repair"</span><span class="p">)</span>
+
+    <span class="n">env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"SCITEX_WRITER_PAPER_SYMLINK"</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">env</span> <span class="ow">in</span> <span class="n">levels</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">env</span>
+
+    <span class="n">user_cfg</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span> <span class="o">/</span> <span class="s2">".scitex"</span> <span class="o">/</span> <span class="s2">"writer"</span> <span class="o">/</span> <span class="s2">"config.yaml"</span>
+    <span class="k">if</span> <span class="n">user_cfg</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+
+            <span class="n">data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">user_cfg</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">))</span> <span class="ow">or</span> <span class="p">{}</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"paper_symlink"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">level</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"level"</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">block</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">level</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">levels</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">level</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span>
+    <span class="k">return</span> <span class="s2">"warn"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_maybe_scaffold_paper_symlink</span><span class="p">(</span><span class="n">project_dir</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Create the ``paper -&gt; .scitex/writer`` link ONLY when level == ``repair``.</span>
+
+<span class="sd">    The link is a private convention; we scaffold it only when the user has</span>
+<span class="sd">    actively opted in (level ``repair``). Idempotent and never clobbers an</span>
+<span class="sd">    existing ``paper`` entry of any kind.</span>
+<span class="sd">    """</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+    <span class="k">if</span> <span class="n">_resolve_paper_symlink_level</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">"repair"</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="n">project_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
+    <span class="n">link</span> <span class="o">=</span> <span class="n">project_dir</span> <span class="o">/</span> <span class="s2">"paper"</span>
+    <span class="n">canonical</span> <span class="o">=</span> <span class="n">project_dir</span> <span class="o">/</span> <span class="s2">".scitex"</span> <span class="o">/</span> <span class="s2">"writer"</span>
+    <span class="c1"># Never clobber an existing entry (symlink, dir, or file).</span>
+    <span class="k">if</span> <span class="n">link</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">or</span> <span class="n">link</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">canonical</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">return</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">symlink</span><span class="p">(</span><span class="s2">".scitex/writer"</span><span class="p">,</span> <span class="n">link</span><span class="p">,</span> <span class="n">target_is_directory</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="c1"># Best-effort scaffold; the check/repair command is the primary path.</span>
+        <span class="k">pass</span>
+
+
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;__version__&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;usage&quot;</span><span class="p">,</span>
+    <span class="s2">"__version__"</span><span class="p">,</span>
+    <span class="s2">"usage"</span><span class="p">,</span>
     <span class="c1"># Modules</span>
-    <span class="s2">&quot;checks&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;claim&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;compile&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;export&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;project&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;tables&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;figures&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;bib&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;guidelines&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;prompts&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;migration&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;update&quot;</span><span class="p">,</span>
+    <span class="s2">"checks"</span><span class="p">,</span>
+    <span class="s2">"citation_style"</span><span class="p">,</span>
+    <span class="s2">"cleanup"</span><span class="p">,</span>
+    <span class="s2">"claim"</span><span class="p">,</span>
+    <span class="s2">"compile"</span><span class="p">,</span>
+    <span class="s2">"count_words"</span><span class="p">,</span>
+    <span class="s2">"export"</span><span class="p">,</span>
+    <span class="s2">"project"</span><span class="p">,</span>
+    <span class="s2">"tables"</span><span class="p">,</span>
+    <span class="s2">"figures"</span><span class="p">,</span>
+    <span class="s2">"bib"</span><span class="p">,</span>
+    <span class="s2">"guidelines"</span><span class="p">,</span>
+    <span class="s2">"prompts"</span><span class="p">,</span>
+    <span class="s2">"migration"</span><span class="p">,</span>
+    <span class="s2">"update"</span><span class="p">,</span>
+    <span class="s2">"workspace_layout"</span><span class="p">,</span>
     <span class="c1"># Writer class</span>
-    <span class="s2">&quot;Writer&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;ensure_workspace&quot;</span><span class="p">,</span>
+    <span class="s2">"Writer"</span><span class="p">,</span>
+    <span class="s2">"ensure_workspace"</span><span class="p">,</span>
     <span class="c1"># GUI</span>
-    <span class="s2">&quot;gui&quot;</span><span class="p">,</span>
+    <span class="s2">"gui"</span><span class="p">,</span>
 <span class="p">]</span>
 
 <span class="c1"># EOF</span>
