@@ -12,6 +12,12 @@ All file I/O uses tmp_path to avoid touching actual project files.
 import json
 from pathlib import Path
 
+import pytest
+
+# Claims are stored in scitex-clew (the one claim store): every test here
+# needs the real store, on a throwaway schema.
+pytestmark = pytest.mark.usefixtures("clew_store")
+
 
 def _make_project(tmp_path: Path) -> Path:
     """Create minimal project structure for claim tests."""

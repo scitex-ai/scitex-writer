@@ -32,6 +32,11 @@ from pathlib import Path
 
 import pytest
 
+# Claims are stored in scitex-clew (the one claim store): every test here
+# needs the real store, on a throwaway schema.
+pytestmark = pytest.mark.usefixtures("clew_store")
+
+
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _RENDER_SCRIPT = _REPO_ROOT / "scripts/python/render_claims.py"
 _CLEW_PRESENTATION = _REPO_ROOT / "00_shared/latex_styles/clew_presentation.tex"

@@ -477,7 +477,7 @@ def test_tables_any_t_name_01_results_for_t_in_data_tables_and_data_tables_0(
     )
 
 
-def test_claims_metadata_resp_status_code_equals_n_200(project_dir):
+def test_claims_metadata_resp_status_code_equals_n_200(project_dir, clew_store):
     # Arrange
     rf = RequestFactory()
     (Path(project_dir) / "00_shared").mkdir(exist_ok=True)
@@ -491,7 +491,7 @@ def test_claims_metadata_resp_status_code_equals_n_200(project_dir):
     assert resp.status_code == 200
 
 
-def test_claims_metadata_data_success_is_true_and_data_count_0(project_dir):
+def test_claims_metadata_data_success_is_true_and_data_count_0(project_dir, clew_store):
     # Arrange
     rf = RequestFactory()
     (Path(project_dir) / "00_shared").mkdir(exist_ok=True)
