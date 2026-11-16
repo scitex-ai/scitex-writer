@@ -5,15 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>scitex_writer.figures &mdash; SciTeX Writer v2.17.5</title>
+  <title>scitex_writer.figures &mdash; SciTeX Writer v2.43.21</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=b1c06546"></script>
+      <script src="../../_static/documentation_options.js?v=501ce1ad"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -89,6 +90,8 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.supplementary"><code class="docutils literal notranslate"><span class="pre">supplementary()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.revision"><code class="docutils literal notranslate"><span class="pre">revision()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.content"><code class="docutils literal notranslate"><span class="pre">content()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.diff"><code class="docutils literal notranslate"><span class="pre">diff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.project">scitex_writer.project</a><ul>
@@ -114,6 +117,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.csv_to_latex"><code class="docutils literal notranslate"><span class="pre">csv_to_latex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.latex_to_csv"><code class="docutils literal notranslate"><span class="pre">latex_to_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.figures">scitex_writer.figures</a><ul>
@@ -123,6 +127,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.convert"><code class="docutils literal notranslate"><span class="pre">convert()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.pdf_to_images"><code class="docutils literal notranslate"><span class="pre">pdf_to_images()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.export">scitex_writer.export</a><ul>
@@ -182,21 +187,21 @@
 <span class="c1"># Timestamp: 2026-01-27</span>
 <span class="c1"># File: src/scitex_writer/figures.py</span>
 
-<span class="sd">&quot;&quot;&quot;Figure management functions.</span>
+<span class="sd">"""Figure management functions.</span>
 
 <span class="sd">Usage::</span>
 
 <span class="sd">    import scitex_writer as sw</span>
 
 <span class="sd">    # List figures in project</span>
-<span class="sd">    result = sw.figures.list(&quot;./my-paper&quot;)</span>
+<span class="sd">    result = sw.figures.list("./my-paper")</span>
 
 <span class="sd">    # Add a figure</span>
-<span class="sd">    sw.figures.add(&quot;./my-paper&quot;, &quot;fig01&quot;, &quot;./plot.png&quot;, &quot;Results plot&quot;)</span>
+<span class="sd">    sw.figures.add("./my-paper", "fig01", "./plot.png", "Results plot")</span>
 
 <span class="sd">    # Convert figure format</span>
-<span class="sd">    sw.figures.convert(&quot;input.pdf&quot;, &quot;output.png&quot;)</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    sw.figures.convert("input.pdf", "output.png")</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_shutil</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span> <span class="k">as</span> <span class="n">_Path</span>
@@ -208,6 +213,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">convert_figure</span> <span class="k">as</span> <span class="n">_convert_figure</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">list_figures</span> <span class="k">as</span> <span class="n">_list_figures</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.handlers</span><span class="w"> </span><span class="kn">import</span> <span class="n">pdf_to_images</span> <span class="k">as</span> <span class="n">_pdf_to_images</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.handlers._figures_pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">process</span> <span class="k">as</span> <span class="n">_process</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">._mcp.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_project_path</span> <span class="k">as</span> <span class="n">_resolve_project_path</span>
 
 <span class="k">try</span><span class="p">:</span>
@@ -225,7 +231,7 @@
     <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">extensions</span><span class="p">:</span> <span class="n">_Optional</span><span class="p">[</span><span class="n">_List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;List all figures in a writer project.</span>
+<span class="w">    </span><span class="sd">"""List all figures in a writer project.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        project_dir: Path to scitex-writer project.</span>
@@ -233,7 +239,7 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with figures list and count.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_list_figures</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">extensions</span><span class="p">)</span></div>
 
 
@@ -247,9 +253,9 @@
     <span class="n">image_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">caption</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">label</span><span class="p">:</span> <span class="n">_Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">&quot;manuscript&quot;</span><span class="p">,</span> <span class="s2">&quot;supplementary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;manuscript&quot;</span><span class="p">,</span>
+    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"manuscript"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add a figure (copy image + create caption) to the project.</span>
+<span class="w">    </span><span class="sd">"""Add a figure (copy image + create caption) to the project.</span>
 
 <span class="sd">    Design note (2026-06-12, operator decision 1b):</span>
 <span class="sd">        Figure *ingestion* (this function) keeps `shutil.copy2` — the</span>
@@ -261,7 +267,7 @@
 <span class="sd">        In contrast, figure *placement into jpg_for_compilation*</span>
 <span class="sd">        (`scripts/shell/modules/process_figures_modules/02_format_conversion.src`)</span>
 <span class="sd">        was switched to a symlink — that target lives entirely inside the</span>
-<span class="sd">        project&#39;s derived tree and benefits from automatic propagation of</span>
+<span class="sd">        project's derived tree and benefits from automatic propagation of</span>
 <span class="sd">        upstream edits.</span>
 
 <span class="sd">    Args:</span>
@@ -274,70 +280,70 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with image_path, caption_path, label.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">project_path</span> <span class="o">=</span> <span class="n">_resolve_project_path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
         <span class="n">doc_dirs</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;manuscript&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;01_manuscript&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;supplementary&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;02_supplementary&quot;</span><span class="p">,</span>
+            <span class="s2">"manuscript"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"01_manuscript"</span><span class="p">,</span>
+            <span class="s2">"supplementary"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"02_supplementary"</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">doc_dir</span> <span class="o">=</span> <span class="n">doc_dirs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">doc_type</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">doc_dir</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Invalid doc_type: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Invalid doc_type: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
 
-        <span class="n">fig_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">&quot;contents&quot;</span> <span class="o">/</span> <span class="s2">&quot;figures&quot;</span> <span class="o">/</span> <span class="s2">&quot;caption_and_media&quot;</span>
+        <span class="n">fig_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">"contents"</span> <span class="o">/</span> <span class="s2">"figures"</span> <span class="o">/</span> <span class="s2">"caption_and_media"</span>
         <span class="n">fig_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="n">src_image</span> <span class="o">=</span> <span class="n">_Path</span><span class="p">(</span><span class="n">image_path</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">src_image</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Image not found: </span><span class="si">{</span><span class="n">image_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Image not found: </span><span class="si">{</span><span class="n">image_path</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
 
-        <span class="n">dest_image</span> <span class="o">=</span> <span class="n">fig_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}{</span><span class="n">src_image</span><span class="o">.</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">dest_image</span> <span class="o">=</span> <span class="n">fig_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}{</span><span class="n">src_image</span><span class="o">.</span><span class="n">suffix</span><span class="si">}</span><span class="s2">"</span>
         <span class="n">_shutil</span><span class="o">.</span><span class="n">copy2</span><span class="p">(</span><span class="n">src_image</span><span class="p">,</span> <span class="n">dest_image</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">label</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">label</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;fig:</span><span class="si">{</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;_&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="n">caption_content</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">caption</span><span class="se">{{</span><span class="si">{</span><span class="n">caption</span><span class="si">}</span><span class="se">}}\n\\</span><span class="s2">label</span><span class="se">{{</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="se">}}\n</span><span class="s2">&quot;</span>
-        <span class="n">caption_path</span> <span class="o">=</span> <span class="n">fig_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.tex&quot;</span>
-        <span class="n">caption_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">caption_content</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"fig:</span><span class="si">{</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">' '</span><span class="p">,</span><span class="w"> </span><span class="s1">'_'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">caption_content</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="se">\\</span><span class="s2">caption</span><span class="se">{{</span><span class="si">{</span><span class="n">caption</span><span class="si">}</span><span class="se">}}\n\\</span><span class="s2">label</span><span class="se">{{</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="se">}}\n</span><span class="s2">"</span>
+        <span class="n">caption_path</span> <span class="o">=</span> <span class="n">fig_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.tex"</span>
+        <span class="n">caption_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">caption_content</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-            <span class="s2">&quot;image_path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">dest_image</span><span class="p">),</span>
-            <span class="s2">&quot;caption_path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">caption_path</span><span class="p">),</span>
-            <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="n">label</span><span class="p">,</span>
+            <span class="s2">"success"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s2">"image_path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">dest_image</span><span class="p">),</span>
+            <span class="s2">"caption_path"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">caption_path</span><span class="p">),</span>
+            <span class="s2">"label"</span><span class="p">:</span> <span class="n">label</span><span class="p">,</span>
         <span class="p">}</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
 
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_find_all_figure_files</span><span class="p">(</span><span class="n">fig_dir</span><span class="p">:</span> <span class="n">_Path</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find all files associated with a figure name across all subdirectories.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Find all files associated with a figure name across all subdirectories."""</span>
     <span class="n">files</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">extensions</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="s2">&quot;.tex&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;.png&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;.jpg&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;.jpeg&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;.pdf&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;.tif&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;.tiff&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;.eps&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;.svg&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;.mmd&quot;</span><span class="p">,</span>
+        <span class="s2">".tex"</span><span class="p">,</span>
+        <span class="s2">".png"</span><span class="p">,</span>
+        <span class="s2">".jpg"</span><span class="p">,</span>
+        <span class="s2">".jpeg"</span><span class="p">,</span>
+        <span class="s2">".pdf"</span><span class="p">,</span>
+        <span class="s2">".tif"</span><span class="p">,</span>
+        <span class="s2">".tiff"</span><span class="p">,</span>
+        <span class="s2">".eps"</span><span class="p">,</span>
+        <span class="s2">".svg"</span><span class="p">,</span>
+        <span class="s2">".mmd"</span><span class="p">,</span>
     <span class="p">]</span>
     <span class="c1"># Base directory</span>
     <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="n">extensions</span><span class="p">:</span>
-        <span class="n">p</span> <span class="o">=</span> <span class="n">fig_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}{</span><span class="n">ext</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">fig_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}{</span><span class="n">ext</span><span class="si">}</span><span class="s2">"</span>
         <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">or</span> <span class="n">p</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>
             <span class="n">files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
     <span class="c1"># Subdirectories: jpg_for_compilation, mermaid_originals</span>
-    <span class="k">for</span> <span class="n">subdir_name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;jpg_for_compilation&quot;</span><span class="p">,</span> <span class="s2">&quot;mermaid_originals&quot;</span><span class="p">]:</span>
+    <span class="k">for</span> <span class="n">subdir_name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"jpg_for_compilation"</span><span class="p">,</span> <span class="s2">"mermaid_originals"</span><span class="p">]:</span>
         <span class="n">subdir</span> <span class="o">=</span> <span class="n">fig_dir</span> <span class="o">/</span> <span class="n">subdir_name</span>
         <span class="k">if</span> <span class="n">subdir</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
             <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="n">extensions</span><span class="p">:</span>
-                <span class="n">p</span> <span class="o">=</span> <span class="n">subdir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}{</span><span class="n">ext</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">p</span> <span class="o">=</span> <span class="n">subdir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}{</span><span class="n">ext</span><span class="si">}</span><span class="s2">"</span>
                 <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">or</span> <span class="n">p</span><span class="o">.</span><span class="n">is_symlink</span><span class="p">():</span>
                     <span class="n">files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">files</span>
@@ -349,9 +355,9 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">remove</span><span class="p">(</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">&quot;manuscript&quot;</span><span class="p">,</span> <span class="s2">&quot;supplementary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;manuscript&quot;</span><span class="p">,</span>
+    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"manuscript"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove a figure (image + caption) from the project.</span>
+<span class="w">    </span><span class="sd">"""Remove a figure (image + caption) from the project.</span>
 
 <span class="sd">    Removes all associated files including those in subdirectories</span>
 <span class="sd">    (jpg_for_compilation/, mermaid_originals/).</span>
@@ -363,18 +369,18 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with removed file paths.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">project_path</span> <span class="o">=</span> <span class="n">_resolve_project_path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
         <span class="n">doc_dirs</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;manuscript&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;01_manuscript&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;supplementary&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;02_supplementary&quot;</span><span class="p">,</span>
+            <span class="s2">"manuscript"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"01_manuscript"</span><span class="p">,</span>
+            <span class="s2">"supplementary"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"02_supplementary"</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">doc_dir</span> <span class="o">=</span> <span class="n">doc_dirs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">doc_type</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">doc_dir</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Invalid doc_type: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Invalid doc_type: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
 
-        <span class="n">fig_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">&quot;contents&quot;</span> <span class="o">/</span> <span class="s2">&quot;figures&quot;</span> <span class="o">/</span> <span class="s2">&quot;caption_and_media&quot;</span>
+        <span class="n">fig_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">"contents"</span> <span class="o">/</span> <span class="s2">"figures"</span> <span class="o">/</span> <span class="s2">"caption_and_media"</span>
         <span class="n">all_files</span> <span class="o">=</span> <span class="n">_find_all_figure_files</span><span class="p">(</span><span class="n">fig_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
 
         <span class="n">removed</span> <span class="o">=</span> <span class="p">[]</span>
@@ -383,11 +389,11 @@
             <span class="n">removed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">removed</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Figure not found: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Figure not found: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
 
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;removed&quot;</span><span class="p">:</span> <span class="n">removed</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"removed"</span><span class="p">:</span> <span class="n">removed</span><span class="p">}</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
 
 
 
@@ -397,9 +403,9 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">archive</span><span class="p">(</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">&quot;manuscript&quot;</span><span class="p">,</span> <span class="s2">&quot;supplementary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;manuscript&quot;</span><span class="p">,</span>
+    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"manuscript"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Move a figure to legacy/ instead of deleting.</span>
+<span class="w">    </span><span class="sd">"""Move a figure to legacy/ instead of deleting.</span>
 
 <span class="sd">    Moves all associated files (tex, images, mermaid sources) from</span>
 <span class="sd">    caption_and_media/ to legacy/, preserving them for potential reuse.</span>
@@ -411,19 +417,19 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with archived file paths.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">project_path</span> <span class="o">=</span> <span class="n">_resolve_project_path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span>
         <span class="n">doc_dirs</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;manuscript&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;01_manuscript&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;supplementary&quot;</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">&quot;02_supplementary&quot;</span><span class="p">,</span>
+            <span class="s2">"manuscript"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"01_manuscript"</span><span class="p">,</span>
+            <span class="s2">"supplementary"</span><span class="p">:</span> <span class="n">project_path</span> <span class="o">/</span> <span class="s2">"02_supplementary"</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">doc_dir</span> <span class="o">=</span> <span class="n">doc_dirs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">doc_type</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">doc_dir</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Invalid doc_type: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Invalid doc_type: </span><span class="si">{</span><span class="n">doc_type</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
 
-        <span class="n">fig_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">&quot;contents&quot;</span> <span class="o">/</span> <span class="s2">&quot;figures&quot;</span> <span class="o">/</span> <span class="s2">&quot;caption_and_media&quot;</span>
-        <span class="n">legacy_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">&quot;contents&quot;</span> <span class="o">/</span> <span class="s2">&quot;figures&quot;</span> <span class="o">/</span> <span class="s2">&quot;legacy&quot;</span>
+        <span class="n">fig_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">"contents"</span> <span class="o">/</span> <span class="s2">"figures"</span> <span class="o">/</span> <span class="s2">"caption_and_media"</span>
+        <span class="n">legacy_dir</span> <span class="o">=</span> <span class="n">doc_dir</span> <span class="o">/</span> <span class="s2">"contents"</span> <span class="o">/</span> <span class="s2">"figures"</span> <span class="o">/</span> <span class="s2">"legacy"</span>
         <span class="n">legacy_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="n">all_files</span> <span class="o">=</span> <span class="n">_find_all_figure_files</span><span class="p">(</span><span class="n">fig_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
@@ -432,14 +438,14 @@
         <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">all_files</span><span class="p">:</span>
             <span class="n">dest</span> <span class="o">=</span> <span class="n">legacy_dir</span> <span class="o">/</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span>
             <span class="n">_shutil</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">dest</span><span class="p">))</span>
-            <span class="n">archived</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">),</span> <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">dest</span><span class="p">)})</span>
+            <span class="n">archived</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"from"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">),</span> <span class="s2">"to"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">dest</span><span class="p">)})</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">archived</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Figure not found: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Figure not found: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
 
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;archived&quot;</span><span class="p">:</span> <span class="n">archived</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"archived"</span><span class="p">:</span> <span class="n">archived</span><span class="p">}</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span></div>
 
 
 
@@ -452,7 +458,7 @@
     <span class="n">dpi</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">300</span><span class="p">,</span>
     <span class="n">quality</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">95</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert figure between formats (e.g., PDF to PNG).</span>
+<span class="w">    </span><span class="sd">"""Convert figure between formats (e.g., PDF to PNG).</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        input_path: Source image path.</span>
@@ -462,7 +468,7 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with input_path and output_path.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_convert_figure</span><span class="p">(</span><span class="n">input_path</span><span class="p">,</span> <span class="n">output_path</span><span class="p">,</span> <span class="n">dpi</span><span class="p">,</span> <span class="n">quality</span><span class="p">)</span></div>
 
 
@@ -475,9 +481,9 @@
     <span class="n">output_dir</span><span class="p">:</span> <span class="n">_Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">pages</span><span class="p">:</span> <span class="n">_Optional</span><span class="p">[</span><span class="n">_Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">_List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">dpi</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">600</span><span class="p">,</span>
-    <span class="nb">format</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">&quot;png&quot;</span><span class="p">,</span> <span class="s2">&quot;jpg&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;png&quot;</span><span class="p">,</span>
+    <span class="nb">format</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">"png"</span><span class="p">,</span> <span class="s2">"jpg"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"png"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Render PDF pages as images.</span>
+<span class="w">    </span><span class="sd">"""Render PDF pages as images.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        pdf_path: Path to PDF file.</span>
@@ -488,12 +494,52 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with images list and output_dir.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_pdf_to_images</span><span class="p">(</span><span class="n">pdf_path</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">pages</span><span class="p">,</span> <span class="n">dpi</span><span class="p">,</span> <span class="nb">format</span><span class="p">)</span></div>
 
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;add&quot;</span><span class="p">,</span> <span class="s2">&quot;remove&quot;</span><span class="p">,</span> <span class="s2">&quot;archive&quot;</span><span class="p">,</span> <span class="s2">&quot;convert&quot;</span><span class="p">,</span> <span class="s2">&quot;pdf_to_images&quot;</span><span class="p">]</span>
+<div class="viewcode-block" id="render">
+<a class="viewcode-back" href="../../api/scitex_writer.html#scitex_writer.figures.render">[docs]</a>
+<span class="nd">@_supports_return_as</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span>
+    <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">doc_type</span><span class="p">:</span> <span class="n">_Literal</span><span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">,</span> <span class="s2">"revision"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"manuscript"</span><span class="p">,</span>
+    <span class="n">no_figs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">pptx</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">crop</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Run the engine's figure pipeline for ``doc_type``.</span>
+
+<span class="sd">    The pure-Python port of ``scripts/shell/modules/process_figures.sh``: tidies</span>
+<span class="sd">    panel ids and captions, converts every source image through the single Pillow</span>
+<span class="sd">    backend (TIF/MMD/PNG -&gt; JPG), tiles multi-panel figures into one composite,</span>
+<span class="sd">    links the results into ``jpg_for_compilation``, fills a declared-but-missing</span>
+<span class="sd">    figure with a placeholder, and assembles the compiled ``FINAL.tex`` (each</span>
+<span class="sd">    float also written to ``_placeable/&lt;number&gt;.tex`` for inline</span>
+<span class="sd">    ``\\scitexfig{&lt;number&gt;}`` placement). With no figures at all it emits a</span>
+<span class="sd">    comment-only fallback header -- never a placeholder float.</span>
+
+<span class="sd">    ``no_figs=True`` skips all image work and disables figures (the shell's</span>
+<span class="sd">    ``no_figs``); ``pptx=True`` also renders ``NN_*.pptx`` slides through</span>
+<span class="sd">    LibreOffice; ``crop=True`` trims each compilation JPG's uniform border.</span>
+<span class="sd">    Returns ``{success, figures_compiled, captions_created, panel_captions_removed,</span>
+<span class="sd">    renamed_panels, converted, composed, placeholders_created, cropped, figures,</span>
+<span class="sd">    compiled_file, figures_enabled, fallback_header, skipped, warnings, error}``.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">_process</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">doc_type</span><span class="p">,</span> <span class="n">no_figs</span><span class="p">,</span> <span class="n">pptx</span><span class="p">,</span> <span class="n">crop</span><span class="p">)</span></div>
+
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"list"</span><span class="p">,</span>
+    <span class="s2">"add"</span><span class="p">,</span>
+    <span class="s2">"remove"</span><span class="p">,</span>
+    <span class="s2">"archive"</span><span class="p">,</span>
+    <span class="s2">"convert"</span><span class="p">,</span>
+    <span class="s2">"pdf_to_images"</span><span class="p">,</span>
+    <span class="s2">"render"</span><span class="p">,</span>
+<span class="p">]</span>
 
 <span class="c1"># EOF</span>
 </pre></div>

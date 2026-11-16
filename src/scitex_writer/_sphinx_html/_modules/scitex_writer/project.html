@@ -5,15 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>scitex_writer.project &mdash; SciTeX Writer v2.17.5</title>
+  <title>scitex_writer.project &mdash; SciTeX Writer v2.43.21</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx_autodoc_typehints.css?v=057ac668" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=b1c06546"></script>
+      <script src="../../_static/documentation_options.js?v=501ce1ad"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -89,6 +90,8 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.supplementary"><code class="docutils literal notranslate"><span class="pre">supplementary()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.revision"><code class="docutils literal notranslate"><span class="pre">revision()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.content"><code class="docutils literal notranslate"><span class="pre">content()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.diff"><code class="docutils literal notranslate"><span class="pre">diff()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.compile.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.project">scitex_writer.project</a><ul>
@@ -114,6 +117,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.csv_to_latex"><code class="docutils literal notranslate"><span class="pre">csv_to_latex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.latex_to_csv"><code class="docutils literal notranslate"><span class="pre">latex_to_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.tables.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.figures">scitex_writer.figures</a><ul>
@@ -123,6 +127,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.archive"><code class="docutils literal notranslate"><span class="pre">archive()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.convert"><code class="docutils literal notranslate"><span class="pre">convert()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.pdf_to_images"><code class="docutils literal notranslate"><span class="pre">pdf_to_images()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../api/scitex_writer.html#scitex_writer.figures.render"><code class="docutils literal notranslate"><span class="pre">render()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="../../api/scitex_writer.html#module-scitex_writer.export">scitex_writer.export</a><ul>
@@ -182,21 +187,21 @@
 <span class="c1"># Timestamp: 2026-01-27</span>
 <span class="c1"># File: src/scitex_writer/project.py</span>
 
-<span class="sd">&quot;&quot;&quot;Project management functions.</span>
+<span class="sd">"""Project management functions.</span>
 
 <span class="sd">Usage::</span>
 
 <span class="sd">    import scitex_writer as sw</span>
 
 <span class="sd">    # Create new project from template</span>
-<span class="sd">    result = sw.project.clone(&quot;./my-new-paper&quot;)</span>
+<span class="sd">    result = sw.project.clone("./my-new-paper")</span>
 
 <span class="sd">    # Get project info</span>
-<span class="sd">    info = sw.project.info(&quot;./my-paper&quot;)</span>
+<span class="sd">    info = sw.project.info("./my-paper")</span>
 
 <span class="sd">    # Get path to compiled PDF</span>
-<span class="sd">    pdf = sw.project.get_pdf(&quot;./my-paper&quot;, &quot;manuscript&quot;)</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    pdf = sw.project.get_pdf("./my-paper", "manuscript")</span>
+<span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Optional</span>
 
@@ -218,25 +223,25 @@
 <span class="nd">@_supports_return_as</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">clone</span><span class="p">(</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">git_strategy</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;child&quot;</span><span class="p">,</span> <span class="s2">&quot;parent&quot;</span><span class="p">,</span> <span class="s2">&quot;origin&quot;</span><span class="p">,</span> <span class="s2">&quot;none&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;child&quot;</span><span class="p">,</span>
+    <span class="n">git_strategy</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"child"</span><span class="p">,</span> <span class="s2">"parent"</span><span class="p">,</span> <span class="s2">"origin"</span><span class="p">,</span> <span class="s2">"none"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"child"</span><span class="p">,</span>
     <span class="n">branch</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tag</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new writer project from template.</span>
+<span class="w">    </span><span class="sd">"""Create a new writer project from template.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        project_dir: Path for the new project.</span>
 <span class="sd">        git_strategy: How to handle git:</span>
-<span class="sd">            - &quot;child&quot;: Fresh git repo (default)</span>
-<span class="sd">            - &quot;parent&quot;: Keep template history</span>
-<span class="sd">            - &quot;origin&quot;: Keep as clone of template</span>
-<span class="sd">            - &quot;none&quot;: No git initialization</span>
+<span class="sd">            - "child": Fresh git repo (default)</span>
+<span class="sd">            - "parent": Keep template history</span>
+<span class="sd">            - "origin": Keep as clone of template</span>
+<span class="sd">            - "none": No git initialization</span>
 <span class="sd">        branch: Clone specific branch.</span>
 <span class="sd">        tag: Clone specific tag.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with success status and project_path.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_clone_project</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">git_strategy</span><span class="p">,</span> <span class="n">branch</span><span class="p">,</span> <span class="n">tag</span><span class="p">)</span></div>
 
 
@@ -245,14 +250,14 @@
 <a class="viewcode-back" href="../../api/scitex_writer.html#scitex_writer.project.info">[docs]</a>
 <span class="nd">@_supports_return_as</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">info</span><span class="p">(</span><span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get writer project information.</span>
+<span class="w">    </span><span class="sd">"""Get writer project information.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        project_dir: Path to scitex-writer project.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with project_name, documents, compiled_pdfs.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_get_project_info</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span></div>
 
 
@@ -262,9 +267,9 @@
 <span class="nd">@_supports_return_as</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_pdf</span><span class="p">(</span>
     <span class="n">project_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">doc_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;manuscript&quot;</span><span class="p">,</span> <span class="s2">&quot;supplementary&quot;</span><span class="p">,</span> <span class="s2">&quot;revision&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;manuscript&quot;</span><span class="p">,</span>
+    <span class="n">doc_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"manuscript"</span><span class="p">,</span> <span class="s2">"supplementary"</span><span class="p">,</span> <span class="s2">"revision"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"manuscript"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get path to compiled PDF.</span>
+<span class="w">    </span><span class="sd">"""Get path to compiled PDF.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        project_dir: Path to scitex-writer project.</span>
@@ -272,7 +277,7 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with pdf_path if exists.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_get_pdf</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">doc_type</span><span class="p">)</span></div>
 
 
@@ -281,16 +286,16 @@
 <a class="viewcode-back" href="../../api/scitex_writer.html#scitex_writer.project.list_document_types">[docs]</a>
 <span class="nd">@_supports_return_as</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">list_document_types</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;List available document types.</span>
+<span class="w">    </span><span class="sd">"""List available document types.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Dict with document_types list.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">_list_document_types</span><span class="p">()</span></div>
 
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;clone&quot;</span><span class="p">,</span> <span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="s2">&quot;get_pdf&quot;</span><span class="p">,</span> <span class="s2">&quot;list_document_types&quot;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"clone"</span><span class="p">,</span> <span class="s2">"info"</span><span class="p">,</span> <span class="s2">"get_pdf"</span><span class="p">,</span> <span class="s2">"list_document_types"</span><span class="p">]</span>
 
 <span class="c1"># EOF</span>
 </pre></div>

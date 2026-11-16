@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- Refresh version-bound offline HTML and add a strict receipt-backed build
+  command. Failed bundle delivery is no longer reported as a successful job.
 - Clarify caption-based editor media discovery and distinguish missing media
   from unavailable previews in the owning skill, linked from the editor guide
   and README. Add an orphan-image behavioral regression.

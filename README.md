@@ -68,6 +68,19 @@ python -m pip install -e '.[dev]'
 python scripts/build_frontend.py --receipt /tmp/writer-frontend-build.json
 ```
 
+Refresh the packaged offline documentation separately with Python 3.11+ and
+this checkout installed with its docs dependencies:
+
+```bash
+python -m pip install -e '.[docs,dev]'
+python scripts/build_docs.py --receipt /tmp/writer-offline-docs.json
+```
+
+The docs build refuses a mismatched installed Writer version, keeps strict
+Sphinx warnings enabled and checks the generated version before replacing the
+packaged HTML. Its receipt binds the generated files; this is separate from
+reviewing guide contents or deployment.
+
 The build discovers both frontend packages from installed Python distributions,
 runs normal npm installation and produces the complete asset closure without
 sibling source checkouts. See [the host boundary](docs/GUI_HOST_BOUNDARY.md) for
