@@ -26,6 +26,28 @@ The compile script auto-discovers figures and tables from source directories:
 
 Tables follow the same structure under `01_manuscript/contents/tables/`.
 
+## Editor media discovery
+
+The Fig and Table panes list `.tex` caption files in the selected document's
+`contents/figures/caption_and_media/` and `contents/tables/caption_and_media/`
+folders. An image elsewhere in the project does not automatically appear in
+the Fig pane. Discovery matches a caption to a supported image, vector or data
+file with the same filename stem in that folder or its subdirectories.
+
+A caption can be listed even when no matching media file is found. Its reference
+remains available, but it has no thumbnail. A listed image can also fail to
+produce a preview; an unavailable preview does not establish that the source
+file is absent. Empty lists and missing/unavailable figure previews display
+separate guidance. Listing does not create captions or copy project images.
+Compilation is a separate operation.
+
+The owning sources are `_django/handlers/media.py::_list_media`,
+`_ports/thumbnails.py::find_media_for_stem`, and
+`_django/frontend/src/insert-panel.ts`. Behavioral controls are
+`tests/scitex_writer/_django/handlers/test_media.py` (empty lists, orphan images,
+caption-only entries and real PNG thumbnails) and frontend `tests/api.test.cjs`
+(empty/missing/unavailable states, resource scope and explicit insertion).
+
 ## Removing a Figure from the Manuscript
 
 The compile script rebuilds `compiled/FINAL.tex` from whatever `.tex` files exist in `caption_and_media/`. To remove a figure, you must move **all** associated files:

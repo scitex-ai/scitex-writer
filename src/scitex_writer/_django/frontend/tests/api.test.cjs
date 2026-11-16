@@ -111,7 +111,7 @@ test("PDF, DAG and downloads retain the declared custom prefix and canonical pro
 // media contract without a fake InsertPanel, presence client or HTML parser.
 const { JSDOM } = require("jsdom");
 
-function insertClient(mode, kind) {
+function insertClient(mode, kind, scenario = {}) {
   const apiBase = "/science/custom/writer/v2/";
   const alphaDirectory = "/local/alpha manuscript & inputs";
   const betaDirectory = "/local/beta manuscript";
@@ -130,6 +130,7 @@ function insertClient(mode, kind) {
     label, insert: `\\ref{${label}}`, media_path: mediaPath,
     media_ext: kind === "figures" ? ".png" : ".csv",
     thumbnail_url: `/api/thumbnail?kind=${kind}&path=${encodedPath}`,
+    ...scenario.entry,
   };
   const globals = {
     document, location: dom.window.location, URLSearchParams, URL,
@@ -138,7 +139,7 @@ function insertClient(mode, kind) {
       requests.push({ url, options });
       const parsed = new URL(url, "http://testserver");
       if (parsed.pathname !== `${apiBase}api/${kind}`) throw new Error(`Unexpected media-list URL: ${parsed.pathname}`);
-      return { ok: true, async json() { return { doc_type: "manuscript", [kind]: [entry] }; } };
+      return { ok: true, async json() { return { doc_type: "manuscript", [kind]: scenario.empty ? [] : [entry] }; } };
     },
   };
   const modules = new Map();
@@ -199,3 +200,57 @@ for (const mode of ["hub", "standalone"]) {
     });
   }
 }
+
+
+for (const mode of ["hub", "standalone"]) {
+  for (const kind of ["figures", "tables"]) {
+    test(`empty ${kind} explain the selected document in ${mode}`, async (t) => {
+      const fixture = insertClient(mode, kind, { empty: true });
+      t.after(() => fixture.dom.window.close());
+      fixture.controller.open(kind === "figures" ? "fig" : "table");
+      await new Promise(resolve => setImmediate(resolve));
+      assert.match(fixture.panel.textContent, new RegExp(`No ${kind} found for this document`));
+      assert.match(fixture.panel.textContent, /project|document/i);
+      assert.match(fixture.panel.textContent, /caption_and_media/);
+      assert.equal(fixture.panel.querySelectorAll(".insert-item-action").length, 0);
+      assert.deepEqual(fixture.insertions, []);
+    });
+  }
+}
+
+test("a figure caption without an image explains the missing preview and retains explicit insertion", async (t) => {
+  const fixture = insertClient("hub", "figures", { entry: { media_path: null, thumbnail_url: null } });
+  t.after(() => fixture.dom.window.close());
+  fixture.controller.open("fig");
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(fixture.panel.textContent, /No matching figure image found/);
+  assert.match(fixture.panel.textContent, /same name.*caption/i);
+  fixture.panel.querySelector(".insert-item").click();
+  assert.deepEqual(fixture.insertions, []);
+  fixture.panel.querySelector(".insert-item-action").click();
+  assert.deepEqual(fixture.insertions, [fixture.entry.insert]);
+});
+
+test("an existing image without a thumbnail is not described as a missing image", async (t) => {
+  const fixture = insertClient("hub", "figures", { entry: { thumbnail_url: null } });
+  t.after(() => fixture.dom.window.close());
+  fixture.controller.open("fig");
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(fixture.panel.textContent, /Preview unavailable/);
+  assert.doesNotMatch(fixture.panel.textContent, /No matching figure image found/);
+});
+
+
+test("a failed thumbnail explains the unavailable preview without inserting text", async (t) => {
+  const fixture = insertClient("hub", "figures");
+  t.after(() => fixture.dom.window.close());
+  fixture.controller.open("fig");
+  await new Promise(resolve => setImmediate(resolve));
+  fixture.panel.querySelector("img").dispatchEvent(new fixture.dom.window.Event("error"));
+  assert.match(fixture.panel.textContent, /Preview unavailable.*source file/i);
+  assert.equal(fixture.panel.querySelectorAll("img").length, 0);
+  assert.equal(fixture.panel.querySelectorAll(".insert-item-thumb--empty").length, 1);
+  assert.deepEqual(fixture.insertions, []);
+  fixture.panel.querySelector(".insert-item-action").click();
+  assert.deepEqual(fixture.insertions, [fixture.entry.insert]);
+});
