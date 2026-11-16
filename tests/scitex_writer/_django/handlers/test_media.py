@@ -109,3 +109,15 @@ def test_caption_without_matching_image_has_explicit_missing_media(tmp_path):
         None,
         None,
     )
+
+
+def test_image_without_caption_is_not_a_figure_entry(tmp_path):
+    # Arrange
+    folder = tmp_path / "01_manuscript/contents/figures/caption_and_media"
+    folder.mkdir(parents=True)
+    Image.new("RGB", (8, 8), "navy").save(folder / "orphan.png")
+    project = ProjectState(project_dir=tmp_path)
+    # Act
+    response = handle_figures(RequestFactory().get("/api/figures"), project)
+    # Assert
+    assert json.loads(response.content)["figures"] == []

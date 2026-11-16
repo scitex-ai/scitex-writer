@@ -56,6 +56,9 @@ compilation. Its PDF pane uses LivePaper's public rich provider through Writer's
 own annotation adapter; the SDK owns PDF rendering. Clicking a figure or table
 row does not insert text: use drag and drop or the explicit insert action.
 Caption-only tables have no data thumbnail.
+The panes discover captions in the selected document, rather than every image
+in the project. See [editor media discovery](src/scitex_writer/_skills/scitex-writer/12_figures-and-tables.md#editor-media-discovery)
+for file pairing and missing-preview guidance.
 
 Contributor builds require SDK>=0.3.17, LivePaper>=0.2.20 and Node/npm. From the
 checkout, install the declared developer dependencies and run the tracked build:

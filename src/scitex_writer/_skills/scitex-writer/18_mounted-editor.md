@@ -30,6 +30,8 @@ font size through a capture listener. The shared theme control should update
 Monaco immediately. Figure/table entries display supported thumbnails;
 clicking an item must leave the manuscript unchanged. Insertion uses an
 intentional drag into the editor or the explicit Insert reference button.
+For caption discovery and missing-preview diagnostics, see
+[Figures and Tables](12_figures-and-tables.md#editor-media-discovery).
 PDF options and annotation tools share one menu; Monaco gutter edges use
 semantic borders. Verify changes in a disposable manuscript,
 not an existing user's research text.
