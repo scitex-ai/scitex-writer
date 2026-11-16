@@ -59,6 +59,10 @@ def handle_add_claim(request, project):
             output_file=data.get("output_file"),
             output_hash=data.get("output_hash"),
             test=data.get("test"),
+            source_keys=data.get("source_keys"),
+            tolerance=data.get("tolerance"),
+            tex_file=data.get("tex_file"),
+            line_number=data.get("line_number"),
         )
     )
 

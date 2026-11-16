@@ -58,6 +58,13 @@
 # .scitex/writer/runtime/citation_trust.json (scholar has no cache of its own),
 # keyed by cite key + bib-entry content hash, so repeated compiles are network-free
 # until an entry actually changes.
+# claim_values is the VALUE-VS-SOURCE gate: for every \vclaim registered with
+# source_keys (a JSON Pointer into a json/yaml source, or a csv/tsv cell) it
+# re-reads the value from the claim's source file and compares it with the
+# claim value within the declared (or precision-implied) tolerance -- the
+# value-level complement of clew_verify's hash check. Claims come from the
+# scitex-clew store (no JSON fallback; an unreachable store fails loudly).
+# Defaults to error.
 #
 # Returns the worst exit code across the checks (0 unless a check errored).
 
@@ -68,7 +75,7 @@ PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$THIS_DIR/../../.." && pwd)}"
 PY="${SCITEX_WRITER_PYTHON:-python3}"
 
 rc=0
-for chk in check_paper_symlink check_media_provenance check_figure_media check_ref_integrity check_caption_footnote check_table_decimals check_clew_verify check_clew_completeness check_citations check_citation_trust check_version_freshness; do
+for chk in check_paper_symlink check_media_provenance check_figure_media check_ref_integrity check_caption_footnote check_table_decimals check_clew_verify check_clew_completeness check_claim_values check_citations check_citation_trust check_version_freshness; do
     script="$THIS_DIR/../../python/${chk}.py"
     [ -f "$script" ] || continue
     "$PY" "$script" "$PROJECT_ROOT" || rc=$?

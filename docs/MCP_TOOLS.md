@@ -27,15 +27,16 @@ scitex-writer mcp install       # Show Claude Desktop config guide
 | `writer_checks_references` | Check all LaTeX `\ref{}` / `\cite{}` resolve correctly |
 | `writer_checks_float_order` | Audit float (figure/table) numbering order |
 
-### claim (6 tools)
+### claim (7 tools)
 | Tool | Description |
 |------|-------------|
-| `writer_add_claim` | Add or update a scientific claim (statistic, value, citation, figure, table) |
-| `writer_format_claim` | Render a claim as a formatted string (nature/apa/plain style) |
-| `writer_get_claim` | Get details for a single claim |
-| `writer_list_claims` | List all claims with status and previews |
-| `writer_remove_claim` | Delete a claim by ID |
-| `writer_render_claims` | Generate claims_rendered.tex for LaTeX compilation |
+| `writer_claim_add` | Register a claim in the scitex-clew store (statistic, value, citation, figure, table); optional source_keys/tolerance for the value-vs-source check |
+| `writer_claim_format` | Render a claim as a formatted string (nature/apa/plain style) |
+| `writer_claim_get` | Get details for a single claim |
+| `writer_claim_list` | List all claims with clew status, provenance pointers and previews |
+| `writer_claim_remove` | Retire a claim (clew supersede; kept for audit) |
+| `writer_claim_render` | Generate claims_rendered.tex from the clew store for LaTeX compilation |
+| `writer_claim_check_values` | Re-read located claim values from their source files and report mismatches |
 
 ### compile (4 tools)
 | Tool | Description |

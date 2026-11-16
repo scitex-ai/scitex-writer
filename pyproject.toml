@@ -86,6 +86,9 @@ dependencies = [
     # 0.3.x exposes no public runtime_path; migrate when one lands, card
     # writer-migrate-runtime-db-path-to-public-scitex-config-api.)
     "scitex-config>=0.3.6",
+    # The claim value-vs-source check (_mcp/handlers/_claim_source.py) reads a
+    # claim's .yaml/.yml source to compare the manuscript value with it.
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -131,6 +134,12 @@ all = [
     # reason. Live-verified across all four forms (doi, bare eprint, title-only,
     # fabricated).
     "scitex-scholar>=1.5.2",
+    # Claims (sw.claim / writer_claim_*) are STORED in scitex-clew -- the one
+    # claim store, so every \vclaim back-traces through clew's DAG. No local
+    # fallback exists: without clew, claim calls fail loudly. 0.21.0 is the
+    # first release whose add_claim takes an explicit claim_id on the
+    # project-scoped PostgreSQL store.
+    "scitex-clew>=0.21.0",
     # PS-221 closure: every public extra is a subset of `all`, so
     # `pip install scitex-writer[all]` pulls everything public.
     "scitex-writer[dev]",
@@ -158,6 +167,12 @@ dev = [
     # get a scholar whose verify_cites can actually return VERIFIED.
     "scitex-scholar>=1.5.2",
     "openpyxl",           # writes the .xlsx fixture for the tables xlsx stage
+    # Claims (sw.claim / writer_claim_*) are STORED in scitex-clew -- the one
+    # claim store, so every \vclaim back-traces through clew's DAG. No local
+    # fallback exists: without clew, claim calls fail loudly. 0.21.0 is the
+    # first release whose add_claim takes an explicit claim_id on the
+    # project-scoped PostgreSQL store.
+    "scitex-clew>=0.21.0",
 ]
 docs = [
     "sphinx>=7.0",

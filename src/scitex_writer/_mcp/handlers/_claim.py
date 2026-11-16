@@ -2,10 +2,14 @@
 # -*- coding: utf-8 -*-
 # File: src/scitex_writer/_mcp/handlers/_claim.py
 
-"""Claim handlers: CRUD for 00_shared/claims.json and LaTeX rendering.
+"""Claim handlers: CRUD through the scitex-clew claim store + LaTeX rendering.
 
 Claims are traceable scientific assertions — statistics, values, citations, figure
-references — stored as structured objects instead of magic numbers.
+references — stored as structured objects instead of magic numbers. The store
+of record is scitex-clew (see ``_claim_store``): every claim registered here is
+a clew claim, so it back-traces through clew's DAG to the session/file that
+produced it. ``00_shared/claims.json`` is a derived export, never a second
+store.
 
 Usage in LaTeX (after render_claims is called before compile):
     \\vclaim{group_comparison}           % nature style (default)
@@ -13,7 +17,6 @@ Usage in LaTeX (after render_claims is called before compile):
     \\vclaim[plain]{group_comparison}    % plain text
 """
 
-import json
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -26,8 +29,22 @@ from ._claim_format import (
     describe_sanitize_collisions,
     find_sanitize_collisions,
 )
+from ._claim_paths import (  # noqa: F401  (re-exported; tests + callers use them)
+    _claim_path_roots,
+    _dangling_output_error,
+    _output_file_exists,
+    resolve_output_file,
+)
+from ._claim_source import check_claim_against_source
+from ._claim_store import (
+    CLAIMS_FILE,
+    ClewUnavailableError,
+    register,
+    retire,
+    sync,
+    write_export,
+)
 
-CLAIMS_FILE = "00_shared/claims.json"
 CLAIMS_RENDERED = "00_shared/claims_rendered.tex"
 
 
@@ -36,83 +53,27 @@ CLAIMS_RENDERED = "00_shared/claims_rendered.tex"
 # ---------------------------------------------------------------------------
 
 
-def _claims_path(project_path: Path) -> Path:
-    return project_path / CLAIMS_FILE
-
-
-def _claim_path_roots(project_path: Path) -> list:
-    """Where a claim's RELATIVE output_file may legitimately be anchored.
-
-    Getting this wrong is not a detail — it decides whether a claim's provenance
-    is reported as present or missing, and both errors are lies.
-
-    A standalone project anchors at the project dir. But a VENDORED project puts
-    the writer engine at ``<repo>/.scitex/writer`` while the pipeline's data
-    stays at the REPO ROOT — so ``data/x/summary.json`` resolves only from the
-    repo root. Measured on a real 49-claim manuscript: resolving against the
-    writer subdir found 0 of 49; against the repo root, 25. An earlier draft of
-    this function checked only the project dir and would have declared EVERY
-    claim's provenance broken — the same false answer as the bug it replaces,
-    pointing the other way.
-    """
-    roots = [project_path]
-    for parent in project_path.parents:
-        # Vendored layout: <repo>/.scitex/writer -> the repo root is above .scitex
-        if parent.name == ".scitex":
-            roots.append(parent.parent)
-            break
-    for parent in (project_path, *project_path.parents):
-        if (parent / ".git").exists():
-            if parent not in roots:
-                roots.append(parent)
-            break
-    return roots
-
-
-def _output_file_exists(
-    project_path: Path, output_file: Optional[str]
-) -> Optional[bool]:
-    """Does the claim's recorded output actually exist?
-
-    None when no output_file is recorded — "unknown", not "missing". Never
-    resolved against the process cwd: a claim's provenance must not depend on
-    where the server happened to be started.
-    """
-    if not output_file:
-        return None
-    candidate = Path(output_file)
-    if candidate.is_absolute():
-        return candidate.exists()
-    return any((root / candidate).exists() for root in _claim_path_roots(project_path))
-
-
-def _dangling_output_error(
-    output_file: Optional[str], output_exists: Optional[bool]
-) -> Optional[str]:
-    """Name the dangling pointer, so a broken claim cannot pass as a bare gap."""
-    if output_file and output_exists is False:
-        return (
-            f"output_file is recorded but does not exist on disk: {output_file}. "
-            f"This claim points at provenance it does not have."
-        )
-    return None
+def _display(entry: Dict[str, Any]) -> str:
+    """The display string clew carries for a claim (LaTeX-ready, nature)."""
+    return _render_claim(entry, "nature")
 
 
 def _load_claims(project_path: Path) -> Dict:
-    """Load claims.json, returning empty structure if not found."""
-    p = _claims_path(project_path)
-    if not p.exists():
-        return {"version": "1.0", "claims": {}}
-    return json.loads(p.read_text(encoding="utf-8"))
+    """All claims of the project, FROM THE CLEW STORE (migrating claims.json).
+
+    Raises ClewUnavailableError when clew or its store is unavailable — there
+    is deliberately no fallback to reading the JSON file directly.
+    """
+    claims, notices = sync(Path(project_path), _display)
+    return {"claims": claims, "notices": notices}
 
 
-def _save_claims(project_path: Path, data: Dict) -> None:
-    """Write claims.json with consistent formatting."""
-    p = _claims_path(project_path)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(
-        json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
+def _failure(exc: Exception) -> Dict:
+    kind = "clew_unavailable" if isinstance(exc, ClewUnavailableError) else None
+    out = {"success": False, "error": str(exc)}
+    if kind:
+        out["error_kind"] = kind
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -130,15 +91,20 @@ def add_claim(
     output_file: Optional[str] = None,
     output_hash: Optional[str] = None,
     test: Optional[str] = None,
+    source_keys: Optional[Dict[str, Any]] = None,
+    tolerance: Optional[Dict[str, float]] = None,
+    tex_file: Optional[str] = None,
+    line_number: Optional[int] = None,
 ) -> Dict:
-    """Add or update a claim in 00_shared/claims.json.
+    """Register (or update) a claim in the scitex-clew store.
 
     Parameters
     ----------
     project_dir : str
         Path to the scitex-writer project directory.
     claim_id : str
-        Unique identifier (e.g., "group_comparison"). Used in \\vclaim{id}.
+        Unique identifier (e.g., "group_comparison"). Used in \\vclaim{id};
+        also the clew claim_id, so clew's DAG/verify output joins on it.
     claim_type : str
         One of: statistic, value, citation, figure, table.
     value : dict
@@ -147,18 +113,34 @@ def add_claim(
     context : str, optional
         Human-readable description of what this claim represents.
     session_id : str, optional
-        Session ID that produced this claim (for Clew traceability).
+        Session that produced the value (clew ``source_session``; clew
+        auto-detects it from ``output_file`` when omitted).
     output_file : str, optional
-        File that produced this value (for Clew traceability).
+        File that produced this value (clew ``source_file``; hashed by clew).
     output_hash : str, optional
-        SHA-256 hash of output_file at time of claim creation.
+        SHA-256 of output_file when the value was computed. If given and the
+        file's CURRENT hash differs, registration is REFUSED.
     test : str, optional
         Statistical test name (e.g., "welch_t_test") for statistic claims.
+    source_keys : dict, optional
+        Where each value field lives inside ``output_file``, so the pre-compile
+        check can re-read and compare it: ``{"<field>": locator}``, locator =
+        ``{"pointer": "/a/0/b"}`` (json/yaml, RFC 6901) or
+        ``{"row": 3 | {"col": "val"}, "column": "name" | 2}`` (csv/tsv), with
+        optional per-field ``abs_tol`` / ``rel_tol``. Field ``"."`` = the
+        whole (scalar) value. A claim that already disagrees with its source
+        is REFUSED.
+    tolerance : dict, optional
+        Claim-level ``{"abs_tol": x, "rel_tol": y}``; when nothing is declared
+        the tolerance is implied by the precision the value is written with.
+    tex_file, line_number : optional
+        Manuscript location of the claim; default = the first
+        ``\\vclaim{claim_id}`` call site found in the project's contents.
 
     Returns
     -------
     dict
-        Success status and rendered preview for each style.
+        Success status, rendered preview for each style, and clew notices.
     """
     try:
         if claim_type not in CLAIM_TYPES:
@@ -167,8 +149,10 @@ def add_claim(
                 "error": f"Invalid claim_type '{claim_type}'. Must be one of: {CLAIM_TYPES}",
             }
 
-        project_path = resolve_project_path(project_dir)
-        data = _load_claims(project_path)
+        project_path = resolve_project_path(project_dir).resolve()
+        # Migrate any legacy claims.json BEFORE writing, so a migration can
+        # never overwrite the claim being added now.
+        _, notices = sync(project_path, _display)
 
         entry: Dict[str, Any] = {
             "type": claim_type,
@@ -177,28 +161,49 @@ def add_claim(
             "session_id": session_id,
             "output_file": output_file,
             "output_hash": output_hash,
+            "source_keys": source_keys,
+            "tolerance": tolerance,
         }
         if test:
             entry["test"] = test
 
-        data["claims"][claim_id] = entry
-        _save_claims(project_path, data)
+        notices = notices + register(
+            project_path,
+            claim_id,
+            entry,
+            _display(entry),
+            tex_file=tex_file,
+            line_number=line_number,
+        )
+        claims, more = sync(project_path, _display)
+        stored = claims.get(claim_id)
+        if stored is None:
+            raise ClewUnavailableError(
+                f"clew accepted claim {claim_id!r} but it is not readable back "
+                "from the store; refusing to report success."
+            )
 
-        previews = {style: _render_claim(entry, style) for style in FORMAT_STYLES}
+        previews = {style: _render_claim(stored, style) for style in FORMAT_STYLES}
 
         return {
             "success": True,
             "claim_id": claim_id,
             "claim_type": claim_type,
+            "store": "scitex-clew",
+            "location": {
+                "file": stored.get("file_path"),
+                "line": stored.get("line_number"),
+            },
             "previews": previews,
             "latex_usage": f"\\vclaim{{{claim_id}}}",
+            "notices": notices + more,
         }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except Exception as e:  # incl. ClewUnavailableError -> success False, loud
+        return _failure(e)
 
 
 def list_claims(project_dir: str) -> Dict:
-    """List all claims in the project.
+    """List all claims in the project (from the clew store).
 
     Parameters
     ----------
@@ -211,7 +216,7 @@ def list_claims(project_dir: str) -> Dict:
         List of claims with formatted previews.
     """
     try:
-        project_path = resolve_project_path(project_dir)
+        project_path = resolve_project_path(project_dir).resolve()
         data = _load_claims(project_path)
         claims = data.get("claims", {})
 
@@ -247,12 +252,20 @@ def list_claims(project_dir: str) -> Dict:
                     "provenance_error": _dangling_output_error(
                         output_file, output_exists
                     ),
+                    "status": claim.get("status"),
+                    "has_source_keys": bool(claim.get("source_keys")),
                 }
             )
 
-        return {"success": True, "count": len(result), "claims": result}
+        return {
+            "success": True,
+            "count": len(result),
+            "claims": result,
+            "store": "scitex-clew",
+            "notices": data["notices"],
+        }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return _failure(e)
 
 
 def get_claim(project_dir: str, claim_id: str) -> Dict:
@@ -271,7 +284,7 @@ def get_claim(project_dir: str, claim_id: str) -> Dict:
         Full claim data including rendered previews for all styles.
     """
     try:
-        project_path = resolve_project_path(project_dir)
+        project_path = resolve_project_path(project_dir).resolve()
         data = _load_claims(project_path)
         claim = data.get("claims", {}).get(claim_id)
 
@@ -288,11 +301,11 @@ def get_claim(project_dir: str, claim_id: str) -> Dict:
             "latex_usage": f"\\vclaim{{{claim_id}}}",
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return _failure(e)
 
 
 def remove_claim(project_dir: str, claim_id: str) -> Dict:
-    """Remove a claim from the project.
+    """Retire a claim (clew ``supersede_claim``) and refresh the export.
 
     Parameters
     ----------
@@ -307,18 +320,23 @@ def remove_claim(project_dir: str, claim_id: str) -> Dict:
         Success status.
     """
     try:
-        project_path = resolve_project_path(project_dir)
+        project_path = resolve_project_path(project_dir).resolve()
         data = _load_claims(project_path)
 
         if claim_id not in data.get("claims", {}):
             return {"success": False, "error": f"Claim not found: '{claim_id}'"}
 
-        del data["claims"][claim_id]
-        _save_claims(project_path, data)
+        if not retire(project_path, claim_id):
+            return {
+                "success": False,
+                "error": f"clew could not retire claim '{claim_id}'",
+            }
+        remaining = {k: v for k, v in data["claims"].items() if k != claim_id}
+        write_export(project_path, remaining)
 
-        return {"success": True, "removed": claim_id}
+        return {"success": True, "removed": claim_id, "store": "scitex-clew"}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return _failure(e)
 
 
 def format_claim(project_dir: str, claim_id: str, style: str = "nature") -> Dict:
@@ -345,7 +363,7 @@ def format_claim(project_dir: str, claim_id: str, style: str = "nature") -> Dict
                 "error": f"Invalid style '{style}'. Must be one of: {FORMAT_STYLES}",
             }
 
-        project_path = resolve_project_path(project_dir)
+        project_path = resolve_project_path(project_dir).resolve()
         data = _load_claims(project_path)
         claim = data.get("claims", {}).get(claim_id)
 
@@ -361,13 +379,58 @@ def format_claim(project_dir: str, claim_id: str, style: str = "nature") -> Dict
             "rendered": rendered,
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return _failure(e)
+
+
+def check_claim_values(project_dir: str) -> Dict:
+    """Re-read every located claim value from its source and compare.
+
+    For each claim registered with ``source_keys``, the value at each locator
+    is read from the claim's ``output_file`` NOW and compared with the claim's
+    value field within the declared (or precision-implied) tolerance. This is
+    the value-level complement of clew's hash check: a hash proves the file is
+    unchanged, not that the manuscript number is the number in the file.
+
+    Returns
+    -------
+    dict
+        ``success`` (False only when the check could not run), ``ok`` (no
+        mismatches), ``mismatches`` / ``checked`` / ``unlocated`` lists.
+    """
+    try:
+        project_path = resolve_project_path(project_dir).resolve()
+        claims = _load_claims(project_path)["claims"]
+        checked, mismatches, unlocated = [], [], []
+        for claim_id, claim in claims.items():
+            keys = claim.get("source_keys") or {}
+            if not keys:
+                unlocated.append(claim_id)
+                continue
+            source = resolve_output_file(project_path, claim.get("output_file"))
+            for result in check_claim_against_source(
+                claim.get("value"),
+                str(source) if source else None,
+                keys,
+                claim.get("tolerance") or {},
+            ):
+                row = {"claim_id": claim_id, **result}
+                (checked if result["ok"] else mismatches).append(row)
+        return {
+            "success": True,
+            "ok": not mismatches,
+            "checked": checked,
+            "mismatches": mismatches,
+            "unlocated": unlocated,
+        }
+    except Exception as e:
+        return _failure(e)
 
 
 def render_claims(project_dir: str) -> Dict:
     """Render all claims to 00_shared/claims_rendered.tex.
 
     This is called automatically before compilation when claims.json exists.
+    Values are read from the scitex-clew store, never from the JSON file.
     The generated file defines the \\vclaim{id} LaTeX macro and all claim
     renderings for all styles.
 
@@ -388,7 +451,7 @@ def render_claims(project_dir: str) -> Dict:
 
         lines = [
             "%% Auto-generated by scitex-writer — do not edit manually.",
-            f"%% Source: {CLAIMS_FILE}",
+            f"%% Source: scitex-clew claim store (export: {CLAIMS_FILE})",
             "%% To update: run writer_claim_render or recompile the project.",
             "",
             "\\makeatletter",
@@ -486,9 +549,11 @@ def render_claims(project_dir: str) -> Dict:
             "success": True,
             "rendered_path": str(output_path),
             "claims_count": len(claims),
+            "store": "scitex-clew",
+            "notices": data["notices"],
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return _failure(e)
 
 
 __all__ = [
@@ -500,6 +565,7 @@ __all__ = [
     "remove_claim",
     "format_claim",
     "render_claims",
+    "check_claim_values",
 ]
 
 # EOF
