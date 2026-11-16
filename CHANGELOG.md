@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.22] - 2026-11-16
+
+### Fixed
+
+- Align release admission and the Writer executor with one immutable shared
+  provider revision using its existing trusted-account policy. Retain the
+  registered runtime/image, complete test matrix, leaf scripts and publisher
+  gates. The failed 2.43.21 tag remains unchanged and unpublished.
+
+
 ## [2.43.21] - 2026-11-16
 
 ### Fixed
