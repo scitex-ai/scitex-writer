@@ -135,12 +135,18 @@ export class InsertPanel {
       }
     }
     this.renderList(
+      "figures",
       this.figCache[docType].map((figure) => ({
         label: figure.name,
         sub: figure.label ? `\\ref{${figure.label}}` : "",
         insert: figure.insert,
         thumbnail_url: figure.thumbnail_url,
         media_ext: figure.media_ext,
+        notice: figure.media_path === null
+          ? "No matching figure image found. Add an image with the same name as this caption (before the file extension)."
+          : figure.media_path && !figure.thumbnail_url
+            ? "Preview unavailable for this image."
+            : "",
       })),
     );
   }
@@ -157,6 +163,7 @@ export class InsertPanel {
       }
     }
     this.renderList(
+      "tables",
       this.tableCache[docType].map((table) => ({
         label: table.name,
         sub: table.label ? `\\ref{${table.label}}` : "",
@@ -222,9 +229,11 @@ export class InsertPanel {
   }
 
   private renderList(
+    kind: "figures" | "tables",
     items: Array<{
       label: string;
       sub: string;
+      notice?: string;
       insert: string;
       thumbnail_url?: string | null;
       media_ext?: string | null;
@@ -232,7 +241,10 @@ export class InsertPanel {
   ): void {
     if (items.length === 0) {
       this.opts.panel.innerHTML = `
-      <div class="insert-panel-body"><p class="insert-panel-empty">(none)</p></div>
+      <div class="insert-panel-body insert-panel-info" role="status">
+        <p class="insert-panel-empty">No ${kind} found for this document.</p>
+        <p class="insert-panel-empty">Choose a different project or document, or add ${kind === "figures" ? "figure images and matching .tex captions" : "table .tex captions and any associated data"} in <code>contents/${kind}/caption_and_media</code>.</p>
+      </div>
     `;
       return;
     }
@@ -253,6 +265,7 @@ export class InsertPanel {
           ${thumb}
           <div class="insert-item-meta">
             <div class="insert-item-label">${escapeHtml(item.label)}</div>
+            ${item.notice ? `<div class="insert-item-sub" role="status">${escapeHtml(item.notice)}</div>` : ""}
             ${item.sub && item.sub !== item.insert ? `<div class="insert-item-sub">${escapeHtml(item.sub)}</div>` : ""}
             <div class="insert-item-snippet">${escapeHtml(item.insert)}</div>
             <button type="button" class="insert-item-action" draggable="false">Insert reference</button>
