@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.21] - 2026-11-16
+
+### Fixed
+
+- Explain empty figure/table lists and captions without matching images, with
+  guidance for the selected document's caption-and-media folder.
+- Replace failed thumbnail images with a readable, wrapping status while
+  preserving scoped resource URLs, drag payloads and explicit insertion.
+
+### Documentation
+
+- Clarify caption-based editor media discovery and distinguish missing media
+  from unavailable previews in the owning skill, linked from the editor guide
+  and README. Add an orphan-image behavioral regression.
+
 
 ## [2.43.20] - 2026-11-04
 
