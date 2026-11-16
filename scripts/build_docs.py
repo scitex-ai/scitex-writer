@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import platform
 import re
 import shutil
 import subprocess
@@ -79,6 +80,17 @@ def main() -> None:
         "source_version": expected,
         "installed_version": installed,
         "sphinx_version": version("sphinx"),
+        "python_version": platform.python_version(),
+        "toolchain": {
+            name: version(name)
+            for name in (
+                "sphinx",
+                "sphinx-rtd-theme",
+                "sphinx-autodoc-typehints",
+                "myst-parser",
+                "sphinx-copybutton",
+            )
+        },
         "files": hashes,
         "scope": "strict generated offline HTML/version delivery; not whole-guide semantic or hosted acceptance",
     }

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Prepare source-bound offline documentation patches for normal PR review with
+  read-only CI permissions, instead of attempting protected-branch pushes.
+  Retain a failing drift check until generated changes are reviewed and committed.
+
 ## [2.43.22] - 2026-11-16
 
 ### Fixed
