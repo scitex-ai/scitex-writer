@@ -1,41 +1,32 @@
 name: vendor-sphinx-html
 
-# Vendors the built Sphinx HTML into src/scitex_writer/_sphinx_html/ so the
-# package can serve its own docs offline. Genuinely unique to this leaf — no
-# org workflow commits into a consumer's package tree — which is why it is a
-# local workflow and not a caller.
-#
-# It used to be two extra steps bolted onto the docs BUILD workflow. That file
-# now calls the org reusable (PS-231), and the shared half cannot carry a
-# leaf-specific commit step, so the two jobs are separated by what they are:
-#   docs                -> gate the build (org reusable, runs on PRs too)
-#   vendor-sphinx-html  -> produce and commit the bundle (here, develop only)
-#
-# The build is repeated rather than passed as an artifact between workflows.
-# That is deliberate: an artifact handoff would couple this file to the org
-# workflow's internals — the very coupling PS-231 exists to remove — and the
-# duplicate build costs one job on develop pushes only, never on a PR.
-
+# Prepare leaf-owned offline docs for review. Protected branches are updated
+# only through a normal PR; this workflow never commits or pushes source.
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/vendor-sphinx-html.yml"
+      - "docs/sphinx/**"
+      - "scripts/build_docs.py"
+      - "scripts/prepare_docs_update.py"
+      - "src/scitex_writer/_sphinx_html/**"
+      - "pyproject.toml"
   push:
     branches: [develop]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   vendor:
-    # Skip when HEAD is this workflow's own previous auto-commit — breaks the
-    # infinite loop without using `[skip ci]`, which would also suppress the
-    # tag-push and release workflows whenever the auto-commit happens to be
-    # the most recent commit on develop at release time.
-    if: "!contains(github.event.head_commit.message, 'docs(sphinx_html): refresh from CI build')"
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
@@ -44,15 +35,19 @@ jobs:
       - name: Install package + docs deps
         run: pip install -e ".[docs]"
 
-      - name: Build and refresh version-bound offline HTML
-        run: python scripts/build_docs.py --receipt "$RUNNER_TEMP/writer-offline-docs.json"
+      - name: Prepare version-bound docs review artifact
+        run: python scripts/prepare_docs_update.py --output "$RUNNER_TEMP/writer-docs-review"
 
-      - name: Commit refreshed HTML if it changed
+      - name: Upload generated candidate for normal review
+        uses: actions/upload-artifact@v4
+        with:
+          name: writer-offline-docs-review-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/writer-docs-review/
+          if-no-files-found: error
+
+      - name: Require the generated bundle to be committed through review
         run: |
-          if [ -n "$(git status --porcelain src/scitex_writer/_sphinx_html)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add src/scitex_writer/_sphinx_html
-            git commit -m "docs(sphinx_html): refresh from CI build"
-            git push
+          if [ -n "$(git status --porcelain --untracked-files=all -- src/scitex_writer/_sphinx_html)" ]; then
+            echo "::error::Offline docs differ from source. Review the source-bound artifact and submit bundle.patch through a normal pull request."
+            exit 1
           fi
