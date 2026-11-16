@@ -265,7 +265,7 @@ export class InsertPanel {
           ${thumb}
           <div class="insert-item-meta">
             <div class="insert-item-label">${escapeHtml(item.label)}</div>
-            ${item.notice ? `<div class="insert-item-sub" role="status" data-media-status>${escapeHtml(item.notice)}</div>` : ""}
+            ${item.notice ? `<div class="insert-item-sub insert-item-notice" role="status" data-media-status>${escapeHtml(item.notice)}</div>` : ""}
             ${item.sub && item.sub !== item.insert ? `<div class="insert-item-sub">${escapeHtml(item.sub)}</div>` : ""}
             <div class="insert-item-snippet">${escapeHtml(item.insert)}</div>
             <button type="button" class="insert-item-action" draggable="false">Insert reference</button>
@@ -293,7 +293,7 @@ export class InsertPanel {
           placeholder.textContent = "—";
           image.replaceWith(placeholder);
           const notice = el.querySelector<HTMLElement>("[data-media-status]") || document.createElement("div");
-          notice.className = "insert-item-sub";
+          notice.className = "insert-item-sub insert-item-notice";
           notice.dataset.mediaStatus = "";
           notice.setAttribute("role", "status");
           notice.textContent = "Preview unavailable. Check that the source file exists and can be opened.";

@@ -1537,6 +1537,13 @@ select:focus {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Status guidance must remain readable beside thumbnail cards. */
+.insert-item--thumb .insert-item-notice {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
 
 /* Citations panel (scholar-aware) */
 .citations-panel {
