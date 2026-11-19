@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.44.1] - 2026-11-19
+
+Release of the 2.44.0 content. The 2.44.0 tag failed its release test gate
+(7 tests in `test_check_clew_verify.py` on the release SIF) and stays
+unchanged and unpublished.
+
+### Fixed
+
+- `test_check_clew_verify.py`: the fake `clew` used `#!/usr/bin/env python3`,
+  but its subprocess gets a minimal `PATH`. In the release SIF, Python lives
+  only in `/opt/venv-3.11`, so the fake could not start. It now names the
+  test interpreter (`sys.executable`) directly.
+
 ## [2.44.0] - 2026-11-19
 
 ### Changed
