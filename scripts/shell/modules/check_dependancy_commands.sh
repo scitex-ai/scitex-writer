@@ -45,16 +45,26 @@ log_info "Running ${BASH_SOURCE[0]}..."
 # returned a non-empty string. Probes through the full command incl. any
 # container-exec prefix, so a present-but-unmountable .sif (squashfuse
 # 'fuse: device not found') fails here instead of being greenlit as a working
-# engine. Returns 0 only when the probe runs to a 0 exit within the timeout.
+# engine. Returns 0 when the probe runs to a 0 exit within the timeout, or --
+# for tools whose --version exits non-zero (latexdiff 1.3.1a in writer's own
+# TeX Live SIF exits 255) -- when it did not time out and its output names the
+# tool together with a version number (issue #505). An error such as
+# "latexdiff: not found" names the tool but carries no version, so it fails.
 _probe_runs() {
     local cmd="$1"
     [ -z "$cmd" ] && return 1
+    local tool out rc
+    tool=$(basename "${cmd##* }")
     # shellcheck disable=SC2086  # $cmd is a multi-word resolved command line.
     if command -v timeout &>/dev/null; then
-        timeout 20 $cmd --version &>/dev/null
+        out=$(timeout 20 $cmd --version 2>&1)
     else
-        $cmd --version &>/dev/null
+        out=$($cmd --version 2>&1)
     fi
+    rc=$?
+    [ "$rc" -eq 0 ] && return 0
+    [ "$rc" -eq 124 ] && return 1
+    printf '%s\n' "$out" | grep -iqE "${tool}.*[0-9]+\.[0-9]+"
 }
 
 # Detect package manager
