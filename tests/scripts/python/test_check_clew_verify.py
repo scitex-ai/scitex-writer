@@ -29,7 +29,10 @@ from check_clew_verify import (  # noqa: E402
 
 _SCRIPT = ROOT_DIR / "scripts" / "python" / "check_clew_verify.py"
 
-_FAKE_CLEW = """#!/usr/bin/env python3
+# The shebang names THIS interpreter: the subprocess gets a minimal PATH
+# (os.defpath), and an image whose Python lives only in a venv (the release
+# SIF: /opt/venv-3.11/bin/python) has no `python3` there for `env` to find.
+_FAKE_CLEW = f"""#!{sys.executable}
 import os, sys
 sys.stdout.write("fake clew args: %s\\n" % " ".join(sys.argv[1:]))
 sys.exit(int(os.environ.get("FAKE_CLEW_EXIT", "0")))
