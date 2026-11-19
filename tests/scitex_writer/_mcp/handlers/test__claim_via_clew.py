@@ -12,13 +12,18 @@ Before: ``add_claim`` wrote its own ``00_shared/claims.json`` and never called
 * ``claims.json`` is only a derived export; a legacy one is migrated, loudly;
 * with no reachable store every call FAILS, and nothing is read from or
   written to the JSON file as a substitute;
-* remove + re-add round-trips (clew hides removed rows; writer supersedes).
+* remove + re-add round-trips (writer supersedes; re-registering reactivates);
+* writer's fields use clew's native columns (display / value / source_keys /
+  tolerance / metadata), so ``clew verify`` itself checks located values,
+  and rows written as the older JSON envelope are still read;
+* every clew call is scoped by ``project_root``, never by the cwd.
 
 Real files, real PostgreSQL schema (``clew_store``), no mocks.
 """
 
 import json
 import os
+import warnings
 from pathlib import Path
 
 import pytest
@@ -33,11 +38,12 @@ from scitex_writer._mcp.handlers._claim import (
 from scitex_writer._mcp.handlers._claim_store import (
     DERIVED_MARKER,
     ENVELOPE_SCHEMA,
+    METADATA_SCHEMA,
 )
 
 
-def _project(tmp_path: Path) -> Path:
-    project = tmp_path / "paper"
+def _project(tmp_path: Path, name: str = "paper") -> Path:
+    project = tmp_path / name
     (project / "00_shared").mkdir(parents=True)
     contents = project / "01_manuscript" / "contents"
     contents.mkdir(parents=True)
@@ -57,15 +63,33 @@ def _clew_rows(project: Path):
     """The claims as CLEW reports them — not via any writer code path."""
     import scitex_clew
 
-    previous = os.getcwd()
-    os.chdir(project)
-    try:
-        return {
-            c.claim_id: c
-            for c in scitex_clew.list_claims(file_path_prefix=str(project.resolve()))
-        }
-    finally:
-        os.chdir(previous)
+    return {
+        c.claim_id: c
+        for c in scitex_clew.list_claims(
+            file_path_prefix=str(project.resolve()), project_root=str(project)
+        )
+    }
+
+
+def _clew_rows_at(scope: Path, project: Path):
+    """The project's claims as clew lists them in the scope of ``scope``."""
+    import scitex_clew
+
+    return {
+        c.claim_id: c
+        for c in scitex_clew.list_claims(
+            file_path_prefix=str(project.resolve()), project_root=str(scope)
+        )
+    }
+
+
+def _clew_verify(project: Path, claim_id: str) -> dict:
+    """clew's own verdict on one claim (clew's verify, not writer's check)."""
+    import scitex_clew
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        return scitex_clew.verify_claim(claim_id, project_root=str(project))
 
 
 # ---------------------------------------------------------------------------
@@ -112,20 +136,164 @@ class TestRegistrationThroughClew:
             row.line_number,
         ) == (True, True, "results.tex", 2)
 
-    def test_writer_fields_travel_in_a_versioned_envelope(self, tmp_path, clew_store):
+    def test_claim_value_is_only_the_display_string(self, tmp_path, clew_store):
         # Arrange
         project = _project(tmp_path)
 
         # Act
         add_claim(str(project), "acc", "value", {"value": 0.91}, context="test acc")
-        payload = json.loads(_clew_rows(project)["acc"].claim_value)
+        row = _clew_rows(project)["acc"]
+
+        # Assert: no JSON packed into clew's display column any more
+        assert row.claim_value == "0.91"
+
+    def test_writer_fields_travel_in_clews_metadata(self, tmp_path, clew_store):
+        # Arrange
+        project = _project(tmp_path)
+
+        # Act
+        add_claim(str(project), "acc", "value", {"value": 0.91}, context="test acc")
+        metadata = _clew_rows(project)["acc"].metadata
 
         # Assert
-        assert (payload["schema"], payload["value"], payload["context"]) == (
-            ENVELOPE_SCHEMA,
+        assert (metadata["schema"], metadata["value"], metadata["context"]) == (
+            METADATA_SCHEMA,
             {"value": 0.91},
             "test acc",
         )
+
+    def test_locator_and_tolerance_use_clews_native_columns(self, tmp_path, clew_store):
+        # Arrange
+        project = _project(tmp_path)
+        locator = {"value": {"pointer": "/test/acc"}}
+
+        # Act
+        add_claim(
+            str(project),
+            "acc",
+            "value",
+            {"value": 0.9134, "unit": "%"},
+            output_file="data/metrics.json",
+            source_keys=locator,
+            tolerance={"abs_tol": 0.001},
+        )
+        row = _clew_rows(project)["acc"]
+
+        # Assert: clew's value = the LOCATED field only (unit is render data)
+        assert (row.value, row.source_keys, row.tolerance) == (
+            {"value": 0.9134},
+            locator,
+            {"abs_tol": 0.001},
+        )
+
+    def test_clews_own_verify_reads_the_located_value(self, tmp_path, clew_store):
+        # Arrange
+        project = _project(tmp_path)
+        add_claim(
+            str(project),
+            "acc",
+            "value",
+            {"value": 0.9134},
+            output_file="data/metrics.json",
+            source_keys={"value": {"pointer": "/test/acc"}},
+        )
+
+        # Act
+        result = _clew_verify(project, "acc")
+
+        # Assert: clew itself (not writer) re-read /test/acc and compared it
+        assert [(c["field"], c["ok"]) for c in result["value_checks"]] == [
+            ("text/value", True),
+            ("value", True),
+        ]
+
+    def test_statistic_with_p_below_bound_verifies_in_clew(self, tmp_path, clew_store):
+        # Arrange: rendered "p < 0.001" for p = 0.0002 must not read as 0.001
+        project = _project(tmp_path)
+        (project / "data" / "stats.json").write_text(
+            json.dumps({"t": 5.123, "df": 28, "p": 0.0002}), encoding="utf-8"
+        )
+        add_claim(
+            str(project),
+            "ttest",
+            "statistic",
+            {"t": 5.123, "df": 28, "p": 0.0002},
+            output_file="data/stats.json",
+            source_keys={"t": "/t", "p": "/p"},
+        )
+
+        # Act
+        result = _clew_verify(project, "ttest")
+
+        # Assert
+        assert all(c["ok"] for c in result["value_checks"]), result["details"]
+
+    def test_legacy_envelope_rows_are_still_read(self, tmp_path, clew_store):
+        # Arrange: a row as writer registered it before the native columns
+        import scitex_clew
+
+        project = _project(tmp_path)
+        envelope = {
+            "schema": ENVELOPE_SCHEMA,
+            "display": "0.91",
+            "type": "value",
+            "value": {"value": 0.91},
+            "context": "old acc",
+        }
+        scitex_clew.add_claim(
+            file_path=str(project / "00_shared" / "claims.json"),
+            claim_type="value",
+            claim_value=json.dumps(envelope),
+            claim_id="acc",
+            project_root=str(project),
+        )
+
+        # Act
+        claim = get_claim(str(project), "acc")["claim"]
+
+        # Assert
+        assert (claim["value"], claim["context"]) == ({"value": 0.91}, "old acc")
+
+    def test_registration_never_changes_the_working_directory(
+        self, tmp_path, clew_store
+    ):
+        # Arrange: run from somewhere that is NOT the project
+        project = _project(tmp_path)
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        previous = os.getcwd()
+        os.chdir(elsewhere)
+        try:
+            # Act
+            add_claim(str(project), "acc", "value", {"value": 0.91})
+            cwd_after = Path.cwd()
+        finally:
+            os.chdir(previous)
+
+        # Assert: scoped to the project by project_root, not by the cwd
+        assert (cwd_after, "acc" in _clew_rows(project)) == (elsewhere, True)
+
+    def test_workspace_shares_the_research_projects_clew_scope(
+        self, tmp_path, clew_store
+    ):
+        # Arrange: create-project puts the workspace at <root>/.scitex/writer,
+        # a template clone carrying its OWN .git and pyproject.toml; its claims
+        # still belong with the runs of <root>.
+        root = tmp_path / "study"
+        root.mkdir()
+        (root / "pyproject.toml").write_text("[project]\nname = 'study'\n")
+        workspace = _project(root / ".scitex", name="writer")
+        (workspace / ".git").mkdir()
+        (workspace / "pyproject.toml").write_text("[project]\nname = 'tmpl'\n")
+
+        # Act
+        add_claim(str(workspace), "acc", "value", {"value": 0.91})
+
+        # Assert: visible in the research root's scope, not only the workspace's
+        assert (
+            "acc" in _clew_rows_at(root, workspace),
+            "acc" in _clew_rows_at(workspace, workspace),
+        ) == (True, False)
 
     def test_claims_json_is_a_derived_export(self, tmp_path, clew_store):
         # Arrange

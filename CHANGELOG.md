@@ -7,8 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Claims are stored in scitex-clew, the one claim store (#502).
+  `writer_claim_add`, `sw.claim.add` and `POST api/claims` register through
+  `scitex_clew.add_claim`. `00_shared/claims.json` is now a derived export,
+  and a legacy writer-owned file is migrated on first read, with a warning.
+  Without clew, or with the store unreachable, claim calls fail with
+  `error_kind: "clew_unavailable"`. There is no JSON fallback.
+- Claim fields use clew's native columns (`scitex-clew>=0.35.0`).
+  `claim_value` holds only the display string. The located value,
+  `source_keys` and `tolerance` are clew's own fields, so `clew verify` and
+  live-paper's clew evidence provider re-read located values themselves.
+  The writer type, value, context and test are stored in clew `metadata`
+  (`scitex-writer-claim/2`). Rows in the older JSON-envelope format
+  (`scitex-writer-claim/1`) are still read.
+- Every clew call passes `project_root=`, and the locked `chdir` into the
+  project is gone. The root is resolved by clew's own rule. For a
+  `<project>/.scitex/writer` workspace, resolution starts at `<project>`,
+  so a manuscript's claims share the clew scope of the study runs that
+  produced their sources. Before, they were scoped to the workspace
+  template's own `pyproject.toml` and `.git`, and `clew verify` run at the
+  study root did not see them.
+
+### Added
+
+- Value-vs-source gate (#502): `source_keys` locators (JSON Pointer or
+  CSV/TSV cell) and tolerances. A claim that contradicts its source is refused
+  at registration. `check_claim_values.py` re-checks every located value
+  before compile, and is also available as `writer_claim_check_values` /
+  `sw.claim.check_values`.
+
 ### Fixed
 
+- A new project no longer logs "MIGRATING legacy claims.json" for the
+  empty `claims.json` that the project template ships. A legacy file with no
+  claims becomes the derived export without a notice or a `.pre-clew`
+  backup.
+- A p-value between 0.001 and 0.01 rendered without its relation
+  (`p 0.003`). It now renders as `p = 0.003` (APA: `p = .003`).
+- The pre-compile clew gate now reports clew's exit codes 14-24 by name
+  (for example `VALUE_MISMATCH` or `STALE_LINEAGE`) instead of
+  `clew exited N`.
 - Prepare source-bound offline documentation patches for normal PR review with
   read-only CI permissions, instead of attempting protected-branch pushes.
   Retain a failing drift check until generated changes are reviewed and committed.

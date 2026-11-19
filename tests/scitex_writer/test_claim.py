@@ -29,7 +29,9 @@ def _make_project(tmp_path: Path) -> Path:
 class TestClaimAdd:
     """Test adding claims."""
 
-    def test_add_statistic_result_success_and_result_claim_id_group_compariso(self, tmp_path):
+    def test_add_statistic_result_success_and_result_claim_id_group_compariso(
+        self, tmp_path
+    ):
         # Arrange
         import scitex_writer.claim as sc
 
@@ -43,7 +45,7 @@ class TestClaimAdd:
             context="Group A vs B",
         )
         # Assert
-        assert (result['success']) and (result['claim_id'] == 'group_comparison')
+        assert (result["success"]) and (result["claim_id"] == "group_comparison")
 
     def test_add_value_result_success(self, tmp_path):
         # Arrange
@@ -78,6 +80,7 @@ class TestClaimAdd:
     def test_add_creates_claims_json_claims_file_exists(self, tmp_path):
         # Arrange
         import scitex_writer.claim as sc
+
         project_dir = _make_project(tmp_path)
         sc.add(
             project_dir=project_dir,
@@ -94,6 +97,7 @@ class TestClaimAdd:
     def test_add_creates_claims_json_c1_in_data_claims(self, tmp_path):
         # Arrange
         import scitex_writer.claim as sc
+
         project_dir = _make_project(tmp_path)
         sc.add(
             project_dir=project_dir,
@@ -107,7 +111,6 @@ class TestClaimAdd:
         # Act
         # Assert
         assert "c1" in data["claims"]
-
 
     def test_add_preserves_existing(self, tmp_path):
         # Arrange
@@ -135,7 +138,9 @@ class TestClaimAdd:
 class TestClaimList:
     """Test listing claims."""
 
-    def test_list_empty_result_success_and_result_count_0_and_result_claim(self, tmp_path):
+    def test_list_empty_result_success_and_result_count_0_and_result_claim(
+        self, tmp_path
+    ):
         # Arrange
         import scitex_writer.claim as sc
 
@@ -143,7 +148,9 @@ class TestClaimList:
         # Act
         result = sc.list(project_dir=project_dir)
         # Assert
-        assert (result['success']) and (result['count'] == 0) and (result['claims'] == [])
+        assert (
+            (result["success"]) and (result["count"] == 0) and (result["claims"] == [])
+        )
 
     def test_list_after_add(self, tmp_path):
         # Arrange
@@ -159,7 +166,12 @@ class TestClaimList:
         # Act
         result = sc.list(project_dir=project_dir)
         # Assert
-        assert (result['success']) and (result['count'] == 1) and (result['claims'][0]['claim_id'] == 'stat1') and (result['claims'][0]['type'] == 'statistic')
+        assert (
+            (result["success"])
+            and (result["count"] == 1)
+            and (result["claims"][0]["claim_id"] == "stat1")
+            and (result["claims"][0]["type"] == "statistic")
+        )
 
     def test_list_includes_preview(self, tmp_path):
         # Arrange
@@ -196,7 +208,7 @@ class TestClaimGet:
         # Act
         result = sc.get(project_dir=project_dir, claim_id="my_claim")
         # Assert
-        assert (result['success']) and (result['claim']['type'] == 'citation')
+        assert (result["success"]) and (result["claim"]["type"] == "citation")
 
     def test_get_missing_not_result_success(self, tmp_path):
         # Arrange
@@ -212,7 +224,9 @@ class TestClaimGet:
 class TestClaimRemove:
     """Test removing claims."""
 
-    def test_remove_existing_result_success_and_sc_list_project_dir_project_dir(self, tmp_path):
+    def test_remove_existing_result_success_and_sc_list_project_dir_project_dir(
+        self, tmp_path
+    ):
         # Arrange
         import scitex_writer.claim as sc
 
@@ -226,7 +240,7 @@ class TestClaimRemove:
         # Act
         result = sc.remove(project_dir=project_dir, claim_id="to_delete")
         # Assert
-        assert (result['success']) and (sc.list(project_dir=project_dir)['count'] == 0)
+        assert (result["success"]) and (sc.list(project_dir=project_dir)["count"] == 0)
 
     def test_remove_missing_not_result_success(self, tmp_path):
         # Arrange
@@ -256,7 +270,11 @@ class TestClaimFormat:
         # Act
         result = sc.format(project_dir=project_dir, claim_id="s1", style="nature")
         # Assert
-        assert (result['success']) and ('t' in result['rendered']) and ('4.23' in result['rendered'])
+        assert (
+            (result["success"])
+            and ("t" in result["rendered"])
+            and ("4.23" in result["rendered"])
+        )
 
     def test_format_statistic_apa(self, tmp_path):
         # Arrange
@@ -272,7 +290,7 @@ class TestClaimFormat:
         # Act
         result = sc.format(project_dir=project_dir, claim_id="s1", style="apa")
         # Assert
-        assert (result['success']) and ('Cohen' in result['rendered'])
+        assert (result["success"]) and ("Cohen" in result["rendered"])
 
     def test_format_statistic_plain(self, tmp_path):
         # Arrange
@@ -288,7 +306,7 @@ class TestClaimFormat:
         # Act
         result = sc.format(project_dir=project_dir, claim_id="s1", style="plain")
         # Assert
-        assert (result['success']) and ('$' not in result['rendered'])
+        assert (result["success"]) and ("$" not in result["rendered"])
 
     def test_format_p_small(self, tmp_path):
         """p < 0.001 should render as < 0.001, not 0.000."""
@@ -305,9 +323,34 @@ class TestClaimFormat:
         # Act
         result = sc.format(project_dir=project_dir, claim_id="s1", style="nature")
         # Assert
-        assert (result['success']) and ('0.001' in result['rendered'])
+        assert (result["success"]) and ("0.001" in result["rendered"])
 
-    def test_format_citation_result_success_and_as_shown_previously_in_result_r(self, tmp_path):
+    @pytest.mark.parametrize(
+        "style, expected",
+        [("nature", "$p = 0.003$"), ("apa", "$p = .003$"), ("plain", "p = 0.003")],
+    )
+    def test_format_p_between_001_and_01_keeps_the_equals_sign(
+        self, tmp_path, style, expected
+    ):
+        """0.001 <= p < 0.01 rendered as "p 0.003" (no relation) before."""
+        # Arrange
+        import scitex_writer.claim as sc
+
+        project_dir = _make_project(tmp_path)
+        sc.add(
+            project_dir=project_dir,
+            claim_id="s1",
+            claim_type="statistic",
+            value={"t": 3.1, "df": 40, "p": 0.003},
+        )
+        # Act
+        result = sc.format(project_dir=project_dir, claim_id="s1", style=style)
+        # Assert
+        assert expected in result["rendered"]
+
+    def test_format_citation_result_success_and_as_shown_previously_in_result_r(
+        self, tmp_path
+    ):
         # Arrange
         import scitex_writer.claim as sc
 
@@ -321,9 +364,11 @@ class TestClaimFormat:
         # Act
         result = sc.format(project_dir=project_dir, claim_id="c1", style="nature")
         # Assert
-        assert (result['success']) and ('as shown previously' in result['rendered'])
+        assert (result["success"]) and ("as shown previously" in result["rendered"])
 
-    def test_format_value_result_success_and_42_3_in_result_rendered_and_ms_(self, tmp_path):
+    def test_format_value_result_success_and_42_3_in_result_rendered_and_ms_(
+        self, tmp_path
+    ):
         # Arrange
         import scitex_writer.claim as sc
 
@@ -337,7 +382,11 @@ class TestClaimFormat:
         # Act
         result = sc.format(project_dir=project_dir, claim_id="v1", style="nature")
         # Assert
-        assert (result['success']) and ('42.3' in result['rendered']) and ('ms' in result['rendered'])
+        assert (
+            (result["success"])
+            and ("42.3" in result["rendered"])
+            and ("ms" in result["rendered"])
+        )
 
 
 class TestClaimRender:
@@ -346,6 +395,7 @@ class TestClaimRender:
     def test_render_creates_tex_result_success(self, tmp_path):
         # Arrange
         import scitex_writer.claim as sc
+
         project_dir = _make_project(tmp_path)
         sc.add(
             project_dir=project_dir,
@@ -362,6 +412,7 @@ class TestClaimRender:
     def test_render_creates_tex_tex_path_exists(self, tmp_path):
         # Arrange
         import scitex_writer.claim as sc
+
         project_dir = _make_project(tmp_path)
         sc.add(
             project_dir=project_dir,
@@ -375,7 +426,6 @@ class TestClaimRender:
         # Act
         # Assert
         assert tex_path.exists()
-
 
     def test_render_tex_has_macro(self, tmp_path):
         # Arrange
@@ -392,7 +442,7 @@ class TestClaimRender:
         # Act
         tex = (Path(project_dir) / "00_shared" / "claims_rendered.tex").read_text()
         # Assert
-        assert ('\\vclaim' in tex) and ('mystat' in tex)
+        assert ("\\vclaim" in tex) and ("mystat" in tex)
 
     def test_render_all_styles(self, tmp_path):
         """Rendered .tex defines nature, apa, and plain macros for each claim."""
@@ -410,21 +460,23 @@ class TestClaimRender:
         # Act
         tex = (Path(project_dir) / "00_shared" / "claims_rendered.tex").read_text()
         # Assert
-        assert ('@nature' in tex) and ('@apa' in tex) and ('@plain' in tex)
+        assert ("@nature" in tex) and ("@apa" in tex) and ("@plain" in tex)
 
     def test_render_empty_result_success_and_result_claims_count_0(self, tmp_path):
         # Arrange
         import scitex_writer.claim as sc
+
         project_dir = _make_project(tmp_path)
         # Act
         result = sc.render(project_dir=project_dir)
         # Act
         # Assert
-        assert (result['success']) and (result['claims_count'] == 0)
+        assert (result["success"]) and (result["claims_count"] == 0)
 
     def test_render_empty_tex_path_exists(self, tmp_path):
         # Arrange
         import scitex_writer.claim as sc
+
         project_dir = _make_project(tmp_path)
         result = sc.render(project_dir=project_dir)
         # Act
@@ -432,7 +484,6 @@ class TestClaimRender:
         # Act
         # Assert
         assert tex_path.exists()
-
 
     def test_render_emits_hypertarget_for_living_paper(self, tmp_path):
         """Each claim's rendered output wraps in \\hypertarget{vclaim-<id>}{…}
@@ -454,7 +505,18 @@ class TestClaimRender:
         tex = (Path(project_dir) / "00_shared" / "claims_rendered.tex").read_text()
         # Hypertarget name uses the sanitized id
         # Assert
-        assert ('\\hypertarget{vclaim-groupcomparison}' in tex) and ('v@claim@groupcomparison@anchored' in tex) and (all((f'v@claim@groupcomparison@{style}' in tex for style in ('nature', 'apa', 'plain'))))
+        assert (
+            ("\\hypertarget{vclaim-groupcomparison}" in tex)
+            and ("v@claim@groupcomparison@anchored" in tex)
+            and (
+                all(
+                    (
+                        f"v@claim@groupcomparison@{style}" in tex
+                        for style in ("nature", "apa", "plain")
+                    )
+                )
+            )
+        )
 
     def test_render_hypertarget_not_re_emitted_after_first_call(self, tmp_path):
         """The one-shot flag pattern should let multiple \\vclaim{id} calls
@@ -474,7 +536,9 @@ class TestClaimRender:
         tex = (Path(project_dir) / "00_shared" / "claims_rendered.tex").read_text()
         # The guarded expansion pattern
         # Assert
-        assert ('\\expandafter\\ifx\\csname v@claim@x@anchored\\endcsname\\relax' in tex) and ('\\global\\@namedef{v@claim@x@anchored}' in tex)
+        assert (
+            "\\expandafter\\ifx\\csname v@claim@x@anchored\\endcsname\\relax" in tex
+        ) and ("\\global\\@namedef{v@claim@x@anchored}" in tex)
 
 
 class TestClaimPublicApi:
@@ -496,7 +560,15 @@ class TestClaimPublicApi:
         import scitex_writer as sw
 
         # Assert
-        assert all(name not in sw.__all__ for name in ['CompilationResult', 'ManuscriptTree', 'RevisionTree', 'SupplementaryTree']), f'{name} should be hidden from __all__'
+        assert all(
+            name not in sw.__all__
+            for name in [
+                "CompilationResult",
+                "ManuscriptTree",
+                "RevisionTree",
+                "SupplementaryTree",
+            ]
+        ), f"{name} should be hidden from __all__"
 
     def test_claim_in_top_level_all(self):
         """claim module should be in scitex_writer.__all__."""
