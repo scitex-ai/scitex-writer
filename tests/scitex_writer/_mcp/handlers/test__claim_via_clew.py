@@ -33,8 +33,6 @@ from scitex_writer._mcp.handlers._claim import (
 from scitex_writer._mcp.handlers._claim_store import (
     DERIVED_MARKER,
     ENVELOPE_SCHEMA,
-    METADATA_KEY,
-    encode_envelope,
 )
 
 
@@ -120,7 +118,7 @@ class TestRegistrationThroughClew:
 
         # Act
         add_claim(str(project), "acc", "value", {"value": 0.91}, context="test acc")
-        payload = _clew_rows(project)["acc"].metadata[METADATA_KEY]
+        payload = json.loads(_clew_rows(project)["acc"].claim_value)
 
         # Assert
         assert (payload["schema"], payload["value"], payload["context"]) == (
@@ -347,132 +345,6 @@ def test_writer_only_claim_type_maps_onto_a_clew_type(tmp_path, clew_store, clai
         _clew_rows(project)["rep"].claim_type,
         get_claim(str(project), "rep")["claim"]["type"],
     ) == ("text", claim_type)
-
-
-# ---------------------------------------------------------------------------
-# clew checks the located VALUE itself (not only the source file's hash)
-# ---------------------------------------------------------------------------
-
-
-def _add_located(project: Path, **extra):
-    return add_claim(
-        str(project),
-        "acc",
-        "value",
-        {"value": 0.9134},
-        output_file="data/metrics.json",
-        source_keys={"value": {"pointer": "/test/acc"}},
-        **extra,
-    )
-
-
-def _verify(project: Path, claim_id: str = "acc"):
-    import scitex_clew
-
-    return scitex_clew.verify_claim(claim_id, project_root=str(project))
-
-
-class TestClewChecksTheLocatedValue:
-    def test_located_claim_is_value_verified_by_clew(self, tmp_path, clew_store):
-        # Arrange
-        project = _project(tmp_path)
-        _add_located(project)
-
-        # Act
-        result = _verify(project)
-
-        # Assert: checked through the locator, never VALUE_UNCHECKED
-        located = [c for c in result["value_checks"] if c["field"] == "value"]
-        assert (
-            result.get("value_verified"),
-            "value_unchecked" in result,
-            [c["ok"] for c in located],
-        ) == (True, False, [True])
-
-    def test_clew_receives_locators_value_and_tolerance(self, tmp_path, clew_store):
-        # Arrange
-        project = _project(tmp_path)
-
-        # Act
-        _add_located(project, tolerance={"abs_tol": 0.001})
-        row = _clew_rows(project)["acc"]
-
-        # Assert
-        assert (row.value, row.source_keys, row.tolerance) == (
-            {"value": 0.9134},
-            {"value": {"pointer": "/test/acc"}},
-            {"abs_tol": 0.001},
-        )
-
-    def test_clew_claim_text_is_the_display_string(self, tmp_path, clew_store):
-        # Arrange
-        project = _project(tmp_path)
-
-        # Act
-        _add_located(project)
-
-        # Assert: readers of clew's claim see what the manuscript states
-        assert _clew_rows(project)["acc"].claim_value == "0.9134"
-
-    def test_contradicting_source_is_a_value_mismatch(self, tmp_path, clew_store):
-        # Arrange: registered against the true value; the source then changes
-        # to contradict it. (verify_claim stops earlier on the hash change, so
-        # clew's value check is run on the row exactly as writer stored it.)
-        from scitex_clew._claim._value_check import check_claim_value
-
-        project = _project(tmp_path)
-        _add_located(project)
-        (project / "data" / "metrics.json").write_text(
-            json.dumps({"test": {"acc": 0.5}}), encoding="utf-8"
-        )
-        result = {"details": []}
-
-        # Act
-        status = check_claim_value(_clew_rows(project)["acc"], result)
-
-        # Assert
-        assert (status, result["value_verified"]) == ("mismatch", False)
-
-    def test_unstated_value_field_is_not_sent_to_clew(self, tmp_path, clew_store):
-        # Arrange: "n" is in the value dict but the sentence does not state it.
-        project = _project(tmp_path)
-
-        # Act
-        add_claim(
-            str(project),
-            "acc",
-            "value",
-            {"value": 0.9134, "n": 120, "template": "{value}"},
-            output_file="data/metrics.json",
-            source_keys={"value": {"pointer": "/test/acc"}},
-        )
-
-        # Assert
-        assert (
-            _clew_rows(project)["acc"].value,
-            _verify(project).get("value_verified"),
-        ) == ({"value": 0.9134}, True)
-
-
-def test_envelope_in_claim_value_is_still_read_back(tmp_path, clew_store):
-    # Arrange: a row as pre-metadata writers stored it (envelope in claim_value)
-    import scitex_clew
-
-    project = _project(tmp_path)
-    entry = {"type": "value", "value": {"value": 0.91}, "context": "old"}
-    scitex_clew.add_claim(
-        file_path=str(project / "00_shared" / "claims.json"),
-        claim_type="value",
-        claim_value=encode_envelope(entry, "0.91"),
-        claim_id="old",
-        project_root=str(project),
-    )
-
-    # Act
-    claim = get_claim(str(project), "old")["claim"]
-
-    # Assert
-    assert (claim["value"], claim["context"]) == ({"value": 0.91}, "old")
 
 
 # EOF

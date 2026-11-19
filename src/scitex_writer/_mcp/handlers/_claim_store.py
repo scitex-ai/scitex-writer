@@ -22,22 +22,12 @@ clew DAG at all. Now:
   There is NO fallback to the local JSON: a fallback is exactly the second
   store this module exists to remove.
 
-What clew receives (scitex-clew >= 0.34.0, whose claim schema has native
-``value`` / ``source_keys`` / ``tolerance`` / ``metadata`` columns):
-
-* ``claim_value`` — the DISPLAY string, i.e. what the manuscript states. clew
-  shows it to readers and checks that it states every number in ``value``;
-* ``value`` — the located fields of the claim value (the numbers clew re-reads
-  from ``source_file`` through ``source_keys``), only when there are locators;
-* ``source_keys`` / ``tolerance`` — writer's own shape, which clew shares, so
-  ``clew verify`` re-reads and compares the located value itself instead of
-  reporting it ``VALUE_UNCHECKED``;
-* ``metadata["scitex-writer"]`` — the versioned writer envelope
-  (``scitex-writer-claim/1``: full value dict, context, test, locators), from
-  which writer reads its claims back.
-
-Rows registered by older writers carried the envelope as a JSON string in
-``claim_value``; :func:`decode_envelope` still reads those.
+Writer-only fields (structured ``value`` dict, context, test, source locators,
+tolerance) have no native column in clew's claim schema, so they travel in
+``claim_value`` as a versioned JSON envelope (``scitex-writer-claim/1``) whose
+``display`` member is the LaTeX-ready rendering clew's own consumers show.
+clew should grow a native ``metadata`` field so ``claim_value`` can go back to
+being only the display string.
 """
 
 from __future__ import annotations
@@ -155,12 +145,7 @@ def _in_project(project_path: Path) -> Iterator[Any]:
 # ---------------------------------------------------------------------------
 
 
-#: The ``metadata`` key under which writer stores its envelope in clew.
-METADATA_KEY = "scitex-writer"
-
-
-def envelope_payload(entry: Dict[str, Any], display: str) -> Dict[str, Any]:
-    """The writer envelope as a dict (stored in clew's ``metadata``)."""
+def encode_envelope(entry: Dict[str, Any], display: str) -> str:
     payload = {
         "schema": ENVELOPE_SCHEMA,
         "display": display,
@@ -171,27 +156,11 @@ def envelope_payload(entry: Dict[str, Any], display: str) -> Dict[str, Any]:
     for key in ("test", "source_keys", "tolerance"):
         if entry.get(key):
             payload[key] = entry[key]
-    return payload
+    return json.dumps(payload, sort_keys=True, ensure_ascii=False)
 
 
-def encode_envelope(entry: Dict[str, Any], display: str) -> str:
-    """The envelope as the JSON string pre-0.34 rows kept in ``claim_value``."""
-    return json.dumps(
-        envelope_payload(entry, display), sort_keys=True, ensure_ascii=False
-    )
-
-
-def decode_envelope(
-    claim_value: Optional[str], metadata: Optional[Dict[str, Any]] = None
-) -> Optional[Dict[str, Any]]:
-    """The writer payload, or None when this clew claim is not a writer claim.
-
-    Read from ``metadata[METADATA_KEY]`` (current rows), else from a JSON
-    envelope in ``claim_value`` (rows registered by older writers).
-    """
-    stored = (metadata or {}).get(METADATA_KEY) if isinstance(metadata, dict) else None
-    if isinstance(stored, dict) and stored.get("schema") == ENVELOPE_SCHEMA:
-        return stored
+def decode_envelope(claim_value: Optional[str]) -> Optional[Dict[str, Any]]:
+    """The writer payload, or None when this clew claim is not a writer claim."""
     if not claim_value or not claim_value.lstrip().startswith("{"):
         return None
     try:
@@ -257,22 +226,6 @@ def _hash_mismatch(given: str, path: Path) -> Optional[str]:
     )
 
 
-def located_value(value: Any, source_keys: Dict[str, Any]) -> Any:
-    """The part of ``value`` clew checks: the fields ``source_keys`` locate.
-
-    clew requires every number in its ``value`` to be written in the display
-    text, so only the located fields go there — a value dict also carries
-    numbers the sentence does not state (``n``, template-only fields). The
-    whole value is the checked value for a ``"."`` locator. None without
-    locators: clew then justifies the display text's numbers by search.
-    """
-    if not source_keys:
-        return None
-    if "." in source_keys or not isinstance(value, dict):
-        return value
-    return {field: value[field] for field in source_keys if field in value}
-
-
 def register(
     project_path: Path,
     claim_id: str,
@@ -331,14 +284,10 @@ def register(
             file_path=str(tex_path),
             claim_type=_CLEW_TYPE.get(entry["type"], entry["type"]),
             line_number=line_number,
-            claim_value=display,
+            claim_value=encode_envelope(entry, display),
             source_file=str(source_abs) if source_abs else None,
             source_session=entry.get("session_id"),
             claim_id=claim_id,
-            value=located_value(entry["value"], entry["source_keys"]),
-            source_keys=entry["source_keys"] or None,
-            tolerance=entry["tolerance"] or None,
-            metadata={METADATA_KEY: envelope_payload(entry, display)},
         )
     notices.extend(f"{claim_id}: {warning.message}" for warning in w)
     return notices
@@ -366,7 +315,7 @@ def load_store_claims(project_path: Path) -> Dict[str, Dict[str, Any]]:
         rows = clew.list_claims(file_path_prefix=str(project_path), limit=_NO_LIMIT)
     claims: Dict[str, Dict[str, Any]] = {}
     for row in rows:
-        payload = decode_envelope(row.claim_value, getattr(row, "metadata", None))
+        payload = decode_envelope(row.claim_value)
         if payload is None:
             continue  # a clew-native claim, not one of writer's \vclaim values
         entry: Dict[str, Any] = {
@@ -492,11 +441,8 @@ __all__ = [
     "CLAIMS_FILE",
     "ClewUnavailableError",
     "ENVELOPE_SCHEMA",
-    "METADATA_KEY",
     "decode_envelope",
     "encode_envelope",
-    "envelope_payload",
-    "located_value",
     "load_store_claims",
     "locate_in_tex",
     "register",

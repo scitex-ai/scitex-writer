@@ -136,10 +136,10 @@ all = [
     "scitex-scholar>=1.5.2",
     # Claims (sw.claim / writer_claim_*) are STORED in scitex-clew -- the one
     # claim store, so every \vclaim back-traces through clew's DAG. No local
-    # fallback exists: without clew, claim calls fail loudly. 0.34.0: add_claim
-    # takes value/source_keys/tolerance/metadata, so clew re-checks the located
-    # value itself (else every writer claim is VALUE_UNCHECKED).
-    "scitex-clew>=0.34.0",
+    # fallback exists: without clew, claim calls fail loudly. 0.21.0 is the
+    # first release whose add_claim takes an explicit claim_id on the
+    # project-scoped PostgreSQL store.
+    "scitex-clew>=0.21.0",
     # PS-221 closure: every public extra is a subset of `all`, so
     # `pip install scitex-writer[all]` pulls everything public.
     "scitex-writer[dev]",
@@ -169,10 +169,10 @@ dev = [
     "openpyxl",           # writes the .xlsx fixture for the tables xlsx stage
     # Claims (sw.claim / writer_claim_*) are STORED in scitex-clew -- the one
     # claim store, so every \vclaim back-traces through clew's DAG. No local
-    # fallback exists: without clew, claim calls fail loudly. 0.34.0: add_claim
-    # takes value/source_keys/tolerance/metadata, so clew re-checks the located
-    # value itself (else every writer claim is VALUE_UNCHECKED).
-    "scitex-clew>=0.34.0",
+    # fallback exists: without clew, claim calls fail loudly. 0.21.0 is the
+    # first release whose add_claim takes an explicit claim_id on the
+    # project-scoped PostgreSQL store.
+    "scitex-clew>=0.21.0",
 ]
 docs = [
     "sphinx>=7.0",

@@ -9,12 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Claims: pass the located `value`, `source_keys` and `tolerance` to
-  `scitex_clew.add_claim`, so `clew verify` re-reads and compares a located
-  claim itself instead of reporting it `VALUE_UNCHECKED`. clew's `claim_value`
-  is now the display string; writer's envelope moves to clew's `metadata`
-  (rows with the envelope in `claim_value` are still read). Requires
-  scitex-clew >= 0.34.0.
 - `check_dependancy_commands.sh`: accept a `--version` probe that exits
   non-zero but names the tool with a version (latexdiff 1.3.1a in the TeX Live
   SIF exits 255) (#505).
