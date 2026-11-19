@@ -42,6 +42,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `\vclaim` works in a compiled PDF again.
+  - `claims_rendered.tex` doubled its `#` to `##` for an older
+    `\IfFileExists{..}{BODY}` wrapper. `packages.tex` and the flattener now
+    load it with a plain top-level `\input`, so every `\vclaim` failed with
+    "You can't use `macro parameter character #'". The file now uses single
+    `#`. The pdflatex smoke test used to collapse `##` by hand before
+    compiling, so it never compiled the real file. It now compiles the file
+    as rendered.
+  - `\vclaim{acc_mean}` looked up the raw id while the macros are stored
+    under the sanitised id (`accmean`). Every id containing punctuation
+    therefore rendered as `[claim:acc_mean]`. The id now resolves through
+    `v@claim@id@<id>`.
+  - `\vclaim` is robust, so it is safe in captions and section titles.
+
+  The rendering moves to `_claim_render.py`.
 - A new project no longer logs "MIGRATING legacy claims.json" for the
   empty `claims.json` that the project template ships. A legacy file with no
   claims becomes the derived export without a notice or a `.pre-clew`

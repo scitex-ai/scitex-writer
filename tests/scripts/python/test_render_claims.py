@@ -96,7 +96,7 @@ def test_vclaim_looks_up_clew_hex_by_id(tmp_path):
     # Act
     tex = _rendered_tex(project)
     # Assert
-    assert "clew@hex@##1" in tex
+    assert "clew@hex@#1" in tex
 
 
 def test_vclaim_reuses_clew_decorate_for_coloring(tmp_path):
@@ -105,7 +105,7 @@ def test_vclaim_reuses_clew_decorate_for_coloring(tmp_path):
     # Act
     tex = _rendered_tex(project)
     # Assert
-    assert "\\clewDecorate{\\mbox{##2}}" in tex
+    assert "\\clewDecorate{\\mbox{#2}}" in tex
 
 
 def test_vclaim_guards_on_markers_toggle(tmp_path):
@@ -118,10 +118,32 @@ def test_vclaim_guards_on_markers_toggle(tmp_path):
 
 
 def test_vclaim_plain_fallback_when_no_clew_hex(tmp_path):
-    # Arrange: the \@ifundefined false-guard passes the plain value (##2)
+    # Arrange: the \@ifundefined false-guard passes the plain value (#2)
     # through when no clew@hex@<id> is registered (claim not in the clew feed).
     project = tmp_path
     # Act
     tex = _rendered_tex(project)
     # Assert
-    assert "\\@ifundefined{clew@hex@##1}{##2}" in tex
+    assert "\\@ifundefined{clew@hex@#1}{#2}" in tex
+
+
+def test_macro_parameters_are_single_hash_for_top_level_input(tmp_path):
+    # Arrange: packages.tex \input's the file at top level, where a doubled
+    # ## reaches the macro body as a literal parameter token.
+    project = tmp_path
+    # Act
+    tex = _rendered_tex(project)
+    # Assert
+    assert "##" not in tex
+
+
+def test_vclaim_resolves_the_typed_id_through_an_alias(tmp_path):
+    # Arrange: macros are keyed by the sanitised id; \vclaim gets the raw one.
+    project = tmp_path
+    # Act
+    tex = _rendered_tex(project)
+    # Assert
+    assert ("\\@namedef{v@claim@id@foo}{foo}" in tex, "v@claim@id@#2" in tex) == (
+        True,
+        True,
+    )
