@@ -22,12 +22,19 @@ clew DAG at all. Now:
   There is NO fallback to the local JSON: a fallback is exactly the second
   store this module exists to remove.
 
-Writer-only fields (structured ``value`` dict, context, test, source locators,
-tolerance) have no native column in clew's claim schema, so they travel in
-``claim_value`` as a versioned JSON envelope (``scitex-writer-claim/1``) whose
-``display`` member is the LaTeX-ready rendering clew's own consumers show.
-clew should grow a native ``metadata`` field so ``claim_value`` can go back to
-being only the display string.
+Writer's fields use clew's NATIVE claim columns (scitex-clew >= 0.34):
+``claim_value`` is only the LaTeX-ready display string; the structured value,
+``source_keys`` and ``tolerance`` go to clew's ``value`` / ``source_keys`` /
+``tolerance`` (so ``clew verify`` itself re-reads each located value and
+reports ``VALUE_MISMATCH``); the writer-only rest (writer type, context, test)
+rides in clew's ``metadata`` under the schema ``scitex-writer-claim/2``.
+Rows registered before that, with every field packed into ``claim_value`` as a
+``scitex-writer-claim/1`` JSON envelope, are still READ. They are not rewritten
+automatically: re-registering would re-hash the source NOW and so hide a
+source that drifted since the claim was made.
+
+Every clew call names the project explicitly (``project_root=``); nothing
+depends on, or changes, the process working directory.
 """
 
 from __future__ import annotations
@@ -36,7 +43,6 @@ import hashlib
 import json
 import os
 import re
-import threading
 import warnings
 from contextlib import contextmanager
 from pathlib import Path
@@ -44,6 +50,13 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from scitex_logging import getLogger
 
+from ._claim_fields import (
+    ENVELOPE_SCHEMA,
+    METADATA_SCHEMA,
+    clew_fields,
+    decode_envelope,
+    writer_payload,
+)
 from ._claim_paths import portable_output_file, resolve_output_file
 from ._claim_source import (
     check_claim_against_source,
@@ -55,7 +68,6 @@ logger = getLogger(__name__)
 
 CLAIMS_FILE = "00_shared/claims.json"
 LEGACY_BACKUP = "00_shared/claims.json.pre-clew"
-ENVELOPE_SCHEMA = "scitex-writer-claim/1"
 EXPORT_VERSION = "2.0"
 DERIVED_MARKER = "scitex-clew"
 EXPORT_NOTE = (
@@ -83,12 +95,9 @@ _COMPARED = (
     "tolerance",
 )
 _NO_LIMIT = 10**9
+#: ``ensure_workspace`` / ``create-project`` layout: <project>/.scitex/writer
+_WORKSPACE_PARTS = (".scitex", "writer")
 _TEX_COMMENT = re.compile(r"(?<!\\)%.*")
-
-# clew resolves its project (scope id, runtime export dir) from the process
-# CWD. A writer server handles many projects, so every clew call runs inside
-# the project dir, serialised by this lock.
-_CWD_LOCK = threading.RLock()
 
 
 class ClewUnavailableError(RuntimeError):
@@ -123,53 +132,39 @@ def _store_failure(exc: Exception) -> ClewUnavailableError:
 
 
 @contextmanager
-def _in_project(project_path: Path) -> Iterator[Any]:
+def _clew_store() -> Iterator[Any]:
+    """clew, with backend failures reported as :class:`ClewUnavailableError`.
+
+    Every call made inside passes ``project_root=`` (see :func:`_clew_root`):
+    clew scopes the claims, and its runtime export, to that project without a
+    ``chdir``, so one process can serve many projects at once.
+    """
     clew = _clew()
-    with _CWD_LOCK:
-        previous = os.getcwd()
-        os.chdir(project_path)
-        try:
-            yield clew
-        except ClewUnavailableError:
-            raise
-        except (ValueError, TypeError):
-            raise
-        except Exception as exc:  # connection / store errors from the backend
-            raise _store_failure(exc) from exc
-        finally:
-            os.chdir(previous)
-
-
-# ---------------------------------------------------------------------------
-# Envelope (writer fields inside clew's claim_value)
-# ---------------------------------------------------------------------------
-
-
-def encode_envelope(entry: Dict[str, Any], display: str) -> str:
-    payload = {
-        "schema": ENVELOPE_SCHEMA,
-        "display": display,
-        "type": entry["type"],
-        "value": entry["value"],
-        "context": entry.get("context"),
-    }
-    for key in ("test", "source_keys", "tolerance"):
-        if entry.get(key):
-            payload[key] = entry[key]
-    return json.dumps(payload, sort_keys=True, ensure_ascii=False)
-
-
-def decode_envelope(claim_value: Optional[str]) -> Optional[Dict[str, Any]]:
-    """The writer payload, or None when this clew claim is not a writer claim."""
-    if not claim_value or not claim_value.lstrip().startswith("{"):
-        return None
     try:
-        payload = json.loads(claim_value)
-    except ValueError:
-        return None
-    if not isinstance(payload, dict) or payload.get("schema") != ENVELOPE_SCHEMA:
-        return None
-    return payload
+        yield clew
+    except ClewUnavailableError:
+        raise
+    except (ValueError, TypeError):
+        raise
+    except Exception as exc:  # connection / store errors from the backend
+        raise _store_failure(exc) from exc
+
+
+def _clew_root(clew: Any, project_path: Path) -> str:
+    """The clew project that owns this manuscript.
+
+    Resolved by clew's own rule (active session, ``$SCITEX_SESSION_PROJECT_ROOT``,
+    git, project markers). For a workspace in the ``create-project`` layout,
+    ``<project>/.scitex/writer``, the rule starts at ``<project>``: the
+    workspace is a template clone with its own ``.git`` and ``pyproject.toml``,
+    so starting inside it would scope the claims to the template instead of
+    to the study whose runs produced their sources. A standalone writer
+    project starts at itself. Either way the working directory is untouched.
+    """
+    start = project_path
+    if project_path.parts[-2:] == _WORKSPACE_PARTS:
+        start = project_path.parent.parent
+    return clew.project_root_info(start=start)["project_root"]
 
 
 # ---------------------------------------------------------------------------
@@ -278,16 +273,17 @@ def register(
         tex_path, found_line = locate_in_tex(project_path, claim_id)
         line_number = line_number if line_number is not None else found_line
 
-    with _in_project(project_path) as clew, warnings.catch_warnings(record=True) as w:
+    with _clew_store() as clew, warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         clew.add_claim(
             file_path=str(tex_path),
             claim_type=_CLEW_TYPE.get(entry["type"], entry["type"]),
             line_number=line_number,
-            claim_value=encode_envelope(entry, display),
             source_file=str(source_abs) if source_abs else None,
             source_session=entry.get("session_id"),
             claim_id=claim_id,
+            project_root=_clew_root(clew, project_path),
+            **clew_fields(entry, display),
         )
     notices.extend(f"{claim_id}: {warning.message}" for warning in w)
     return notices
@@ -296,12 +292,14 @@ def register(
 def retire(project_path: Path, claim_id: str) -> bool:
     """Soft-retire (clew ``supersede_claim``): kept for audit, out of every view.
 
-    ``remove_claim`` would HIDE the row, and clew's ``add_claim`` does not
-    unhide — a claim removed and re-added under the same id would stay
-    invisible. Superseding is reversed by re-registration.
+    Unlike ``remove_claim`` (which hides the row), the retired claim stays in
+    clew's audit trail (``list_claims(include_superseded=True)``).
+    Registering the same id again makes it active again.
     """
-    with _in_project(project_path) as clew:
-        return bool(clew.supersede_claim(claim_id))
+    with _clew_store() as clew:
+        return bool(
+            clew.supersede_claim(claim_id, project_root=_clew_root(clew, project_path))
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -311,11 +309,15 @@ def retire(project_path: Path, claim_id: str) -> bool:
 
 def load_store_claims(project_path: Path) -> Dict[str, Dict[str, Any]]:
     """Every active writer claim of this project, straight from the clew store."""
-    with _in_project(project_path) as clew:
-        rows = clew.list_claims(file_path_prefix=str(project_path), limit=_NO_LIMIT)
+    with _clew_store() as clew:
+        rows = clew.list_claims(
+            file_path_prefix=str(project_path),
+            limit=_NO_LIMIT,
+            project_root=_clew_root(clew, project_path),
+        )
     claims: Dict[str, Dict[str, Any]] = {}
     for row in rows:
-        payload = decode_envelope(row.claim_value)
+        payload = writer_payload(row)
         if payload is None:
             continue  # a clew-native claim, not one of writer's \vclaim values
         entry: Dict[str, Any] = {
@@ -386,7 +388,9 @@ def sync(
         file_claims = data.get("claims", {}) or {}
         missing = [cid for cid in file_claims if cid not in store]
 
-        if not derived:
+        # A legacy file with no claims (the project template ships one) has
+        # nothing to migrate: it just becomes the derived export, silently.
+        if not derived and file_claims:
             backup = project_path / LEGACY_BACKUP
             if not backup.exists():
                 backup.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
@@ -441,14 +445,16 @@ __all__ = [
     "CLAIMS_FILE",
     "ClewUnavailableError",
     "ENVELOPE_SCHEMA",
+    "METADATA_SCHEMA",
+    "clew_fields",
     "decode_envelope",
-    "encode_envelope",
     "load_store_claims",
     "locate_in_tex",
     "register",
     "retire",
     "sync",
     "write_export",
+    "writer_payload",
 ]
 
 # EOF

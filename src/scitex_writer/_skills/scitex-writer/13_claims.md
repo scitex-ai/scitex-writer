@@ -15,8 +15,19 @@ input -> executable -> output that produced it.
 ## Storage (one store, no fallback)
 
 - `writer_claim_add` / `sw.claim.add` call `scitex_clew.add_claim(claim_id=<id>,
-  file_path=<tex with the \vclaim call site>, line_number, claim_value,
-  source_file=<output_file>, source_session=<session_id>)`.
+  file_path=<tex with the \vclaim call site>, line_number,
+  claim_value=<rendered display string>, source_file=<output_file>,
+  source_session=<session_id>, value=<the located fields>, source_keys,
+  tolerance, metadata={"schema": "scitex-writer-claim/2", type, value,
+  context, test}, project_root=<project>)` — clew's native columns, so
+  `clew verify` (and live-paper's clew evidence provider) re-reads every
+  located value itself. Rows written by writer < 2.44 (all fields packed in
+  `claim_value` as `scitex-writer-claim/1` JSON) are still read.
+- Every clew call is scoped by `project_root`; the working directory is never
+  changed, so one process can serve many projects.
+- A claim without `source_keys` is allowed: clew shows it as "registered, not
+  checkable" (it tries to find the stated number in the source; ambiguous or
+  absent -> unchecked, never passed).
 - `00_shared/claims.json` is a **derived export** of the store
   (`"_derived_from": "scitex-clew"`), regenerated after every change. Do not
   edit it; edits are overwritten (the store wins, with a warning).
