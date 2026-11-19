@@ -66,6 +66,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The pre-compile clew gate now reports clew's exit codes 14-24 by name
   (for example `VALUE_MISMATCH` or `STALE_LINEAGE`) instead of
   `clew exited N`.
+- `check_dependancy_commands.sh`: accept a `--version` probe that exits
+  non-zero but names the tool with a version (latexdiff 1.3.1a in the TeX Live
+  SIF exits 255) (#505).
+- `check_media_provenance.py --require-under-scripts`: in a vendored
+  `<repo>/.scitex/writer` workspace, accept media resolving under the research
+  repo's `scripts/` (#505).
 - Prepare source-bound offline documentation patches for normal PR review with
   read-only CI permissions, instead of attempting protected-branch pushes.
   Retain a failing drift check until generated changes are reviewed and committed.
