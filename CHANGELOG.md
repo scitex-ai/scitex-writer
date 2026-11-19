@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.44.0] - 2026-11-19
+
 ### Changed
 
 - Claims are stored in scitex-clew, the one claim store (#502).
