@@ -6,7 +6,8 @@
 # may set it read-only in the consumer workspace after vendoring).
 # File: scripts/python/render_claims.py
 # Purpose: Pre-compile generation step -- regenerate 00_shared/claims_rendered.tex
-#          from 00_shared/claims.json (the \vclaim value SSoT) before the
+#          from the scitex-clew claim store (the \vclaim value SSoT; 00_shared/
+#          claims.json is its derived export and the "claims in use" signal) before the
 #          manuscript is flattened. The shell compile path (compile_*.sh) did
 #          NOT regenerate this file, so a stale/hand-edited claims_rendered.tex
 #          could ship outdated \vclaim values (or a legacy prototype block)
@@ -44,11 +45,14 @@ def main(argv) -> int:
         return 1
 
     result = render_claims(str(project_path))
+    for notice in result.get("notices") or ():
+        print(f"WARN:     {notice}", file=sys.stderr)
     if not result.get("success"):
         print(
             f"ERRO:     Failed to render claims_rendered.tex from {claims_json}: "
-            f"{result.get('error', 'unknown error')}. Fix claims.json or the "
-            f"claim definitions; compiling now would ship a stale "
+            f"{result.get('error', 'unknown error')}. Claims are read from the "
+            f"scitex-clew store (claims.json is only its export); fix the store "
+            f"connection or the claim definitions -- compiling now would ship a stale "
             f"claims_rendered.tex.",
             file=sys.stderr,
         )
@@ -56,7 +60,7 @@ def main(argv) -> int:
 
     print(
         f"INFO:     Rendered claims_rendered.tex "
-        f"({result.get('claims_count', 0)} claims) from claims.json"
+        f"({result.get('claims_count', 0)} claims) from the scitex-clew store"
     )
     return 0
 

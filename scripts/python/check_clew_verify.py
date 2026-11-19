@@ -25,6 +25,9 @@
 #            11  SOURCE_MISSING -- a bound source file is gone
 #            12  HASH_MISMATCH  -- a bound source changed since binding
 #            13  NO_LINEAGE     -- a claim has no lineage (only with --strict)
+#            14-19, 21-24       -- citation, lineage, value and environment
+#                                  failures; labels in _CLEW_CODES below,
+#                                  contract in scitex_clew._cli._exit_codes
 #            20  NO_CLAIMS      -- the project has no registered claims
 #
 #          NO_CLAIMS (20) is treated as a WARN regardless of level: a project
@@ -99,7 +102,17 @@ _CLEW_CODES = {
     11: ("SOURCE_MISSING -- a bound source file is gone", True),
     12: ("HASH_MISMATCH -- a bound source changed since it was registered", True),
     13: ("NO_LINEAGE -- a claim has no lineage (strict)", True),
+    14: ("CITATION_STUB -- a \\cite key resolves to a placeholder stub", True),
+    15: ("CITATION_UNRESOLVED -- a cited key has no confirmed source", True),
+    16: ("CITATION_UNLINKED -- a cited key has no clew citation node", True),
+    17: ("UNSOURCED -- a claim's chain reaches no registered source", True),
+    18: ("STALE_LINEAGE -- an input, script or run changed since recording", True),
+    19: ("VERIFY_ERROR -- a claim could not be verified", True),
     20: ("NO_CLAIMS -- no clew claims registered in this project", False),
+    21: ("VALUE_MISMATCH -- a stated value disagrees with its source", True),
+    22: ("EXTERNAL_MISSING -- an input outside the project is absent here", True),
+    23: ("ENV_NOT_REPRODUCIBLE -- a package used is not reproducible", True),
+    24: ("VALUE_UNCHECKED -- a stated value could not be checked (strict)", True),
 }
 
 # Env override for the clew executable (else found on PATH).
@@ -212,7 +225,9 @@ def _find_clew():
     """Locate the clew executable (env override first), or None."""
     override = os.environ.get(_CLEW_BIN_ENV, "").strip()
     if override:
-        return override if (Path(override).is_file() or shutil.which(override)) else None
+        return (
+            override if (Path(override).is_file() or shutil.which(override)) else None
+        )
     return shutil.which("clew")
 
 
@@ -286,9 +301,7 @@ def main():
     if require_claims:
         mode += "+require-claims"
     kind = "research" if research else "non-research"
-    print(
-        f"\n{BOLD}=== Clew Provenance Gate (level={level}, {mode}, {kind}) ==={NC}\n"
-    )
+    print(f"\n{BOLD}=== Clew Provenance Gate (level={level}, {mode}, {kind}) ==={NC}\n")
 
     if level == "off":
         print(
@@ -337,7 +350,7 @@ def main():
         report = log_fail if level == "error" else log_warn
         report(f"clew verify failed: {label}")
         if output:
-            for line in output.splitlines()[:_max_detail_lines()]:
+            for line in output.splitlines()[: _max_detail_lines()]:
                 log_detail(line)
         log_detail(
             "fix: re-run the analysis to rebind drifted sources, or update the "

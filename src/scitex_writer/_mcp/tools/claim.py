@@ -12,6 +12,9 @@ from ..handlers._claim import (
     add_claim as _add_claim,
 )
 from ..handlers._claim import (
+    check_claim_values as _check_claim_values,
+)
+from ..handlers._claim import (
     format_claim as _format_claim,
 )
 from ..handlers._claim import (
@@ -42,11 +45,27 @@ def register_tools(mcp: FastMCP) -> None:
         output_file: Optional[str] = None,
         output_hash: Optional[str] = None,
         test: Optional[str] = None,
+        source_keys: Optional[Dict[str, Any]] = None,
+        tolerance: Optional[Dict[str, float]] = None,
+        tex_file: Optional[str] = None,
+        line_number: Optional[int] = None,
     ) -> dict:
-        """Add or update a claim in 00_shared/claims.json.
+        """Register (or update) a claim in the scitex-clew claim store.
 
         Claims are traceable scientific assertions — statistics, values, citations —
-        stored as structured objects instead of hardcoded magic numbers.
+        stored as structured objects instead of hardcoded magic numbers. The
+        scitex-clew store is the single source of truth (00_shared/claims.json
+        is a derived export); output_file/session_id link the claim into
+        clew's provenance DAG. Fails (success=False, error_kind=
+        "clew_unavailable") when clew or its store is unreachable — no fallback.
+
+        source_keys makes the value checkable against its source before every
+        compile: {"<value field>": locator}, locator = {"pointer": "/a/0/b"}
+        for json/yaml (RFC 6901) or {"row": 3 | {"col": "val"}, "column":
+        "name"} for csv/tsv; optional abs_tol/rel_tol per locator or via
+        tolerance={"abs_tol": .., "rel_tol": ..}. Undeclared tolerance = the
+        precision the value is written with (0.91 -> +-0.005). A claim that
+        already disagrees with its source is refused.
 
         After adding claims, use writer_claim_render (or recompile) to generate
         the LaTeX macro file. Then use \\vclaim{claim_id} in your manuscript.
@@ -75,7 +94,20 @@ def register_tools(mcp: FastMCP) -> None:
             output_file,
             output_hash,
             test,
+            source_keys=source_keys,
+            tolerance=tolerance,
+            tex_file=tex_file,
+            line_number=line_number,
         )
+
+    @mcp.tool()
+    def writer_claim_check_values(project_dir: str) -> dict:
+        """Re-read every located claim value from its source file and compare.
+
+        Reports claims whose value disagrees with the value at their
+        source_keys locator (beyond tolerance) as mismatches.
+        """
+        return _check_claim_values(project_dir)
 
     @mcp.tool()
     def writer_claim_list(project_dir: str) -> dict:
@@ -95,7 +127,7 @@ def register_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     def writer_claim_remove(project_dir: str, claim_id: str) -> dict:
-        """Remove a claim from 00_shared/claims.json.
+        """Retire a claim from the clew store (supersede; kept for audit).
 
         Note: Re-run writer_claim_render after removal to update claims_rendered.tex.
         """
@@ -118,7 +150,7 @@ def register_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     def writer_claim_render(project_dir: str) -> dict:
-        """Generate 00_shared/claims_rendered.tex from claims.json.
+        """Generate 00_shared/claims_rendered.tex from the clew claim store.
 
         This file defines the \\vclaim[style]{id} LaTeX macro and all claim
         renderings. It is included automatically in the manuscript preamble

@@ -67,9 +67,6 @@ def _format_p(p: float, style: str) -> str:
     """Format a p-value according to style."""
     if p < 0.001:
         return "< 0.001" if style != "apa" else "< .001"
-    if p < 0.01:
-        fmt = f"{p:.3f}"
-        return fmt if style != "apa" else fmt.lstrip("0")
     fmt = f"{p:.3f}"
     return f"= {fmt}" if style != "apa" else f"= {fmt.lstrip('0')}"
 

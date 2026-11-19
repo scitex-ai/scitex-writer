@@ -62,10 +62,9 @@ def _make_fake_clew(tmp_path):
 
 
 def _run(project, *extra, clew_bin=None, clew_exit=None, env_level=None):
-    env = dict(os.environ)
-    for k in _ENV_KEYS:
-        env.pop(k, None)
-    env["HOME"] = str(Path(project) / "_home")
+    # A minimal, explicit environment: nothing from the caller's environment
+    # (credentials, DSNs, a real clew on PATH) reaches the script.
+    env = {"HOME": str(Path(project) / "_home"), "PATH": os.defpath}
     if clew_bin is not None:
         env["SCITEX_WRITER_CLEW_BIN"] = str(clew_bin)
     if clew_exit is not None:
@@ -127,8 +126,11 @@ def test_default_off_for_non_research(tmp_path, clean_env):
     project = tmp_path
     # Act
     level = resolve_level(
-        "clew_verify", None, project,
-        default="off", env_var="SCITEX_WRITER_CLEW_VERIFY",
+        "clew_verify",
+        None,
+        project,
+        default="off",
+        env_var="SCITEX_WRITER_CLEW_VERIFY",
     )
     # Assert
     assert level == "off"
@@ -180,9 +182,11 @@ def test_research_clew_ok_passes(tmp_path, clean_env):
     assert proc.returncode == 0
 
 
-@pytest.mark.parametrize("code", [10, 11, 12, 13])
+@pytest.mark.parametrize(
+    "code", [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24]
+)
 def test_research_verify_failure_blocks(tmp_path, clean_env, code):
-    """Research project + a real verify failure (10-13) => exit 1 (gate blocks)."""
+    """Research project + a real verify failure (any non-0, non-20) => exit 1."""
     # Arrange
     _mark_research(tmp_path)
     clew = _make_fake_clew(tmp_path)
@@ -190,6 +194,21 @@ def test_research_verify_failure_blocks(tmp_path, clean_env, code):
     proc = _run(tmp_path, clew_bin=clew, clew_exit=code)
     # Assert
     assert proc.returncode == 1
+
+
+@pytest.mark.parametrize(
+    "code, name",
+    [(18, "STALE_LINEAGE"), (21, "VALUE_MISMATCH"), (24, "VALUE_UNCHECKED")],
+)
+def test_verify_failure_is_reported_by_name(tmp_path, clean_env, code, name):
+    """Every clew exit code is named, not reported as a bare number."""
+    # Arrange
+    _mark_research(tmp_path)
+    clew = _make_fake_clew(tmp_path)
+    # Act
+    proc = _run(tmp_path, clew_bin=clew, clew_exit=code)
+    # Assert
+    assert name in proc.stdout
 
 
 def test_research_no_claims_warns_not_blocks(tmp_path, clean_env):

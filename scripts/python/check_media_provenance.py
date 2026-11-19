@@ -170,14 +170,34 @@ def _iter_media_files(project_dir, doc_types):
                         yield p, area
 
 
-def _resolves_under(path, scripts_dir):
-    """True if the symlink ``path`` resolves to a location under ``scripts_dir``."""
+def _scripts_dirs(project_dir):
+    """The ``scripts/`` dirs media may resolve under (issue #505).
+
+    Same roots as ``_claim_paths._claim_path_roots``: the project dir, the
+    research repo above a VENDORED ``<repo>/.scitex/writer`` workspace, and
+    the enclosing git root. In a vendored layout the research code lives in
+    ``<repo>/scripts``, not in the workspace's own ``scripts/``.
+    """
+    roots = [project_dir]
+    for parent in project_dir.parents:
+        if parent.name == ".scitex":
+            roots.append(parent.parent)
+            break
+    for parent in (project_dir, *project_dir.parents):
+        if (parent / ".git").exists():
+            if parent not in roots:
+                roots.append(parent)
+            break
+    return [(root / "scripts").resolve() for root in roots]
+
+
+def _resolves_under(path, scripts_dirs):
+    """True if the symlink ``path`` resolves under one of ``scripts_dirs``."""
     try:
         target = Path(os.path.realpath(path))
-        target.relative_to(scripts_dir)
-        return True
-    except (OSError, ValueError):
+    except OSError:
         return False
+    return any(target.is_relative_to(d) for d in scripts_dirs)
 
 
 def main():
@@ -234,7 +254,7 @@ def main():
         return 0
 
     doc_types = list(_DOC_DIRS) if args.doc_type == "all" else [args.doc_type]
-    scripts_dir = (project_dir / "scripts").resolve()
+    scripts_dirs = _scripts_dirs(project_dir)
 
     report = log_fail if level == "error" else log_warn
     total = 0
@@ -244,10 +264,8 @@ def main():
         rel = path.relative_to(project_dir)
         if not path.is_symlink():
             offenders.append((str(rel), "not a symlink (loose copy)"))
-        elif require_under_scripts and not _resolves_under(path, scripts_dir):
-            offenders.append(
-                (str(rel), f"symlink resolves outside {scripts_dir.name}/")
-            )
+        elif require_under_scripts and not _resolves_under(path, scripts_dirs):
+            offenders.append((str(rel), "symlink resolves outside scripts/"))
 
     if total == 0:
         log_pass("no media files found under contents/*/caption_and_media/")
