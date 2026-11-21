@@ -18,6 +18,9 @@ access: it cannot commit or push generated files to protected branches.
 To prepare the same proposal, start from clean, committed source and a new or
 empty output directory outside the checkout. The command runs the strict build
 itself; it is separate from the local preview command above:
+The [CLI admission tests](../tests/integration/test_writer_docs_review_admission.py)
+check checkout-local, symlink and nonempty output refusals while preserving
+existing evidence and caller staging.
 
 ```bash
 python scripts/prepare_docs_update.py --output /tmp/writer-docs-review
