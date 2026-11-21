@@ -33,6 +33,14 @@ def filtered_review_case(repository, tmp_path):
         )
         command = shlex.join([sys.executable, "-c", program])
         git(repository, "config", "filter.owned.clean", command)
+        smudge = shlex.join(
+            [
+                sys.executable,
+                "-c",
+                "import sys; sys.stdout.buffer.write(sys.stdin.buffer.read())",
+            ]
+        )
+        git(repository, "config", "filter.owned.smudge", smudge)
         git(repository, "config", "filter.owned.required", "true")
         policy = repository / ".gitattributes"
         policy.write_text(REVIEW.BUNDLE + "/** -text filter=owned\n")
