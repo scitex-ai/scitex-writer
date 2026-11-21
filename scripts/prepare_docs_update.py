@@ -61,6 +61,8 @@ def write_review(root: Path, output: Path, base: str, receipt: dict) -> dict:
             "--cached",
             "--binary",
             "--no-color",
+            "--no-ext-diff",
+            "--unified=3",
             "--full-index",
             "--src-prefix=a/",
             "--dst-prefix=b/",
@@ -69,7 +71,17 @@ def write_review(root: Path, output: Path, base: str, receipt: dict) -> dict:
             BUNDLE,
             env=env,
         )
-        summary = git(root, "diff", "--cached", "--stat", base, "--", BUNDLE, env=env)
+        summary = git(
+            root,
+            "diff",
+            "--no-ext-diff",
+            "--cached",
+            "--stat",
+            base,
+            "--",
+            BUNDLE,
+            env=env,
+        )
     if git(root, "rev-parse", "HEAD").decode().strip() != base:
         raise ValueError("Source commit changed while preparing the review patch")
     manifest = {

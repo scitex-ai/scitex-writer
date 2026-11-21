@@ -108,6 +108,11 @@ Patch output also disables ANSI coloring, so local `color.ui=always` or
 `color.diff=always` keeps producing a plain-apply artifact without changing
 those settings. [Color replay tests](tests/integration/test_writer_docs_review_indicators.py)
 check both settings against the receipt and unchanged caller state.
+Patch generation fixes unified context at three lines and uses Git’s built-in
+diff renderer; the summary also bypasses external diff helpers. Local
+`diff.context` and `diff.external` settings remain unchanged.
+[Configured diff replay tests](tests/integration/test_writer_docs_review_config.py)
+check zero-context settings, plain apply, and an uninvoked owned external helper.
 Check the source commit and patch hash in the manifest, review the changed paths
 and contents, and use an isolated branch at that source commit:
 
