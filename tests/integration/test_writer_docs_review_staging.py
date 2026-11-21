@@ -1,4 +1,5 @@
 """Review receipts must bind the bytes Git actually puts in the patch."""
+
 import hashlib
 import importlib.util
 import json
@@ -8,7 +9,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location(
-    "writer_review_fixtures", Path(__file__).with_name("test_writer_docs_review_artifact.py")
+    "writer_review_fixtures",
+    Path(__file__).with_name("test_writer_docs_review_artifact.py"),
 )
 FIXTURES = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(FIXTURES)
@@ -40,7 +42,9 @@ def test_review_patch_binds_staged_bytes(repository, tmp_path, case):
     output = tmp_path / "review"
     output.mkdir()
     if case in ["normalized", "ignored"]:
-        with pytest.raises(ValueError, match="^Staged documentation differs from the build receipt$"):
+        with pytest.raises(
+            ValueError, match="^Staged documentation differs from the build receipt$"
+        ):
             REVIEW.write_review(root, output, base, generated)
         assert list(output.iterdir()) == []
     else:
@@ -51,7 +55,10 @@ def test_review_patch_binds_staged_bytes(repository, tmp_path, case):
         git(replay, "apply", str(output / "bundle.patch"))
         assert receipt(replay)["files"] == generated["files"]
         assert result["update_required"] is True
-        assert result["patch_sha256"] == hashlib.sha256((output / "bundle.patch").read_bytes()).hexdigest()
+        assert (
+            result["patch_sha256"]
+            == hashlib.sha256((output / "bundle.patch").read_bytes()).hexdigest()
+        )
         assert json.loads((output / "manifest.json").read_text())["base_commit"] == base
     assert receipt(root)["files"] == generated["files"]
     assert policy.read_bytes() == policy_before

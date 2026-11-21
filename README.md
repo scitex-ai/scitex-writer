@@ -91,6 +91,12 @@ python scripts/prepare_docs_update.py --output /tmp/writer-docs-review
 The artifact contains `bundle.patch`, `summary.txt`, a build receipt and a
 manifest binding the patch to its source commit, Python and docs-tool versions.
 It includes new binary assets and deletions without staging the caller's index.
+Before writing the patch, summary or manifest, the helper checks that the
+isolated Git index contains exactly the receipt's files and content bytes.
+Ignored generated files or Git attributes/filters that change those bytes cause
+refusal. Existing Git policies and the caller's staging are preserved. The
+[owning Git tests](tests/integration/test_writer_docs_review_staging.py) cover
+line-ending normalization, ignored additions and binary CRLF preservation.
 Check the source commit and patch hash in the manifest, review the changed paths
 and contents, and use an isolated branch at that source commit:
 
