@@ -20,13 +20,11 @@ receipt = FIXTURES.receipt
 @pytest.mark.parametrize(
     "setting,value",
     [
-        ("diff.outputIndicatorNew", ">"),
-        ("diff.outputIndicatorOld", "<"),
-        ("diff.outputIndicatorContext", "."),
+        ("color.diff", "always"),
         ("color.ui", "always"),
     ],
 )
-def test_presentation_settings_preserve_patch_replay(
+def test_color_settings_preserve_patch_replay(
     repository, tmp_path, setting, value
 ):
     # Arrange
