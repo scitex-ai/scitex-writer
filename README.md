@@ -97,6 +97,9 @@ Ignored generated files or Git attributes/filters that change those bytes cause
 refusal. Existing Git policies and the caller's staging are preserved. The
 [owning Git tests](tests/integration/test_writer_docs_review_staging.py) cover
 line-ending normalization, ignored additions and binary CRLF preservation.
+[Local clean-filter tests](tests/integration/test_writer_docs_review_filters.py)
+also check byte-changing refusal and byte-preserving patch replay, including
+filenames with spaces and Unicode.
 Check the source commit and patch hash in the manifest, review the changed paths
 and contents, and use an isolated branch at that source commit:
 
