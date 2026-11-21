@@ -104,6 +104,10 @@ The patch sets standard `a/` and `b/` path prefixes so plain `git apply` works
 even with local `diff.noprefix=true`; the repository setting is preserved.
 [The prefix replay test](tests/integration/test_writer_docs_review_prefixes.py)
 checks modified, new binary and deleted documentation files.
+Patch output also disables ANSI coloring, so local `color.ui=always` or
+`color.diff=always` keeps producing a plain-apply artifact without changing
+those settings. [Color replay tests](tests/integration/test_writer_docs_review_indicators.py)
+check both settings against the receipt and unchanged caller state.
 Check the source commit and patch hash in the manifest, review the changed paths
 and contents, and use an isolated branch at that source commit:
 

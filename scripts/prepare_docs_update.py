@@ -60,6 +60,7 @@ def write_review(root: Path, output: Path, base: str, receipt: dict) -> dict:
             "diff",
             "--cached",
             "--binary",
+            "--no-color",
             "--full-index",
             "--src-prefix=a/",
             "--dst-prefix=b/",
