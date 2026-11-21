@@ -48,6 +48,11 @@ diff renderer; the summary also bypasses external diff helpers. Local
 `diff.context` and `diff.external` settings remain unchanged.
 [Configured diff replay tests](../tests/integration/test_writer_docs_review_config.py)
 check zero-context settings, plain apply, and an uninvoked owned external helper.
+Patch and summary generation also disable text conversion. A configured
+`diff.<driver>.textconv` can hide byte changes from human previews; its command
+and the matching attributes remain unchanged.
+[The text-conversion test](../tests/integration/test_writer_docs_review_textconv.py)
+checks raw-byte replay and an uninvoked owned converter.
 Check the source commit and patch hash in the manifest, review the changed paths
 and contents, and use an isolated branch at that source commit:
 
