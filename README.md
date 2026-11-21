@@ -100,6 +100,10 @@ line-ending normalization, ignored additions and binary CRLF preservation.
 [Local clean-filter tests](tests/integration/test_writer_docs_review_filters.py)
 also check byte-changing refusal and byte-preserving patch replay, including
 filenames with spaces and Unicode.
+The patch sets standard `a/` and `b/` path prefixes so plain `git apply` works
+even with local `diff.noprefix=true`; the repository setting is preserved.
+[The prefix replay test](tests/integration/test_writer_docs_review_prefixes.py)
+checks modified, new binary and deleted documentation files.
 Check the source commit and patch hash in the manifest, review the changed paths
 and contents, and use an isolated branch at that source commit:
 

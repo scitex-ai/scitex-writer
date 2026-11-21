@@ -61,6 +61,8 @@ def write_review(root: Path, output: Path, base: str, receipt: dict) -> dict:
             "--cached",
             "--binary",
             "--full-index",
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
             base,
             "--",
             BUNDLE,
