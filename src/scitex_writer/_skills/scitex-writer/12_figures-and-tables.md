@@ -26,6 +26,22 @@ The compile script auto-discovers figures and tables from source directories:
 
 Tables follow the same structure under `01_manuscript/contents/tables/`.
 
+## Check front-matter totals
+
+After adding or moving a table, run a full Writer compile and open the
+resulting PDF. Compare the front-matter table total with the numbered table
+captions in that document. Check the manuscript and supplement separately.
+
+Writer's LaTeX table counter includes inline numbered tables, including
+`longtable`, and tables produced by Writer's table pipeline. The generated
+`table_count.txt` describes files from the pipeline. Leave that file unchanged.
+A single-pass draft can show the previous LaTeX total, so use a full compile
+before verifying the PDF or publishing it. The compile-artifacts gate checks
+the displayed total against the final LaTeX pass on full builds. Writer's
+default numbering runs
+continuously within each document. Recheck the total with a custom style
+that resets or skips table numbers.
+
 ## Editor media discovery
 
 The Fig and Table panes list `.tex` caption files in the selected document's
@@ -89,7 +105,7 @@ Author CSV column headers as the FINAL rendered label — the csv→LaTeX conver
 passes them through faithfully (it no longer title-cases or strips them):
 
 - **Math** renders when written in `$...$`: `$n_{\mathrm{SZ}}$`, `$F_1$`,
-  `Sens$_{15}$`, `$R^2$` (a header containing `$` or `\` is emitted verbatim).
+  `Sens$_{15}$`, `$R^2$` (a header containing `$` or `` is emitted verbatim).
 - **Human labels** read as written: `SOP (min)`, `# of Patients`, `ROC-AUC` —
   NOT raw underscore-derived `SOP min` / `n patients` / `n SZ`. Use real words
   and spaces (or math) in the header, not `snake_case`.

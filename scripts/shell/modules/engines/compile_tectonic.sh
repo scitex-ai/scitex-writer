@@ -27,7 +27,7 @@ compile_with_tectonic() {
     fi
 
     # Build tectonic options
-    local opts=""
+    local opts="--keep-logs"
 
     # Output directory (use configured LOG_DIR for clean separation)
     # Tectonic requires absolute paths for --outdir

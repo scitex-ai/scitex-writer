@@ -20,6 +20,21 @@ def git(root: Path, *args: str, env: dict | None = None) -> bytes:
     ).stdout
 
 
+def _verify_staged_bundle(root: Path, env: dict, files: dict) -> None:
+    """Bind isolated-index membership and blob bytes to the build receipt."""
+    staged = {
+        os.fsdecode(path)
+        for path in git(root, "ls-files", "-z", "--", BUNDLE, env=env).split(b"\0")
+        if path
+    }
+    if staged != {f"{BUNDLE}/{name}" for name in files}:
+        raise ValueError("Staged documentation differs from the build receipt")
+    for name, digest in files.items():
+        blob = git(root, "show", f":{BUNDLE}/{name}", env=env)
+        if hashlib.sha256(blob).hexdigest() != digest:
+            raise ValueError("Staged documentation differs from the build receipt")
+
+
 def write_review(root: Path, output: Path, base: str, receipt: dict) -> dict:
     """Capture additions/deletions/binary bytes without staging the real index."""
     if git(root, "rev-parse", "HEAD").decode().strip() != base:
@@ -39,18 +54,36 @@ def write_review(root: Path, output: Path, base: str, receipt: dict) -> dict:
         env = {**os.environ, "GIT_INDEX_FILE": str(Path(directory) / "index")}
         git(root, "read-tree", base, env=env)
         git(root, "add", "-A", "--", BUNDLE, env=env)
+        _verify_staged_bundle(root, env, receipt["files"])
         patch = git(
             root,
             "diff",
             "--cached",
             "--binary",
+            "--no-color",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--unified=3",
             "--full-index",
+            "--src-prefix=a/",
+            "--dst-prefix=b/",
             base,
             "--",
             BUNDLE,
             env=env,
         )
-        summary = git(root, "diff", "--cached", "--stat", base, "--", BUNDLE, env=env)
+        summary = git(
+            root,
+            "diff",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--cached",
+            "--stat",
+            base,
+            "--",
+            BUNDLE,
+            env=env,
+        )
     if git(root, "rev-parse", "HEAD").decode().strip() != base:
         raise ValueError("Source commit changed while preparing the review patch")
     manifest = {
