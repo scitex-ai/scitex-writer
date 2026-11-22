@@ -33,10 +33,12 @@ resulting PDF. Compare the front-matter table total with the numbered table
 captions in that document. Check the manuscript and supplement separately.
 
 Writer's LaTeX table counter includes inline numbered tables, including
-\`longtable\`, and tables produced by Writer's table pipeline. The generated
-\`table_count.txt\` describes files from the pipeline. Leave that file unchanged.
+`longtable`, and tables produced by Writer's table pipeline. The generated
+`table_count.txt` describes files from the pipeline. Leave that file unchanged.
 A single-pass draft can show the previous LaTeX total, so use a full compile
-before verifying the PDF or publishing it.
+before verifying the PDF or publishing it. Writer's default numbering runs
+continuously within each document. Recheck the total with a custom style
+that resets or skips table numbers.
 
 ## Editor media discovery
 
@@ -101,7 +103,7 @@ Author CSV column headers as the FINAL rendered label — the csv→LaTeX conver
 passes them through faithfully (it no longer title-cases or strips them):
 
 - **Math** renders when written in `$...$`: `$n_{\mathrm{SZ}}$`, `$F_1$`,
-  `Sens$_{15}$`, `$R^2$` (a header containing `$` or `\` is emitted verbatim).
+  `Sens$_{15}$`, `$R^2$` (a header containing `$` or `` is emitted verbatim).
 - **Human labels** read as written: `SOP (min)`, `# of Patients`, `ROC-AUC` —
   NOT raw underscore-derived `SOP min` / `n patients` / `n SZ`. Use real words
   and spaces (or math) in the header, not `snake_case`.
