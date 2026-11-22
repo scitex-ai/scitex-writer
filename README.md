@@ -68,49 +68,10 @@ python -m pip install -e '.[dev]'
 python scripts/build_frontend.py --receipt /tmp/writer-frontend-build.json
 ```
 
-Refresh the packaged offline documentation separately with Python 3.11+ and
-this checkout installed with its docs dependencies:
-
-```bash
-python -m pip install -e '.[docs,dev]'
-python scripts/build_docs.py --receipt /tmp/writer-offline-docs.json
-```
-
-The `vendor-sphinx-html` workflow uses Python 3.11 and prepares a review artifact
-on relevant pull requests and `develop` pushes. It has read-only repository
-access: it cannot commit or push generated files to protected branches.
-
-To prepare the same proposal, start from clean, committed source and a new or
-empty output directory outside the checkout. The command runs the strict build
-itself; it is separate from the local preview command above:
-
-```bash
-python scripts/prepare_docs_update.py --output /tmp/writer-docs-review
-```
-
-The artifact contains `bundle.patch`, `summary.txt`, a build receipt and a
-manifest binding the patch to its source commit, Python and docs-tool versions.
-It includes new binary assets and deletions without staging the caller's index.
-Check the source commit and patch hash in the manifest, review the changed paths
-and contents, and use an isolated branch at that source commit:
-
-```bash
-git apply --check /tmp/writer-docs-review/bundle.patch
-git apply /tmp/writer-docs-review/bundle.patch
-git diff -- src/scitex_writer/_sphinx_html
-```
-
-Submit the reviewed result through a normal pull request. CI uploads the
-candidate before failing when regenerated docs differ from committed source;
-an uploaded artifact or successful build alone is not reviewed delivery or
-whole-guide content acceptance. Use the recorded Python/tool versions when
-comparing a regeneration, and keep earlier failed artifacts for diagnosis.
-
-
-The docs build refuses a mismatched installed Writer version, keeps strict
-Sphinx warnings enabled and checks the generated version before replacing the
-packaged HTML. Its receipt binds the generated files; this is separate from
-reviewing guide contents or deployment.
+Refresh packaged offline documentation through the
+[documentation review guide](docs/DOCS_REVIEW.md). It covers local strict builds,
+source-bound review artifacts, Git replay checks and normal pull-request
+delivery. Generated artifacts still require content review before delivery.
 
 The build discovers both frontend packages from installed Python distributions,
 runs normal npm installation and produces the complete asset closure without
