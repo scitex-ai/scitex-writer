@@ -69,8 +69,14 @@ cleanup_owned_tmp() {
         current_id="$(stat -c '%d:%i:%u:%a' -- "$OWNED_TMPDIR" 2>/dev/null)" || cleanup_result=1
         if [ "$cleanup_result" -eq 0 ] && [ ! -L "$OWNED_TMPDIR" ] && [ -d "$OWNED_TMPDIR" ] &&
            [ -n "$OWNED_TMP_ID" ] && [ "$current_id" = "$OWNED_TMP_ID" ]; then
-            /usr/bin/timeout --signal=TERM --kill-after=2s 10s \
-                /usr/bin/rm -rf --one-file-system -- "$OWNED_TMPDIR" || cleanup_result=$?
+            # The SIF's virtualenv copies some pip directories with read-only
+            # modes. Repair only directories owned by this user within this
+            # verified run's scratch, with symlinks and other mounts excluded.
+            /usr/bin/timeout --signal=TERM --kill-after=2s 10s bash -eu -c '
+                find -P "$1" -xdev -type d -uid "$(id -u)" ! -perm -u=w \
+                    -exec chmod u+w -- {} +
+                /usr/bin/rm -rf --one-file-system -- "$1"
+            ' bash "$OWNED_TMPDIR" || cleanup_result=$?
         else
             cleanup_result=1
         fi

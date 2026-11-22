@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.44.3] - 2026-11-22
+
+- Publish the fixes from the unpublished 2.44.2 tag.
+- Allow the release runner to remove its own read-only virtualenv cache directories after tests.
+
 ## [2.44.2] - 2026-11-22
 
 ### Fixed
