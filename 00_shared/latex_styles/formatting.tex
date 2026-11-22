@@ -103,6 +103,21 @@
 }
 \makeatother
 
+%% Existing projects retain their customized front matter on update-project.
+%% Route the legacy table_count.txt call to the compiled total as well.
+\makeatletter
+\let\scitexreadcountfile\readwordcount
+\def\scitextablecountfilename{table_count}
+\renewcommand{\readwordcount}[1]{%
+  \filename@parse{#1}%
+  \ifx\filename@base\scitextablecountfilename
+    \scitextabletotal
+  \else
+    \scitexreadcountfile{#1}%
+  \fi
+}
+\makeatother
+
 %% --- Text highlighting ---
 \usepackage{soul}
 \sethlcolor{yellow}
