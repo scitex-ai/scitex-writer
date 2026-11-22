@@ -24,7 +24,9 @@ PY="${SCITEX_WRITER_PYTHON:-python3}"
 script="$THIS_DIR/../../python/check_compile_artifacts.py"
 [ -f "$script" ] || exit 0
 
+tex_name=$(basename "${SCITEX_WRITER_COMPILED_TEX%.tex}")
 "$PY" "$script" "$PROJECT_ROOT" \
+    --tex-log "${LOG_DIR}/${tex_name}.log" \
     --compiled-tex "${SCITEX_WRITER_COMPILED_TEX}" \
     --pdf "${SCITEX_WRITER_COMPILED_PDF}" \
     --log "${SCITEX_WRITER_GLOBAL_LOG_FILE}"
