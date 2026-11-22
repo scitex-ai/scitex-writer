@@ -18,13 +18,14 @@ access: it cannot commit or push generated files to protected branches.
 To prepare the same proposal, start from clean, committed source and a new or
 empty output directory outside the checkout. The command runs the strict build
 itself; it is separate from the local preview command above:
-The [CLI admission tests](../tests/integration/test_writer_docs_review_admission.py)
-check checkout-local, symlink and nonempty output refusals while preserving
-existing evidence and caller staging.
 
 ```bash
 python scripts/prepare_docs_update.py --output /tmp/writer-docs-review
 ```
+
+The [CLI admission tests](../tests/integration/test_writer_docs_review_admission.py)
+check checkout-local, symlink and nonempty output refusals while preserving
+existing evidence and caller staging.
 
 The artifact contains `bundle.patch`, `summary.txt`, a build receipt and a
 manifest binding the patch to its source commit, Python and docs-tool versions.
@@ -76,6 +77,11 @@ The docs build refuses a mismatched installed Writer version, keeps strict
 Sphinx warnings enabled and checks the generated version before replacing the
 packaged HTML. Its receipt binds the generated files; this is separate from
 reviewing guide contents or deployment.
+The builder also refuses a symlinked bundle destination. The
+[existing version-refusal test](../tests/integration/test_writer_bundled_docs.py)
+and [destination-admission test](../tests/integration/test_writer_docs_build_admission.py)
+check that early refusals preserve existing files; they do not qualify a
+successful docs build or publication.
 
 Source and existing controls: [strict builder](../scripts/build_docs.py),
 [review helper](../scripts/prepare_docs_update.py),
