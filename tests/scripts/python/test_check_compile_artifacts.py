@@ -80,6 +80,7 @@ def _run(tmp_path, *extra, rows=None, use_fake=True, pdf_text=None):
     env = dict(os.environ)
     for k in (
         "SCITEX_WRITER_COMPILE_ARTIFACTS",
+        "SCITEX_WRITER_DRAFT_MODE",
         "SCITEX_WRITER_COMPILED_TEX",
         "SCITEX_WRITER_COMPILED_PDF",
         "SCITEX_WRITER_GLOBAL_LOG_FILE",
@@ -622,3 +623,30 @@ def test_clean_pdf_text_passes_macro_dump_check(tmp_path):
                 pdf_text="Journal Name Here\nYour Manuscript Title Here\nAbstract")
     # Assert
     assert proc.returncode == 0
+
+
+def test_table_frontmatter_mismatch_fails_artifact_gate(tmp_path):
+    # Arrange
+    log = _write(tmp_path, "paper.log", "SCITEX-WRITER-TABLE-TOTAL: 0/2\n")
+
+    # Act
+    result = _run(tmp_path, "--tex-log", str(log))
+
+    # Assert
+    observed = (result.returncode, "front matter shows 0 tables" in result.stdout)
+    assert observed == (1, True)
+
+
+def test_table_frontmatter_gate_uses_final_engine_total(tmp_path):
+    # Arrange
+    log = _write(
+        tmp_path,
+        "paper.log",
+        "SCITEX-WRITER-TABLE-TOTAL: 0/2\nSCITEX-WRITER-TABLE-TOTAL: 2/2\n",
+    )
+
+    # Act
+    result = _run(tmp_path, "--tex-log", str(log))
+
+    # Assert
+    assert (result.returncode, "compiled table total (2)" in result.stdout) == (0, True)

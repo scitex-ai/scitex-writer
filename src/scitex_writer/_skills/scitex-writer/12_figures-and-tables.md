@@ -36,7 +36,9 @@ Writer's LaTeX table counter includes inline numbered tables, including
 `longtable`, and tables produced by Writer's table pipeline. The generated
 `table_count.txt` describes files from the pipeline. Leave that file unchanged.
 A single-pass draft can show the previous LaTeX total, so use a full compile
-before verifying the PDF or publishing it. Writer's default numbering runs
+before verifying the PDF or publishing it. The compile-artifacts gate checks
+the displayed total against the final LaTeX pass on full builds. Writer's
+default numbering runs
 continuously within each document. Recheck the total with a custom style
 that resets or skips table numbers.
 

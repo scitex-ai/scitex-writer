@@ -255,6 +255,24 @@ def _scan_log(log_path, report):
         report("log: there were undefined references (unresolved \\ref/\\cite)")
 
 
+def check_table_total(tex_log, report):
+    """Compare the table count displayed on the final pass with the actual counter."""
+    if not tex_log or os.environ.get("SCITEX_WRITER_DRAFT_MODE") == "true":
+        return
+    try:
+        text = Path(tex_log).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return
+    totals = re.findall(r"(?m)^SCITEX-WRITER-TABLE-TOTAL: (\d+)/(\d+)\s*$", text)
+    if totals:
+        shown, actual = totals[-1]
+        if shown == actual:
+            log_pass(f"front matter reports the compiled table total ({actual})")
+        else:
+            report(f"front matter shows {shown} tables but the compile counted {actual}")
+            log_detail("run a full Writer compile so the table count can settle.")
+
+
 def extract_pdf_text(pdf_path):
     """PDF text via `pdftotext` (poppler), or None when unavailable/failed.
 
@@ -393,6 +411,7 @@ def main():
     parser.add_argument(
         "--log", default=os.environ.get("SCITEX_WRITER_GLOBAL_LOG_FILE")
     )
+    parser.add_argument("--tex-log", help="Final LaTeX engine log")
     parser.add_argument("--level", choices=list(_LEVELS), default=None)
     args = parser.parse_args()
 
@@ -449,6 +468,7 @@ def main():
 
     # --- SECONDARY: log deficiency scan ---
     _scan_log(args.log, report)
+    check_table_total(args.tex_log, report)
 
     # --- TERTIARY: PDF-text completeness (signature, claim placeholders) ---
     pdf_text = extract_pdf_text(args.pdf) if args.pdf else None
