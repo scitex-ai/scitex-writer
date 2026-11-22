@@ -26,6 +26,18 @@ The compile script auto-discovers figures and tables from source directories:
 
 Tables follow the same structure under `01_manuscript/contents/tables/`.
 
+## Check front-matter totals
+
+After adding or moving a table, run a full Writer compile and open the
+resulting PDF. Compare the front-matter table total with the numbered table
+captions in that document. Check the manuscript and supplement separately.
+
+Writer's LaTeX table counter includes inline numbered tables, including
+\`longtable\`, and tables produced by Writer's table pipeline. The generated
+\`table_count.txt\` describes files from the pipeline. Leave that file unchanged.
+A single-pass draft can show the previous LaTeX total, so use a full compile
+before verifying the PDF or publishing it.
+
 ## Editor media discovery
 
 The Fig and Table panes list `.tex` caption files in the selected document's
