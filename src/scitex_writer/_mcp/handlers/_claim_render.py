@@ -33,8 +33,55 @@ PREAMBLE = r"""\makeatletter
   \@ifundefined{v@claim@id@#2}%
     {[\texttt{claim:\detokenize{#2}}]}%
     {\edef\v@claim@safe{\csname v@claim@id@#2\endcsname}%
+     \ifvmode\leavevmode\fi
+     \global\advance\v@claim@seq\@ne
+     \edef\v@claim@n{\the\v@claim@seq}%
+     \v@claim@mark{\detokenize{#2}}{\v@claim@n s}%
      \v@claim@maybecolor{\v@claim@safe}%
-       {\csname v@claim@\v@claim@safe @#1\endcsname}}}
+       {\csname v@claim@\v@claim@safe @#1\endcsname}%
+     \v@claim@mark{\detokenize{#2}}{\v@claim@n e}}}
+
+%% Claim positions for PDF readers (scripts/python/emit_claim_anchors.py
+%% turns them into <pdf stem>.pdf-anchors.json after the compile). Every
+%% printed \vclaim writes to the .aux, when its page is shipped out, where its
+%% text starts and ends (\pdfsavepos). In a paragraph it also records the
+%% left edge of the line in a \vadjust, so a claim that wraps across lines can
+%% be boxed line by line. Record:
+%%   \v@claimpos{id}{<n><s|e|sl|el>}{page}{x sp}{y sp}{indent}{width}{ht}{dp}
+%% Engines without a savepos primitive, and \nofiles runs, record nothing.
+\providecommand{\v@claimpos}[9]{}
+\ifdefined\v@claim@seq\else\newcount\v@claim@seq\fi
+\ifdefined\pdfsavepos
+  \let\v@claim@savepos\pdfsavepos
+  \def\v@claim@lastx{\the\pdflastxpos}%
+  \def\v@claim@lasty{\the\pdflastypos}%
+\else\ifdefined\savepos
+  \let\v@claim@savepos\savepos
+  \def\v@claim@lastx{\the\lastxpos}%
+  \def\v@claim@lasty{\the\lastypos}%
+\fi\fi
+%% The physical page being shipped out (LaTeX 2020-10 and later); older
+%% kernels fall back to the page counter.
+\ifdefined\ReadonlyShipoutCounter
+  \def\v@claim@page{\the\ReadonlyShipoutCounter}%
+\else
+  \def\v@claim@page{\the\c@page}%
+\fi
+%% \v@claim@record{id}{tag}{indent}{width}{ht}{dp}: savepos + deferred write.
+\def\v@claim@record#1#2#3#4#5#6{%
+  \edef\v@claim@rec{\write\@auxout{\string\v@claimpos{#1}{#2}%
+    {\noexpand\v@claim@page}{\noexpand\v@claim@lastx}{\noexpand\v@claim@lasty}%
+    {#3}{#4}{#5}{#6}}}%
+  \v@claim@savepos\v@claim@rec}
+%% \v@claim@mark{id}{<n>s|<n>e}: the claim's start or end mark.
+\def\v@claim@mark#1#2{%
+  \ifdefined\v@claim@savepos\if@filesw
+    \v@claim@record{#1}{#2}{\the\dimexpr\@totalleftmargin\relax}%
+      {\the\linewidth}{\the\ht\strutbox}{\the\dp\strutbox}%
+    \ifhmode\ifinner\else
+      \vadjust{\v@claim@record{#1}{#2l}{0pt}{0pt}{0pt}{0pt}}%
+    \fi\fi
+  \fi\fi}
 
 %% \v@claim@maybecolor{key}{rendered} -- clew provenance overlay.
 %% When the clew presentation markers layer is ACTIVE (\ifclewpresmarkers,

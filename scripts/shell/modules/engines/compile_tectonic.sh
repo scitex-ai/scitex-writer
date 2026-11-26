@@ -27,7 +27,9 @@ compile_with_tectonic() {
     fi
 
     # Build tectonic options
-    local opts="--keep-logs"
+    # --keep-intermediates: the .aux carries the \vclaim position records that
+    # emit_claim_anchors.py turns into <pdf stem>.pdf-anchors.json.
+    local opts="--keep-logs --keep-intermediates"
 
     # Output directory (use configured LOG_DIR for clean separation)
     # Tectonic requires absolute paths for --outdir
@@ -36,7 +38,6 @@ compile_with_tectonic() {
 
     # Incremental mode (use cache)
     if [ "$SCITEX_WRITER_TECTONIC_INCREMENTAL" = "true" ]; then
-        opts="$opts --keep-intermediates"
         # Set cache directory
         if [ -n "$SCITEX_WRITER_TECTONIC_CACHE_DIR" ]; then
             export TECTONIC_CACHE_DIR="$SCITEX_WRITER_TECTONIC_CACHE_DIR"
