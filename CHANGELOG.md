@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.45.0] - 2026-11-26
+
+### Added
+
+- Every compile now writes `<pdf stem>.pdf-anchors.json` beside the PDF
+  (e.g. `01_manuscript/manuscript.pdf-anchors.json`): the page and box of each
+  `\vclaim` in that PDF, in the scitex-live-paper `pdf-anchors.json` format
+  (`{"pdf_sha256", "anchors": {id: {"page", "bbox": [x0, y0, x1, y1]}}}`, page
+  1-based, PDF points from the bottom-left corner). Before, only a
+  demo-specific script produced this file, so a Live Paper reader showed every
+  claim of a real manuscript as "registered" and a click could not reach its
+  text. `\vclaim` records where its text starts and ends with `\pdfsavepos`
+  (written to the `.aux` at shipout) and, in a paragraph, the left edge of the
+  line; `scripts/python/emit_claim_anchors.py` turns the records into boxes.
+  A claim that wraps gets one box per line (`rects`), also across a page or
+  column break; `bbox` is the union on the page where it starts. A claim
+  printed more than once lists every place in `occurrences` and is anchored at
+  the first in reading order. Tectonic now keeps its intermediates so the
+  `.aux` is there to read.
+
+### Fixed
+
+- The supplementary title page now prints the keywords from
+  `00_shared/keywords.tex`, the same file the manuscript prints.
+  `02_supplementary/base.tex` input no keywords file before.
+- A stray glyph (a breve in T1) no longer appears before the supplementary
+  word-count line. `formatting.tex` read the word-count files on a stream
+  named `\wordcount`; `\newread` made that name a `\chardef`, so the
+  supplementary template's `\begin{wordcount}` typeset character
+  <stream number>. The stream is now `\scitexwordcountstream`, and
+  `wordcount` is a real environment (an unindented small paragraph), so
+  existing projects' own `02_supplementary/contents/wordcount.tex` render
+  correctly after `update-project`.
+
 ## [2.44.5] - 2026-11-26
 
 ### Fixed
