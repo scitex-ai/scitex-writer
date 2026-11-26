@@ -131,6 +131,20 @@ pdf_produced_pagecount() {
 # success=True + a loud warning after re-verifying pages>0 in Python.
 EXIT_PROMOTED_WITH_WARNINGS=3
 
+# Claim positions: <pdf stem>.pdf-anchors.json beside the PDF, built from the
+# \vclaim position records the final LaTeX run wrote to the .aux (see
+# scripts/python/emit_claim_anchors.py). A PDF reader uses it to box each claim
+# on its page. Loud but not fatal: the PDF itself is fine without it.
+emit_claim_anchors() {
+    local pdf_file="$1"
+    local aux_file="$2"
+    local python="${SCITEX_WRITER_PYTHON:-python3}"
+    if ! "$python" "${THIS_DIR}/../../python/emit_claim_anchors.py" \
+        --aux "$aux_file" --pdf "$pdf_file"; then
+        echo_warning "    Claim anchors not written for $pdf_file (see above); PDF readers cannot box its claims."
+    fi
+}
+
 cleanup() {
     local compile_result=${1:-1}
     local promoted_with_warnings=false
@@ -211,6 +225,8 @@ cleanup() {
         local size
         size=$(du -h "$pdf_file" | cut -f1)
         echo_success "    $pdf_file ready (${size})"
+
+        emit_claim_anchors "$pdf_file" "${LOG_DIR}/${pdf_basename%.pdf}.aux"
 
         # Create/update stable symlink to latest archive version (prevents corruption during compilation)
         local latest_path="${SCITEX_WRITER_ROOT_DIR}/${SCITEX_WRITER_DOC_TYPE}-latest.pdf"
