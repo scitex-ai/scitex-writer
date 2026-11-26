@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A compile no longer writes claims to a store it was not told about (#516).
+  With `SCITEX_STORE_DSN` unset, claims resolved to the fleet's central store
+  (`scitex-primary:55432`); require scitex-dev >= 0.67.0, whose default is
+  the per-user local store, and name the resolved target (credential-free)
+  in every MIGRATING / IMPORTING notice and in an INFO line before claims are
+  registered. The unreachable-store error says which store was used.
+
 ## [2.45.0] - 2026-11-26
 
 ### Added

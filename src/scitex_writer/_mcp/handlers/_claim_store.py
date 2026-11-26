@@ -123,12 +123,29 @@ def _clew():
 
 
 def _store_failure(exc: Exception) -> ClewUnavailableError:
-    dsn_state = "set" if os.environ.get("SCITEX_STORE_DSN") else "unset"
+    dsn_state = (
+        "set"
+        if os.environ.get("SCITEX_STORE_DSN")
+        else "unset, so the per-user local store (~/.scitex/store/local) was used"
+    )
     return ClewUnavailableError(
         f"scitex-clew claim store is unreachable ({type(exc).__name__}: {exc}). "
         f"SCITEX_STORE_DSN is {dsn_state}. Claims were NOT read or written; "
         "there is no local-JSON fallback."
     )
+
+
+def claims_store_description() -> str:
+    """Which store claims are written to, credential-free, for log lines.
+
+    Resolved by ``scitex_dev.store.host_store`` exactly as clew resolves its
+    claims store: ``SCITEX_STORE_DSN`` when set, otherwise the per-user local
+    store — never a deployment's host (scitex-writer#516). Named in every
+    write notice so a compile never writes to a store it did not name.
+    """
+    from scitex_dev.store import host_store
+
+    return host_store(pkg="scitex_clew", name="claims").describe()
 
 
 @contextmanager
@@ -378,6 +395,7 @@ def sync(
     store = load_store_claims(project_path)
     notices: List[str] = []
     path = project_path / CLAIMS_FILE
+    target = claims_store_description()
 
     if path.exists():
         try:
@@ -396,7 +414,7 @@ def sync(
                 backup.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
             notices.append(
                 f"MIGRATING legacy writer-owned {CLAIMS_FILE} into the "
-                f"scitex-clew store ({len(missing)} of {len(file_claims)} "
+                f"scitex-clew store {target} ({len(missing)} of {len(file_claims)} "
                 f"claim(s) newly registered: {', '.join(missing) or '-'}). The "
                 f"original is kept at {LEGACY_BACKUP}; {CLAIMS_FILE} becomes a "
                 "derived export of the store."
@@ -405,10 +423,15 @@ def sync(
             if derived:
                 notices.append(
                     f"IMPORTING {len(missing)} claim(s) recorded in the derived "
-                    f"{CLAIMS_FILE} but absent from the clew store (fresh clone "
+                    f"{CLAIMS_FILE} but absent from the clew store {target} (fresh clone "
                     f"or new host?): {', '.join(missing)}. Their source hashes are "
                     "taken NOW, not at original registration."
                 )
+            logger.info(
+                "scitex-writer claims: registering %d claim(s) into %s",
+                len(missing),
+                target,
+            )
             for cid in missing:
                 entry = dict(file_claims[cid])
                 entry.setdefault("type", "value")
