@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.44.5] - 2026-11-26
+
 ### Fixed
 
 - Text copied from a pdfTeX-built PDF lost its word spaces and its `ff`/`fi`
