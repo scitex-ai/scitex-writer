@@ -96,6 +96,13 @@ _CITE_CMD = (
 # Optional [..] pre/post-notes, then the mandatory {key,key,...}.
 _CITE_RE = re.compile(_CITE_CMD + r"\s*(?:\[[^\]]*\]\s*){0,2}\{([^}]*)\}")
 
+# Directories whose .tex is never built, skipped when the source set falls back
+# to scanning the project: retired sources kept for reference (legacy/),
+# versioned snapshots (paths.archive_dir, ./0N_*/archive), and build output.
+_NON_SOURCE_DIRS = frozenset(
+    {"legacy", "archive", "logs", "builds", "export", "_minted", ".git"}
+)
+
 # \bibliography{a,b} (bibtex) and \addbibresource{a.bib} (biblatex).
 _BIB_CMD_RE = re.compile(r"\\(?:bibliography|addbibresource)\s*\{([^}]*)\}")
 
@@ -156,13 +163,16 @@ def _strip_tex_comments(tex):
 def extract_cited_keys(tex):
     r"""Return the set of cite keys referenced by \cite-family commands in tex.
 
-    Commented-out citations are ignored. Whitespace and empty keys are dropped.
+    Commented-out citations are ignored. Whitespace and empty keys are dropped,
+    and so are macro parameter placeholders: ``\\cite{#1}`` inside a
+    ``\\newcommand`` body names the macro's argument, not a bibliography key
+    (``#`` is BibTeX's concatenation operator and never part of a real key).
     """
     keys = set()
     for group in _CITE_RE.findall(_strip_tex_comments(tex)):
         for raw in group.split(","):
             key = raw.strip()
-            if key:
+            if key and "#" not in key:
                 keys.add(key)
     return keys
 
@@ -235,21 +245,42 @@ def _load_text(paths):
     return "\n".join(chunks)
 
 
-def _resolve_tex_paths(project_dir, tex_args):
+def _is_buildable_source(path, project_dir):
+    """False for a .tex that is never compiled (see _NON_SOURCE_DIRS).
+
+    Only the directories BELOW the project root count, so a project that itself
+    lives under e.g. ~/archive/ is still scanned. ``*_diff.tex`` (latexdiff
+    output) is excluded too: it carries both the old and the new citations.
+    """
+    rel = Path(path).relative_to(project_dir)
+    if any(part in _NON_SOURCE_DIRS for part in rel.parts[:-1]):
+        return False
+    return not rel.name.endswith("_diff.tex")
+
+
+def _resolve_tex_paths(project_dir, tex_args, environ=None):
     """Resolve the tex sources to scan for citations.
 
     Precedence: explicit --tex args (globs allowed) > SCITEX_WRITER_COMPILED_TEX
-    env > every *.tex under the project (last resort). Returns a sorted list.
+    env > every buildable *.tex under the project (last resort: legacy/,
+    archive/, logs/, ... and latexdiff output are skipped). Returns a sorted
+    list. ``environ`` defaults to ``os.environ``.
     """
     if tex_args:
         found = []
         for pat in tex_args:
             found.extend(sorted(glob.glob(pat)))
         return found
-    env_tex = os.environ.get("SCITEX_WRITER_COMPILED_TEX", "").strip()
+    env = os.environ if environ is None else environ
+    env_tex = (env.get("SCITEX_WRITER_COMPILED_TEX") or "").strip()
     if env_tex and Path(env_tex).is_file():
         return [env_tex]
-    return sorted(str(p) for p in Path(project_dir).rglob("*.tex"))
+    project_dir = Path(project_dir)
+    return sorted(
+        str(p)
+        for p in project_dir.rglob("*.tex")
+        if _is_buildable_source(p, project_dir)
+    )
 
 
 def _resolve_one_bib(raw, base_dirs):
@@ -375,7 +406,8 @@ def main():
         action="append",
         default=None,
         help="Tex file(s)/glob(s) to scan for \\cite keys (repeatable). "
-        "Defaults to $SCITEX_WRITER_COMPILED_TEX, else all *.tex under project.",
+        "Defaults to $SCITEX_WRITER_COMPILED_TEX, else every buildable *.tex "
+        "under the project (legacy/, archive/, logs/ and *_diff.tex skipped).",
     )
     parser.add_argument(
         "--bib",

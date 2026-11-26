@@ -73,6 +73,29 @@ sw.claim.add(
   `config.yaml`), default `error`. Claims without `source_keys` are listed as
   unchecked, never as passed.
 
+## Claim positions in the PDF
+
+Every compile writes `<pdf stem>.pdf-anchors.json` beside the PDF (e.g.
+`01_manuscript/manuscript.pdf-anchors.json`), the file a Live Paper reader uses
+to box each claim:
+
+```json
+{"schema": "scitex-writer.pdf-anchors/v1", "pdf": "manuscript.pdf",
+ "pdf_sha256": "<sha256 of the PDF bytes>",
+ "anchors": {"acc_mean": {"page": 3, "bbox": [x0, y0, x1, y1],
+                          "rects": [{"page": 3, "bbox": [...]}],
+                          "occurrences": [{"page": 3, "bbox": [...]}]}}}
+```
+
+- `page` is 1-based; boxes are PDF points from the bottom-left page corner.
+- `rects` has one box per line of a claim that wraps (also across a page or
+  column break); `bbox` is their union on the page where the claim starts.
+- A claim printed more than once is anchored at its first place in reading
+  order; `occurrences` lists them all.
+- `\vclaim` records the positions in the `.aux`
+  (`scripts/python/emit_claim_anchors.py` reads them). Copy the file with the
+  PDF; a reader ignores it when `pdf_sha256` does not match the PDF.
+
 ## MCP Tools
 
 | Tool | Description |

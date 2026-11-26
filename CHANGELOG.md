@@ -16,6 +16,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in every MIGRATING / IMPORTING notice and in an INFO line before claims are
   registered. The unreachable-store error says which store was used.
 
+## [2.45.0] - 2026-11-26
+
+### Added
+
+- Every compile now writes `<pdf stem>.pdf-anchors.json` beside the PDF
+  (e.g. `01_manuscript/manuscript.pdf-anchors.json`): the page and box of each
+  `\vclaim` in that PDF, in the scitex-live-paper `pdf-anchors.json` format
+  (`{"pdf_sha256", "anchors": {id: {"page", "bbox": [x0, y0, x1, y1]}}}`, page
+  1-based, PDF points from the bottom-left corner). Before, only a
+  demo-specific script produced this file, so a Live Paper reader showed every
+  claim of a real manuscript as "registered" and a click could not reach its
+  text. `\vclaim` records where its text starts and ends with `\pdfsavepos`
+  (written to the `.aux` at shipout) and, in a paragraph, the left edge of the
+  line; `scripts/python/emit_claim_anchors.py` turns the records into boxes.
+  A claim that wraps gets one box per line (`rects`), also across a page or
+  column break; `bbox` is the union on the page where it starts. A claim
+  printed more than once lists every place in `occurrences` and is anchored at
+  the first in reading order. Tectonic now keeps its intermediates so the
+  `.aux` is there to read.
+
+### Fixed
+
+- The supplementary title page now prints the keywords from
+  `00_shared/keywords.tex`, the same file the manuscript prints.
+  `02_supplementary/base.tex` input no keywords file before.
+- A stray glyph (a breve in T1) no longer appears before the supplementary
+  word-count line. `formatting.tex` read the word-count files on a stream
+  named `\wordcount`; `\newread` made that name a `\chardef`, so the
+  supplementary template's `\begin{wordcount}` typeset character
+  <stream number>. The stream is now `\scitexwordcountstream`, and
+  `wordcount` is a real environment (an unindented small paragraph), so
+  existing projects' own `02_supplementary/contents/wordcount.tex` render
+  correctly after `update-project`.
+- Citation gates: `\cite{#1}` inside a `\newcommand` body is no longer
+  counted as a citation (it was reported as unlinked) (#527).
+- Citation gates: without `SCITEX_WRITER_COMPILED_TEX`, the fallback scan now
+  skips sources that are never built (`legacy/`, `archive/`, `logs/`,
+  `builds/`, `export/`, `_minted/`, `.git/` below the project root, and
+  `*_diff.tex`). The citation-trust check passes its cited keys to
+  scitex-scholar, so scholar no longer re-scans the tree on its own and only
+  cache misses are looked up (#528).
+- Citation trust: the scitex-scholar status `lookup_failed` (the metadata
+  service rate-limited or failed the lookup) is reported as "could NOT be
+  checked", as a warning, and is never cached. It used to arrive as
+  `unverified` "weak title match" and was cached for 30 days
+  (scitex-ai/scitex-scholar#314).
+
 ## [2.44.5] - 2026-11-26
 
 ### Fixed
