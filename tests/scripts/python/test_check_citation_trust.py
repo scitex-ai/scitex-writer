@@ -74,8 +74,11 @@ class _StubVerifier:
         self.verdicts = verdicts or []
         self.raises = raises
 
-    def __call__(self, project_dir, bib=None, offline=False, min_confidence=0.8):
+    def __call__(
+        self, project_dir, bib=None, offline=False, min_confidence=0.8, cited_keys=None
+    ):
         self.calls += 1
+        self.cited_keys = cited_keys
         if self.raises is not None:
             raise self.raises
         return [dict(v) for v in self.verdicts]
@@ -111,6 +114,7 @@ def test_status_severity_mapping_matches_agreed_contract():
         "stub": "warning",
         "unlinked": "warning",
         "hallucinated": "error",
+        "lookup_failed": "warning",
     }
 
 
@@ -276,6 +280,76 @@ def test_cite_key_without_a_verdict_is_reported_as_unverified(tmp_path, capsys):
     out = capsys.readouterr().out
     # Assert
     assert "NO verdict from scitex-scholar" in out
+
+
+# ------------------------------------------------- lookup failed (rate limit)
+
+
+def _rate_limited(key="Real2020"):
+    return {
+        "key": key,
+        "status": "lookup_failed",
+        "detail": "lookup rate-limited: crossref: rate-limited (HTTP 429)",
+    }
+
+
+def test_rate_limited_lookup_is_not_reported_as_unverified(tmp_path, capsys):
+    """Regression: a 429 from the metadata service surfaced as "weak title
+    match" (UNVERIFIED). It must be reported as a lookup failure."""
+    # Arrange
+    project = _project(tmp_path)
+    verdicts = [_rate_limited()] + _verdicts()[1:]
+    # Act
+    run_check(project, level="warn", verifier=_StubVerifier(verdicts))
+    out = capsys.readouterr().out
+    # Assert
+    assert "LOOKUP_FAILED" in out and "UNRECOGNISED" not in out
+
+
+def test_rate_limited_lookup_is_never_reported_as_trustworthy(tmp_path, capsys):
+    # Arrange
+    project = _project(tmp_path)
+    # Act
+    run_check(project, level="warn", verifier=_StubVerifier([_rate_limited()]))
+    out = capsys.readouterr().out
+    # Assert
+    assert "trustworthy)" not in out
+
+
+def test_rate_limited_lookup_does_not_block_at_error_level(tmp_path):
+    """A transient service condition is a loud warning, not a content FAIL."""
+    # Arrange
+    project = _project(tmp_path)
+    verdicts = [_rate_limited(k) for k in ("Real2020", "Bogus2099", "NoIdent2021")]
+    # Act
+    code = run_check(project, level="error", verifier=_StubVerifier(verdicts))
+    # Assert
+    assert code == 0
+
+
+def test_rate_limited_verdict_is_not_cached(tmp_path):
+    """A throttled lookup must be retried next compile, not frozen for the
+    cache TTL."""
+    # Arrange
+    project = _project(tmp_path)
+    verdicts = [_rate_limited()] + _verdicts()[1:]
+    verifier = _StubVerifier(verdicts)
+    run_check(project, level="warn", verifier=verifier)
+    # Act
+    run_check(project, level="warn", verifier=verifier)
+    # Assert
+    assert verifier.cited_keys == ["Real2020"]
+
+
+def test_verifier_is_given_the_gate_cited_keys(tmp_path):
+    """The gate's own cited set (not a re-scan of every .tex) is verified."""
+    # Arrange
+    project = _project(tmp_path)
+    verifier = _StubVerifier(_verdicts())
+    # Act
+    run_check(project, level="warn", verifier=verifier)
+    # Assert
+    assert verifier.cited_keys == ["Bogus2099", "NoIdent2021", "Real2020"]
 
 
 # --------------------------------------------------------------------- cache

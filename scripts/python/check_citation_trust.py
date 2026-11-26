@@ -25,6 +25,9 @@
 #          writer-dynamic-paper-findings-feed):
 #            verified                     -> info (suppressed; counted as pass)
 #            unverified / stub / unlinked -> warning
+#            lookup_failed                -> warning (NOT a verdict: the
+#                                            metadata service rate-limited or
+#                                            failed the lookup; never cached)
 #            hallucinated                 -> error
 #          A finding's severity is then CLAMPED by the resolved level: at
 #          level=warn an error-mapped finding is still reported LOUDLY but does
@@ -94,6 +97,10 @@ UNVERIFIED = "unverified"
 STUB = "stub"
 HALLUCINATED = "hallucinated"
 UNLINKED = "unlinked"
+# The metadata service could not be ASKED (HTTP 429 rate limit, 5xx, network):
+# a transient service condition, not a content verdict (scitex-scholar
+# reports it since verify_cites grew LOOKUP_FAILED).
+LOOKUP_FAILED = "lookup_failed"
 
 # The agreed status -> canonical severity mapping. An UNKNOWN status is treated
 # as an error, never as a pass -- fail-loud on anything unrecognised.
@@ -103,7 +110,13 @@ STATUS_SEVERITY = {
     STUB: "warning",
     UNLINKED: "warning",
     HALLUCINATED: "error",
+    LOOKUP_FAILED: "warning",
 }
+
+# Statuses whose verdict is a property of the bib entry and may be reused until
+# the entry changes. LOOKUP_FAILED is a property of the service at that moment,
+# so it is never cached -- the next compile asks again.
+CACHEABLE_STATUSES = {s: v for s, v in STATUS_SEVERITY.items() if s != LOOKUP_FAILED}
 
 _STATUS_EXPLAIN = {
     UNVERIFIED: "has an identifier but did NOT resolve (or its title matched "
@@ -111,6 +124,9 @@ _STATUS_EXPLAIN = {
     STUB: "is an auto-generated placeholder -- no real metadata to verify",
     UNLINKED: "is cited but has no entry in the compiled bibliography",
     HALLUCINATED: "was not found in ANY source index -- it looks fabricated",
+    LOOKUP_FAILED: "could NOT be checked -- the metadata service rate-limited or "
+    "failed the lookup (a service condition, NOT a verdict on the citation; it "
+    "is re-checked on the next run)",
 }
 
 # Force offline verification (no network) without touching the CLI.
@@ -167,8 +183,14 @@ class Reporter:
         return 1 if self.errors > 0 else 0
 
 
-def default_verifier(project_dir, bib=None, offline=False, min_confidence=0.8):
-    """Verify every cited key via scitex-scholar; return a list of verdict dicts.
+def default_verifier(
+    project_dir, bib=None, offline=False, min_confidence=0.8, cited_keys=None
+):
+    """Verify cited keys via scitex-scholar; return a list of verdict dicts.
+
+    ``cited_keys`` is the set to verify (the gate's own cited set, so scholar
+    does not re-scan the project's .tex on its own); ``None`` lets scholar
+    discover them.
 
     Each verdict is ``{"key", "status", "detail", "confidence"}``. Raises
     :class:`VerificationUnavailable` when verification cannot be run at all
@@ -192,6 +214,7 @@ def default_verifier(project_dir, bib=None, offline=False, min_confidence=0.8):
             bib=Path(bib) if bib else None,
             min_confidence=min_confidence,
             offline=offline,
+            cited_keys=None if cited_keys is None else sorted(cited_keys),
             write=False,
         )
     except Exception as exc:  # resolver / network / bib failure -- never swallow
@@ -234,7 +257,7 @@ def _report_findings(reporter, verdicts, level):
             f"matching title (trustworthy)"
         )
 
-    for status in (HALLUCINATED, UNVERIFIED, STUB, UNLINKED):
+    for status in (HALLUCINATED, UNVERIFIED, STUB, UNLINKED, LOOKUP_FAILED):
         found = buckets.pop(status, [])
         if not found:
             continue
@@ -339,7 +362,7 @@ def run_check(
     hits = {}
     if use_cache:
         for key in sorted(cited_keys):
-            hit = cache_lookup(cached, key, fingerprints.get(key), STATUS_SEVERITY)
+            hit = cache_lookup(cached, key, fingerprints.get(key), CACHEABLE_STATUSES)
             if hit is not None:
                 hits[key] = hit
 
@@ -363,6 +386,7 @@ def run_check(
             bib=bib_paths[0],
             offline=offline,
             min_confidence=min_confidence,
+            cited_keys=misses,
         )
     except VerificationUnavailable as exc:
         unrunnable(f"citations could NOT be verified for this build: {exc}")
@@ -397,7 +421,7 @@ def run_check(
     if use_cache and not offline and fresh:
         save_cache(
             cache_path(project_dir),
-            cache_store(cached, fresh, fingerprints, STATUS_SEVERITY),
+            cache_store(cached, fresh, fingerprints, CACHEABLE_STATUSES),
         )
 
     _report_findings(reporter, verdicts, level)
