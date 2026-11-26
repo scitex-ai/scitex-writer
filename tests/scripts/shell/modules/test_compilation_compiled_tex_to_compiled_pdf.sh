@@ -138,6 +138,30 @@ test_cleanup_succeeds_when_fresh_pdf_produced() {
     rm -rf "$tmp"
 }
 
+# Promotion writes <pdf stem>.pdf-anchors.json beside the PDF from the run's
+# .aux. Regression: the emitter path was built from THIS_DIR at call time, which
+# config/load_config.sh had reassigned, so a real compile only warned.
+test_cleanup_writes_claim_anchors_beside_the_pdf() {
+    local tmp
+    tmp="$(mktemp -d)"
+    export LOG_DIR="$tmp/logs"
+    mkdir -p "$LOG_DIR"
+    export SCITEX_WRITER_ROOT_DIR="$tmp"
+    export SCITEX_WRITER_DOC_TYPE="manuscript"
+    export SCITEX_WRITER_VERSIONS_DIR="$tmp/archive"
+    export SCITEX_WRITER_COMPILED_PDF="$tmp/manuscript.pdf"
+    printf 'FRESH PDF produced this run\n' >"$LOG_DIR/manuscript.pdf"
+    printf '%s\n' \
+        '\v@claimpos{acc}{1s}{1}{6578176}{39469056}{0.0pt}{345.0pt}{8.4pt}{3.6pt}' \
+        '\v@claimpos{acc}{1e}{1}{9867264}{39469056}{0.0pt}{345.0pt}{8.4pt}{3.6pt}' \
+        >"$LOG_DIR/manuscript.aux"
+    ( cleanup 0 ) >/dev/null 2>&1
+    local found="no"
+    grep -q '"acc"' "$tmp/manuscript.pdf-anchors.json" 2>/dev/null && found="yes"
+    assert_eq "yes" "$found" "cleanup writes manuscript.pdf-anchors.json with the claim from the .aux"
+    rm -rf "$tmp"
+}
+
 # Run tests
 main() {
     echo "Testing: compilation_compiled_tex_to_compiled_pdf.sh"
@@ -157,6 +181,7 @@ main() {
     test_cleanup_fails_when_stale_pdf_and_no_fresh
     test_cleanup_removes_stale_pdf_when_no_fresh
     test_cleanup_succeeds_when_fresh_pdf_produced
+    test_cleanup_writes_claim_anchors_beside_the_pdf
 
     echo "========================================"
     echo "Results: $TESTS_PASSED/$TESTS_RUN passed"
