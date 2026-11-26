@@ -32,11 +32,8 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.fixture(scope="module")
-def page(tmp_path_factory):
-    """Text of page 1 (real space glyphs only) of a document using the engine font setup."""
-    pymupdf = pytest.importorskip("pymupdf")
-    root = tmp_path_factory.mktemp("pdftext")
+def _compile_with_engine_font_setup(root: Path) -> Path:
+    """Compile SENTENCE with T1 fontenc + the engine's pdf_text.tex; return the PDF."""
     (root / "00_shared" / "latex_styles").mkdir(parents=True)
     shutil.copy(STYLES / "pdf_text.tex", root / "00_shared" / "latex_styles")
     (root / "doc.tex").write_text(
@@ -55,11 +52,24 @@ def page(tmp_path_factory):
         text=True,
     )
     assert proc.returncode == 0, proc.stdout[-3000:]
-    with pymupdf.open(root / "doc.pdf") as doc:
-        # TEXT_INHIBIT_SPACES: report only space glyphs the PDF really
-        # contains, as copy-paste in many viewers does, not gaps the
-        # extractor guesses from glyph positions.
+    return root / "doc.pdf"
+
+
+def _copyable_text(pdf: Path) -> str:
+    """Page-1 text with only the space glyphs the PDF really contains.
+
+    TEXT_INHIBIT_SPACES stops the extractor from guessing spaces from glyph
+    gaps, as copy-paste in many viewers does.
+    """
+    pymupdf = pytest.importorskip("pymupdf")
+    with pymupdf.open(pdf) as doc:
         return doc[0].get_text(flags=pymupdf.TEXT_INHIBIT_SPACES)
+
+
+@pytest.fixture(scope="module")
+def page(tmp_path_factory):
+    """Copyable text of a document compiled with the engine font setup."""
+    return _copyable_text(_compile_with_engine_font_setup(tmp_path_factory.mktemp("pdftext")))
 
 
 def test_words_are_separated_by_spaces(page):
