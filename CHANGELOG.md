@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.45.0] - 2026-11-26
+
 ### Added
 
 - Every compile now writes `<pdf stem>.pdf-anchors.json` beside the PDF
