@@ -411,12 +411,12 @@ def _claims_tex():
     return claims_rendered_tex(claims, "test")
 
 
-@pytest.fixture(scope="module")
-def compiled(tmp_path_factory):
+@pytest.fixture
+def compiled(tmp_path):
     """Compile a document using the generated macros; return (pdf, payload)."""
     if shutil.which("pdflatex") is None:
         pytest.skip("pdflatex not available")
-    work = tmp_path_factory.mktemp("anchors_e2e")
+    work = tmp_path
     (work / "claims_rendered.tex").write_text(_claims_tex(), encoding="utf-8")
     (work / "doc.tex").write_text(
         "\\documentclass{article}\n"
