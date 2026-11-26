@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.44.5] - 2026-11-26
+
+### Fixed
+
+- Text copied from a pdfTeX-built PDF lost its word spaces and its `ff`/`fi`
+  ligatures ("additionalauthore\x1bort"). With `T1` fontenc and no outline EC
+  fonts, pdfTeX embedded bitmap Type3 fonts without a Unicode map. The new
+  `00_shared/latex_styles/pdf_text.tex` (loaded from `packages.tex`, pdfTeX
+  only) uses Latin Modern when the default Computer Modern family is active,
+  maps glyphs to Unicode (`glyphtounicode`, `\pdfgentounicode=1`) and emits
+  real space glyphs (`\pdfinterwordspaceon`).
+
 ## [2.44.4] - 2026-11-26
 
 Publishes the 2.44.2 and 2.44.3 content (both tags failed the release gate and
