@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Text copied from a pdfTeX-built PDF lost its word spaces and its `ff`/`fi`
+  ligatures ("additionalauthore\x1bort"). With `T1` fontenc and no outline EC
+  fonts, pdfTeX embedded bitmap Type3 fonts without a Unicode map. The new
+  `00_shared/latex_styles/pdf_text.tex` (loaded from `packages.tex`, pdfTeX
+  only) uses Latin Modern when the default Computer Modern family is active,
+  maps glyphs to Unicode (`glyphtounicode`, `\pdfgentounicode=1`) and emits
+  real space glyphs (`\pdfinterwordspaceon`).
+
+### Fixed
+
 - Supplementary title page: the title appeared twice, as
   `<title> Supplementary Material for: <title>` (#518). elsarticle's `\title`
   appends instead of replacing, and `02_supplementary/base.tex` called it after
