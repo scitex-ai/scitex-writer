@@ -56,7 +56,12 @@ def _frontmatter_block() -> str:
 def _compile_supplementary_frontmatter(tmp_path: Path) -> Path:
     shared = tmp_path / "00_shared"
     (shared / "latex_styles").mkdir(parents=True)
-    for rel in ("title.tex", "authors.tex", "latex_styles/title_scope.tex"):
+    for rel in (
+        "title.tex",
+        "authors.tex",
+        "keywords.tex",
+        "latex_styles/title_scope.tex",
+    ):
         shutil.copy(SHARED / rel, shared / rel)
     # Page 2 prints elsarticle's running title (\useelstitle), which the same
     # append bug used to double as well.
