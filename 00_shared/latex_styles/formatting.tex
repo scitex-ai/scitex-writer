@@ -73,21 +73,27 @@
 %% every \cite undefined (??/[?]). \ifeof after \openin is true when the file
 %% could not be opened (or is empty); default to 0 + a loud \typeout warning and
 %% keep compiling.
-\newread\wordcount
+%%
+%% The stream is NOT called \wordcount: \newread makes its name a \chardef, and
+%% the supplementary template writes \begin{wordcount}...\end{wordcount}, which
+%% then typeset character <stream number> (slot 8 in T1 = a stray breve) before
+%% the word-count line. The environment below is what that template means.
+\newread\scitexwordcountstream
+\newenvironment{wordcount}{\par\noindent\small}{\par\normalsize}
 \newcommand\readwordcount[1]{%
 \def\thewordcount{0}%
-\openin\wordcount=#1\relax
+\openin\scitexwordcountstream=#1\relax
 % Guard: a missing OR empty count file must NEVER reach \num as an empty
 % argument -- siunitx then errors "Invalid number", which is FATAL and fails
 % every latexmk pass (so citations render as [?]). \ifeof is true for both a
 % missing file and a 0-byte file; the post-read \ifx catches a blank line.
 % Default to 0 in all those cases. (neurovista incident 2026-07-04.)
-\ifeof\wordcount
+\ifeof\scitexwordcountstream
   \typeout{WARNING: scitex-writer: word-count file '#1' not found or empty; using 0.}%
 \else
-  \read\wordcount to \thewordcount
+  \read\scitexwordcountstream to \thewordcount
 \fi
-\closein\wordcount
+\closein\scitexwordcountstream
 \ifx\thewordcount\empty\def\thewordcount{0}\fi
 \begingroup\sisetup{round-mode=none,group-separator={,},group-minimum-digits=4}\num{\thewordcount}\endgroup%
 }

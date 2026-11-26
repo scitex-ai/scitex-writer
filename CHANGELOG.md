@@ -25,6 +25,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the first in reading order. Tectonic now keeps its intermediates so the
   `.aux` is there to read.
 
+### Fixed
+
+- The supplementary title page now prints the keywords from
+  `00_shared/keywords.tex`, the same file the manuscript prints.
+  `02_supplementary/base.tex` input no keywords file before.
+- A stray glyph (a breve in T1) no longer appears before the supplementary
+  word-count line. `formatting.tex` read the word-count files on a stream
+  named `\wordcount`; `\newread` made that name a `\chardef`, so the
+  supplementary template's `\begin{wordcount}` typeset character
+  <stream number>. The stream is now `\scitexwordcountstream`, and
+  `wordcount` is a real environment (an unindented small paragraph), so
+  existing projects' own `02_supplementary/contents/wordcount.tex` render
+  correctly after `update-project`.
+
 ## [2.44.5] - 2026-11-26
 
 ### Fixed
