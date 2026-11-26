@@ -38,6 +38,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `wordcount` is a real environment (an unindented small paragraph), so
   existing projects' own `02_supplementary/contents/wordcount.tex` render
   correctly after `update-project`.
+- Citation gates: `\cite{#1}` inside a `\newcommand` body is no longer
+  counted as a citation (it was reported as unlinked) (#527).
+- Citation gates: without `SCITEX_WRITER_COMPILED_TEX`, the fallback scan now
+  skips sources that are never built (`legacy/`, `archive/`, `logs/`,
+  `builds/`, `export/`, `_minted/`, `.git/` below the project root, and
+  `*_diff.tex`). The citation-trust check passes its cited keys to
+  scitex-scholar, so scholar no longer re-scans the tree on its own and only
+  cache misses are looked up (#528).
+- Citation trust: the scitex-scholar status `lookup_failed` (the metadata
+  service rate-limited or failed the lookup) is reported as "could NOT be
+  checked", as a warning, and is never cached. It used to arrive as
+  `unverified` "weak title match" and was cached for 30 days
+  (scitex-ai/scitex-scholar#314).
 
 ## [2.44.5] - 2026-11-26
 
