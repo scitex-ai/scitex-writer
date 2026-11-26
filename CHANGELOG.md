@@ -7,12 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.44.4] - 2026-11-26
-
-Publishes the 2.44.2 and 2.44.3 content (both tags failed the release gate and
-stay unpublished) together with the fixes below. The release workflow now uses
-the shared release driver revision that pins the 2.44.3 runner cleanup.
-
 ### Fixed
 
 - Text copied from a pdfTeX-built PDF lost its word spaces and its `ff`/`fi`
@@ -22,6 +16,12 @@ the shared release driver revision that pins the 2.44.3 runner cleanup.
   only) uses Latin Modern when the default Computer Modern family is active,
   maps glyphs to Unicode (`glyphtounicode`, `\pdfgentounicode=1`) and emits
   real space glyphs (`\pdfinterwordspaceon`).
+
+## [2.44.4] - 2026-11-26
+
+Publishes the 2.44.2 and 2.44.3 content (both tags failed the release gate and
+stay unpublished) together with the fixes below. The release workflow now uses
+the shared release driver revision that pins the 2.44.3 runner cleanup.
 
 ### Fixed
 
