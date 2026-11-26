@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT_DIR / "scripts" / "python"))
 
 from _citation_banner import banner_tex_path  # noqa: E402
 from check_citations import (  # noqa: E402
+    _resolve_tex_paths,
     audit_citations,
     extract_cited_keys,
     iter_bib_entries,
@@ -77,6 +78,21 @@ class TestExtractCitedKeys:
         keys = extract_cited_keys(tex)
         # Assert
         assert keys == {"Keep2020"}
+
+    def test_macro_parameter_placeholder_is_not_a_cite_key(self):
+        """Regression: ``\\cite{#1}`` in a \\newcommand body names the macro's
+        argument, not a key; it was reported as an unlinked citation."""
+        # Arrange
+        tex = (
+            r"\newcommand{\seeref}[1]{see \citep{#1}}"
+            r"\newcommand{\both}[2]{\cite{#1, ##2}}"
+            "\n"
+            r"Body \cite{Real2020}."
+        )
+        # Act
+        keys = extract_cited_keys(tex)
+        # Assert
+        assert keys == {"Real2020"}
 
     def test_text_without_citations_yields_empty_set(self):
         # Arrange
@@ -190,6 +206,57 @@ class TestAuditCitations:
         stubs, missing, no_doi = audit_citations(cited, self._ENTRIES)
         # Assert
         assert (stubs == []) and (missing == []) and (no_doi == [])
+
+
+class TestResolveTexPathsFallback:
+    """Without --tex and without $SCITEX_WRITER_COMPILED_TEX the gate scans
+    the project's .tex -- but only sources that can be built."""
+
+    def _tree(self, tmp_path):
+        live = tmp_path / "01_manuscript" / "contents" / "intro.tex"
+        live.parent.mkdir(parents=True)
+        live.write_text(r"\cite{Live2020}")
+        old = [
+            tmp_path / "01_manuscript" / "legacy" / "contents" / "intro_old.tex",
+            tmp_path / "01_manuscript" / "archive" / "manuscript_v001.tex",
+            tmp_path / "01_manuscript" / "logs" / "build.tex",
+        ]
+        for path in old:
+            path.parent.mkdir(parents=True)
+            path.write_text(r"\cite{Old1999}")
+        diff = tmp_path / "01_manuscript" / "manuscript_diff.tex"
+        diff.write_text(r"\cite{Old1999}")
+        return live
+
+    def test_legacy_archive_logs_and_diff_tex_are_not_scanned(self, tmp_path):
+        # Arrange
+        live = self._tree(tmp_path)
+        env = {"SCITEX_WRITER_COMPILED_TEX": ""}
+        # Act
+        paths = _resolve_tex_paths(tmp_path, None, environ=env)
+        # Assert
+        assert paths == [str(live)]
+
+    def test_project_under_a_directory_named_archive_is_still_scanned(self, tmp_path):
+        """Only directories BELOW the project root are excluded."""
+        # Arrange
+        root = tmp_path / "archive" / "my-paper"
+        live = self._tree(root)
+        # Act
+        paths = _resolve_tex_paths(root, None, environ={})
+        # Assert
+        assert paths == [str(live)]
+
+    def test_compiled_tex_from_env_wins_over_the_fallback(self, tmp_path):
+        # Arrange
+        self._tree(tmp_path)
+        compiled = tmp_path / "01_manuscript" / "manuscript.tex"
+        compiled.write_text(r"\cite{Live2020}")
+        env = {"SCITEX_WRITER_COMPILED_TEX": str(compiled)}
+        # Act
+        paths = _resolve_tex_paths(tmp_path, None, environ=env)
+        # Assert
+        assert paths == [str(compiled)]
 
 
 class TestResolveBibPaths:

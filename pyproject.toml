@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scitex-writer"
-version = "2.45.0"
+version = "2.45.1"
 description = "LaTeX manuscript compilation system for scientific documents with MCP server"
 readme = "README.md"
 license = "AGPL-3.0-only"
@@ -45,13 +45,16 @@ dependencies = [
     "scitex-sdk>=0.3.17",
     "click>=8.0",
     "fastmcp>=2.0.0",
-    # FLOOR IS 0.48.0: compile diagnostics (_compile/_diagnostics/_report.py)
-    # publish a `scitex_dev.status` Check/Report, first shipped in 0.48.0.
+    # FLOOR IS 0.67.0: an unset SCITEX_STORE_DSN resolves to the per-user
+    # local store, not a fleet host (scitex-writer#516 / scitex-dev#1111);
+    # below it a compile wrote claims to `scitex-primary` without being told.
+    # (0.48.0 was the earlier floor: compile diagnostics publish a
+    # `scitex_dev.status` Check/Report.)
     # (0.30.0 was the earlier floor for the public `scitex_dev.cli`
     # `attach_shell_completion` import.) The imports are deliberately
     # UNGUARDED — scitex-dev is a hard dependency, so a guard would swallow a
     # real breakage rather than cover a missing optional.
-    "scitex-dev>=0.48.0",
+    "scitex-dev>=0.67.0",
     # The compile event log (_compile/_event_log.py) emits every attempt /
     # refusal / failure / success through scitex_logging.getLogger so the
     # records join whatever sink the host configured, in addition to the
@@ -147,7 +150,7 @@ all = [
 ]
 dev = [
     # Public private-cluster testing helper and corrected canonical auditors.
-    "scitex-dev>=0.62.7",
+    "scitex-dev>=0.67.0",
     "build>=1.0",
     # Contributor builds use LivePaper's public wheel-contained frontend package.
     "scitex-live-paper>=0.2.20",
