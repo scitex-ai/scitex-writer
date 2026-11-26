@@ -177,7 +177,7 @@ main() {
     # Provenance / symlink checks at their configured severity (error blocks).
     log_stage_start "Provenance Checks"
     if ! ./scripts/shell/modules/run_provenance_checks.sh; then
-        log_error "Provenance check failed (a check is set to error and found a violation)"
+        echo_error "Provenance check failed (a check is set to error and found a violation)"
         exit 1
     fi
     log_stage_end "Provenance Checks"
@@ -186,7 +186,7 @@ main() {
     # file can never ship outdated values; fails loud if rendering errors.
     log_stage_start "Claims Render"
     if ! ./scripts/shell/modules/render_claims.sh; then
-        log_error "Claims render failed (claims.json present but rendering errored) -- fix claims.json; compiling would ship a stale claims_rendered.tex"
+        echo_error "Claims render failed (claims.json present but rendering errored) -- fix claims.json; compiling would ship a stale claims_rendered.tex"
         exit 1
     fi
     log_stage_end "Claims Render"
