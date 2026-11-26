@@ -1,0 +1,29 @@
+%% -*- coding: utf-8 -*-
+%% ROLE: engine-vendored — DO NOT edit here. `scitex-writer update-project`
+%% overwrites this file on every re-vendor; fix it upstream in the
+%% scitex-writer package instead.
+%% File: 00_shared/latex_styles/pdf_text.tex
+%%
+%% Copyable, searchable PDF text. Loaded right after \usepackage[T1]{fontenc}.
+%%
+%% pdfTeX only (XeTeX/LuaTeX use Unicode fonts and need none of this):
+%% - T1 text in the default Computer Modern family needs outline EC fonts
+%%   (cm-super). Without them pdfTeX embeds bitmap Type3 fonts with no Unicode
+%%   map, so a copied "effort" reads "e\x1bort". Latin Modern is the outline
+%%   T1 version of the same design; it replaces only the default family, so
+%%   a class or project font choice (e.g. times) is kept.
+%% - glyphtounicode + \pdfgentounicode map every glyph, ligatures included,
+%%   back to Unicode text.
+%% - \pdfinterwordspaceon (pdfTeX >= 1.40.15) emits real space glyphs, so
+%%   viewers that copy text without guessing word gaps keep the spaces.
+\usepackage{iftex}
+\ifPDFTeX
+  \begingroup
+    \edef\x{\rmdefault}\def\y{cmr}%
+    \ifx\x\y\endgroup\usepackage{lmodern}\else\endgroup\fi
+  \input{glyphtounicode}%
+  \pdfgentounicode=1
+  \ifdefined\pdfinterwordspaceon\pdfinterwordspaceon\fi
+\fi
+
+%%%% EOF
