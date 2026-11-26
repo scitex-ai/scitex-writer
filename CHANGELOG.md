@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Supplementary title page: the title appeared twice, as
+  `<title> Supplementary Material for: <title>` (#518). elsarticle's `\title`
+  appends instead of replacing, and `02_supplementary/base.tex` called it after
+  `00_shared/title.tex` had already called it. `base.tex` now reads the shared
+  title inside a group where `\title` only records its argument, then sets
+  `Supplementary Material for: <title>` once. This also fixes the running title.
+
 ## [2.44.1] - 2026-11-19
 
 Release of the 2.44.0 content. The 2.44.0 tag failed its release test gate

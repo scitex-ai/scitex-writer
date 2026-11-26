@@ -37,12 +37,19 @@
 %% Frontmatter
 %% ----------------------------------------
 \begin{frontmatter}
-    %% Title + authors from the 00_shared SSoT. \input{title} defines
-    %% \scitexmanuscripttitle (and sets \title); we then override \title to the
-    %% supplementary form derived from the SAME shared title, so it tracks the
-    %% manuscript automatically.
+    %% Title + authors from the 00_shared SSoT, so the supplementary title
+    %% tracks the manuscript automatically. elsarticle's \title APPENDS (to
+    %% \@title and \useelstitle) rather than replacing, so the shared file's
+    %% own \title call must not reach the class (#518). Inside a group, \title
+    %% only records its argument; the shared macro is exported past the group.
+    \begingroup
+    \renewcommand{\title}[2][]{\gdef\scitexsharedtitle{#2}}
     \input{./00_shared/title}
-    \title{Supplementary Material for: \scitexmanuscripttitle}
+    \ifdefined\scitexmanuscripttitle
+      \global\let\scitexmanuscripttitle\scitexmanuscripttitle
+    \fi
+    \endgroup
+    \title{Supplementary Material for: \scitexsharedtitle}
     \input{./00_shared/authors}
 \end{frontmatter}
 
