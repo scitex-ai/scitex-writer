@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.44.4] - 2026-11-26
+
+Publishes the 2.44.2 and 2.44.3 content (both tags failed the release gate and
+stay unpublished) together with the fixes below. The release workflow now uses
+the shared release driver revision that pins the 2.44.3 runner cleanup.
+
+### Fixed
+
+- Supplementary title page: the title appeared twice, as
+  `<title> Supplementary Material for: <title>` (#518). elsarticle's `\title`
+  appends instead of replacing, and `02_supplementary/base.tex` called it after
+  `00_shared/title.tex` had already called it. `base.tex` now reads the shared
+  title inside a group where `\title` only records its argument, then sets
+  `Supplementary Material for: <title>` once. This also fixes the running title.
+- `compile_supplementary.sh` called an undefined `log_error` on the
+  provenance and claims-render failure paths, so a failing check aborted with
+  exit 127 instead of its message. It now uses `echo_error`.
+
 ## [2.44.3] - 2026-11-22
 
 - Publish the fixes from the unpublished 2.44.2 tag.

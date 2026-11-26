@@ -26,7 +26,7 @@ env:
 
 jobs:
   admission:
-    uses: scitex-ai/.github/.github/workflows/runner-admission.yml@9fe54476f605d598fe25b353ba7b05570290c3c9
+    uses: scitex-ai/.github/.github/workflows/runner-admission.yml@2c90ced5832d57649b8861bd6562d574a9c4c883
     with:
       runs_on: '["self-hosted","Linux","X64","scitex-org-cpu"]'
 
@@ -61,14 +61,14 @@ jobs:
 
   test:
     # Fixed guarded shared defining callee (Infrastructure-owned):
-    # writer-release-sif.yml@9fe54476f605d598fe25b353ba7b05570290c3c9
+    # writer-release-sif.yml@2c90ced5832d57649b8861bd6562d574a9c4c883
     # Same immutable provider revision as admission; the existing trusted-actor
     # policy and Writer compatibility entry point retain registered driver gates.
     # DAG + AUTHORIZATION PRESERVED: no test executes without release-identity
     # preflight + admission, same as the leaf job this replaces.
     needs: [admission, preflight]
     if: needs.admission.outputs.native_authorized == 'true'
-    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@9fe54476f605d598fe25b353ba7b05570290c3c9
+    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@2c90ced5832d57649b8861bd6562d574a9c4c883
     with:
       operation: test
       source_commit: ${{ needs.preflight.outputs.commit }}
@@ -83,7 +83,7 @@ jobs:
     # github.sha divergence.
     needs: [admission, preflight, test]
     if: needs.admission.outputs.native_authorized == 'true'
-    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@9fe54476f605d598fe25b353ba7b05570290c3c9
+    uses: scitex-ai/.github/.github/workflows/writer-release-sif.yml@2c90ced5832d57649b8861bd6562d574a9c4c883
     with:
       operation: build
       source_commit: ${{ needs.preflight.outputs.commit }}
