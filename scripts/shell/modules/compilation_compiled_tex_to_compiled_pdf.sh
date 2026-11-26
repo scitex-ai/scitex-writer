@@ -12,6 +12,8 @@
 ORIG_DIR="$(pwd)"
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENGINES_DIR="${THIS_DIR}/engines"
+# Resolved here: sourcing config/load_config.sh below reassigns THIS_DIR.
+EMIT_CLAIM_ANCHORS_PY="$(cd "${THIS_DIR}/../../python" && pwd)/emit_claim_anchors.py"
 LOG_PATH="$THIS_DIR/.$(basename "$0").log"
 echo >"$LOG_PATH"
 
@@ -139,7 +141,7 @@ emit_claim_anchors() {
     local pdf_file="$1"
     local aux_file="$2"
     local python="${SCITEX_WRITER_PYTHON:-python3}"
-    if ! "$python" "${THIS_DIR}/../../python/emit_claim_anchors.py" \
+    if ! "$python" "$EMIT_CLAIM_ANCHORS_PY" \
         --aux "$aux_file" --pdf "$pdf_file"; then
         echo_warning "    Claim anchors not written for $pdf_file (see above); PDF readers cannot box its claims."
     fi
