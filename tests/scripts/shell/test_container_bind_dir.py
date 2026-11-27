@@ -30,7 +30,10 @@ from pathlib import Path
 
 import pytest
 
+# The resolvers (get_cmd_*) live in command_switching.src, which also loads the
+# project config; container_bind_dir lives in the side-effect-free runtime layer.
 MODULE = "scripts/shell/modules/command_switching.src"
+RUNTIME = "scripts/shell/modules/container_runtime.src"
 
 
 def _find_repo_root() -> Path:
@@ -44,8 +47,10 @@ def _find_repo_root() -> Path:
 ROOT = _find_repo_root()
 
 
-def _bash(snippet: str, *args: str, env=None) -> subprocess.CompletedProcess:
-    script = f'source "{ROOT / MODULE}" >/dev/null 2>&1\n{snippet}'
+def _bash(
+    snippet: str, *args: str, env=None, module: str = MODULE
+) -> subprocess.CompletedProcess:
+    script = f'source "{ROOT / module}" >/dev/null 2>&1\n{snippet}'
     return subprocess.run(
         ["bash", "-c", script, "_", *args],
         cwd=str(ROOT),
@@ -101,9 +106,9 @@ def test_bind_dir_is_the_enclosing_repository(nested_project):
     # Arrange
     repo, project = nested_project
     # Act
-    proc = _bash('container_bind_dir "$1"', str(project))
+    proc = _bash('container_bind_dir "$1"', str(project), module=RUNTIME)
     # Assert
-    assert proc.stdout.strip() == str(repo.resolve())
+    assert proc.stdout.strip() == str(repo.resolve()), proc.stderr
 
 
 def test_bind_dir_outside_git_is_the_project_itself(tmp_path):
@@ -111,9 +116,9 @@ def test_bind_dir_outside_git_is_the_project_itself(tmp_path):
     project = tmp_path / "plain"
     project.mkdir()
     # Act
-    proc = _bash('container_bind_dir "$1"', str(project.resolve()))
+    proc = _bash('container_bind_dir "$1"', str(project.resolve()), module=RUNTIME)
     # Assert
-    assert proc.stdout.strip() == str(project.resolve())
+    assert proc.stdout.strip() == str(project.resolve()), proc.stderr
 
 
 @pytest.fixture
