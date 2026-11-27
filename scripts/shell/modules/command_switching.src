@@ -36,6 +36,8 @@ get_cmd_pdflatex() {
     local working_dir="${1:-$(pwd)}"
     local abs_dir
     abs_dir=$(realpath "$working_dir")
+    local bind_dir
+    bind_dir=$(container_bind_dir "$abs_dir")
 
     # First choice: Native pdflatex (fastest)
     if command -v pdflatex &>/dev/null; then
@@ -55,7 +57,7 @@ get_cmd_pdflatex() {
     local runtime
     runtime=$(get_container_runtime)
     if [ -n "$runtime" ] && setup_latex_container; then
-        echo "$runtime exec --bind ${abs_dir}:${abs_dir} --pwd ${abs_dir} $SCITEX_WRITER_TEXLIVE_APPTAINER_SIF pdflatex"
+        echo "$runtime exec --bind ${bind_dir}:${bind_dir} --pwd ${abs_dir} $SCITEX_WRITER_TEXLIVE_APPTAINER_SIF pdflatex"
         return 0
     fi
 
@@ -68,6 +70,8 @@ get_cmd_bibtex() {
     local working_dir="${1:-$(pwd)}"
     local abs_dir
     abs_dir=$(realpath "$working_dir")
+    local bind_dir
+    bind_dir=$(container_bind_dir "$abs_dir")
 
     # First choice: Native bibtex (fastest)
     if command -v bibtex &>/dev/null; then
@@ -87,7 +91,7 @@ get_cmd_bibtex() {
     local runtime
     runtime=$(get_container_runtime)
     if [ -n "$runtime" ] && setup_latex_container; then
-        echo "$runtime exec --bind ${abs_dir}:${abs_dir} --pwd ${abs_dir} $SCITEX_WRITER_TEXLIVE_APPTAINER_SIF bibtex"
+        echo "$runtime exec --bind ${bind_dir}:${bind_dir} --pwd ${abs_dir} $SCITEX_WRITER_TEXLIVE_APPTAINER_SIF bibtex"
         return 0
     fi
 
@@ -100,6 +104,8 @@ get_cmd_latexdiff() {
     local working_dir="${1:-$(pwd)}"
     local abs_dir
     abs_dir=$(realpath "$working_dir")
+    local bind_dir
+    bind_dir=$(container_bind_dir "$abs_dir")
 
     # First choice: Native latexdiff (fastest)
     if [ -x "/usr/bin/latexdiff" ] || [ -x "/usr/local/bin/latexdiff" ]; then
@@ -121,7 +127,7 @@ get_cmd_latexdiff() {
     local runtime
     runtime=$(get_container_runtime)
     if [ -n "$runtime" ] && setup_latex_container; then
-        echo "$runtime exec --bind ${abs_dir}:${abs_dir} --pwd ${abs_dir} $SCITEX_WRITER_TEXLIVE_APPTAINER_SIF latexdiff"
+        echo "$runtime exec --bind ${bind_dir}:${bind_dir} --pwd ${abs_dir} $SCITEX_WRITER_TEXLIVE_APPTAINER_SIF latexdiff"
         return 0
     fi
 
@@ -134,6 +140,8 @@ get_cmd_texcount() {
     local working_dir="${1:-$(pwd)}"
     local abs_dir
     abs_dir=$(realpath "$working_dir")
+    local bind_dir
+    bind_dir=$(container_bind_dir "$abs_dir")
 
     # First choice: Native texcount (fastest)
     if command -v texcount &>/dev/null && texcount --version &>/dev/null 2>&1; then
@@ -151,7 +159,7 @@ get_cmd_texcount() {
     local runtime
     runtime=$(get_container_runtime)
     if [ -n "$runtime" ] && setup_latex_container; then
-        echo "$runtime exec --bind ${abs_dir}:${abs_dir} --pwd ${abs_dir} $SCITEX_WRITER_TEXLIVE_APPTAINER_SIF texcount"
+        echo "$runtime exec --bind ${bind_dir}:${bind_dir} --pwd ${abs_dir} $SCITEX_WRITER_TEXLIVE_APPTAINER_SIF texcount"
         return 0
     fi
 
@@ -164,6 +172,8 @@ get_cmd_latexmk() {
     local working_dir="${1:-$(pwd)}"
     local abs_dir
     abs_dir=$(realpath "$working_dir")
+    local bind_dir
+    bind_dir=$(container_bind_dir "$abs_dir")
 
     # First choice: Native latexmk (fastest)
     if command -v latexmk &>/dev/null && latexmk -version &>/dev/null 2>&1; then
@@ -181,7 +191,7 @@ get_cmd_latexmk() {
     local runtime
     runtime=$(get_container_runtime)
     if [ -n "$runtime" ] && setup_latex_container; then
-        echo "$runtime exec --bind ${abs_dir}:${abs_dir} --pwd ${abs_dir} $SCITEX_WRITER_TEXLIVE_APPTAINER_SIF latexmk"
+        echo "$runtime exec --bind ${bind_dir}:${bind_dir} --pwd ${abs_dir} $SCITEX_WRITER_TEXLIVE_APPTAINER_SIF latexmk"
         return 0
     fi
 
@@ -194,6 +204,8 @@ get_cmd_tectonic() {
     local working_dir="${1:-$(pwd)}"
     local abs_dir
     abs_dir=$(realpath "$working_dir")
+    local bind_dir
+    bind_dir=$(container_bind_dir "$abs_dir")
 
     # First choice: Native tectonic (fastest)
     if command -v tectonic &>/dev/null && tectonic --version &>/dev/null 2>&1; then
@@ -205,7 +217,7 @@ get_cmd_tectonic() {
     local runtime
     runtime=$(get_container_runtime)
     if [ -n "$runtime" ] && setup_tectonic_container; then
-        echo "$runtime exec --bind ${abs_dir}:${abs_dir} --pwd ${abs_dir} $SCITEX_WRITER_TECTONIC_APPTAINER_SIF tectonic"
+        echo "$runtime exec --bind ${bind_dir}:${bind_dir} --pwd ${abs_dir} $SCITEX_WRITER_TECTONIC_APPTAINER_SIF tectonic"
         return 0
     fi
 
@@ -218,6 +230,8 @@ get_cmd_mmdc() {
     local working_dir="${1:-$(pwd)}"
     local abs_dir
     abs_dir=$(realpath "$working_dir")
+    local bind_dir
+    bind_dir=$(container_bind_dir "$abs_dir")
 
     # First choice: Native mmdc (fastest and most compatible)
     if command -v mmdc &>/dev/null; then
@@ -237,9 +251,9 @@ get_cmd_mmdc() {
         local puppeteer_config="${project_root}/.cache/puppeteer-config.json"
 
         if [ -f "$puppeteer_config" ]; then
-            echo "$runtime exec --bind ${abs_dir}:${abs_dir} --bind ${puppeteer_config}:${puppeteer_config}:ro --pwd ${abs_dir} $SCITEX_WRITER_MERMAID_APPTAINER_SIF /home/mermaidcli/node_modules/.bin/mmdc -p ${puppeteer_config}"
+            echo "$runtime exec --bind ${bind_dir}:${bind_dir} --bind ${puppeteer_config}:${puppeteer_config}:ro --pwd ${abs_dir} $SCITEX_WRITER_MERMAID_APPTAINER_SIF /home/mermaidcli/node_modules/.bin/mmdc -p ${puppeteer_config}"
         else
-            echo "$runtime exec --bind ${abs_dir}:${abs_dir} --pwd ${abs_dir} $SCITEX_WRITER_MERMAID_APPTAINER_SIF /home/mermaidcli/node_modules/.bin/mmdc"
+            echo "$runtime exec --bind ${bind_dir}:${bind_dir} --pwd ${abs_dir} $SCITEX_WRITER_MERMAID_APPTAINER_SIF /home/mermaidcli/node_modules/.bin/mmdc"
         fi
         return 0
     fi
@@ -272,6 +286,8 @@ get_cmd_convert() {
     local working_dir="${1:-$(pwd)}"
     local abs_dir
     abs_dir=$(realpath "$working_dir")
+    local bind_dir
+    bind_dir=$(container_bind_dir "$abs_dir")
 
     # First choice: Native magick (ImageMagick v7+) or convert (v6)
     if command -v magick &>/dev/null; then
@@ -287,7 +303,7 @@ get_cmd_convert() {
     runtime=$(get_container_runtime)
     if [ -n "$runtime" ] && setup_imagemagick_container; then
         # Container likely has v7, so use magick to avoid deprecation warning
-        echo "$runtime exec --bind ${abs_dir}:${abs_dir} --pwd ${abs_dir} $SCITEX_WRITER_IMAGEMAGICK_APPTAINER_SIF magick 2>/dev/null"
+        echo "$runtime exec --bind ${bind_dir}:${bind_dir} --pwd ${abs_dir} $SCITEX_WRITER_IMAGEMAGICK_APPTAINER_SIF magick 2>/dev/null"
         return 0
     fi
 

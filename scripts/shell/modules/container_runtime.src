@@ -63,6 +63,27 @@ get_container_runtime() {
     echo "$_CACHED_CONTAINER_RUNTIME"
 }
 
+# Directory a container must bind so the compile can see every project file:
+# the enclosing git work tree when there is one, else the project dir itself.
+# Project media are SYMLINKS into the producing scripts' outputs (the media
+# provenance check requires links resolving under the repo's scripts/), so a
+# project nested in a repo (e.g. <repo>/.scitex/writer) points OUTSIDE its own
+# directory. Binding only the project dir left those links dangling inside the
+# container whenever the repo was not under an auto-bound path such as $HOME:
+# a clone on /scratch or a CI runner's work dir failed its first \includegraphics,
+# latexmk stopped after one pass, and every count that needs a rerun (table
+# total, cross-references) was left unsettled (issue #535).
+container_bind_dir() {
+    local abs_dir="$1"
+    local top
+    top=$(git -C "$abs_dir" rev-parse --show-toplevel 2>/dev/null) || top=""
+    if [ -n "$top" ] && [ -d "$top" ]; then
+        realpath "$top"
+    else
+        echo "$abs_dir"
+    fi
+}
+
 # Load texlive module if available (cached)
 load_texlive_module() {
     # Use cache if available

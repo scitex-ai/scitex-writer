@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A project nested in a repository now compiles on its first run wherever the
+  repository lives (#535). The LaTeX container bound only the project
+  directory, but project media are symlinks into `<repo>/scripts/`, so outside
+  an auto-bound path ($HOME, /tmp) -- a clone on /scratch, a CI runner's work
+  dir -- the first `\includegraphics` failed, latexmk stopped after one pass,
+  and the artifacts gate reported "front matter shows 0 tables but the compile
+  counted N". The container now binds the enclosing git work tree.
+- The artifacts gate no longer counts an `\includegraphics` inside a macro or
+  environment definition as a figure; a figure-free document whose style
+  defines an optional icon macro failed with "1 \includegraphics referenced
+  but the PDF embeds ZERO images" once poppler was installed.
+- The table-total mismatch hint names the usual cause (a LaTeX error that
+  stops latexmk before its rerun) instead of asking for another compile.
+
+### Added
+
+- `poppler-utils` is declared as a system dependency; the artifacts gate's
+  figure-embedding and PDF-text checks need `pdfimages` / `pdftotext`.
+
 ## [2.45.2] - 2026-11-27
 
 ### Added
