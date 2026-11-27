@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Subprocess coverage is configured via `patch = ["subprocess"]` in
+  `pyproject.toml` (coverage >= 7.10); test collection no longer installs a
+  `*_subprocess_coverage.pth` hook into site-packages or overwrites the
+  caller-owned `COVERAGE_PROCESS_START` / `COVERAGE_FILE` variables.
+
 ## [2.45.2] - 2026-11-27
 
 ### Added
