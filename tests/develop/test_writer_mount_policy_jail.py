@@ -31,6 +31,7 @@ not the caller's looser data root. The leaf keeps its own containment
 checks (``files.py::_resolve_safe``, ``sections.py::_within``) for
 standalone mode, where no host enforcement exists.
 """
+
 from __future__ import annotations
 
 import json
@@ -66,6 +67,16 @@ def test_the_manifest_declares_it_touches_files():
     touches = policy.get("touches_files")
     # Assert
     assert touches is True
+
+
+def test_the_manifest_declares_it_requires_a_project():
+    # Arrange — every Writer page works on one project; a host sends a
+    # project-less user to its create-project page instead of the leaf 404
+    policy = _policy()
+    # Act
+    requires = policy.get("requires_project")
+    # Assert
+    assert requires is True
 
 
 def test_the_manifest_declares_a_jail_block():
@@ -157,5 +168,10 @@ def test_the_sdk_floor_covers_the_jail_contract():
     dependencies = project["dependencies"]
     # Assert
     from packaging.requirements import Requirement
-    sdk = next(Requirement(item) for item in dependencies if Requirement(item).name == 'scitex-sdk')
-    assert ('0.3.17' in sdk.specifier, '0.3.16' in sdk.specifier) == (True, False)
+
+    sdk = next(
+        Requirement(item)
+        for item in dependencies
+        if Requirement(item).name == "scitex-sdk"
+    )
+    assert ("0.3.17" in sdk.specifier, "0.3.16" in sdk.specifier) == (True, False)

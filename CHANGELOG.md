@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.45.2] - 2026-11-27
+
+### Added
+
+- The plugin manifest declares `mount_policy.requires_project: true`. Every
+  Writer page works on one project, so a host's generic plugin mount can send
+  a signed-in user who has no project to its create-project page instead of
+  showing the leaf's `404 {"error": "Project not available"}`. Hosts that do
+  not know the key ignore it.
+
 ## [2.45.1] - 2026-11-27
 
 ### Fixed

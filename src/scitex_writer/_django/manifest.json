@@ -42,6 +42,7 @@
   },
   "mount_policy": {
     "login_required": true,
+    "requires_project": true,
     "touches_files": true,
     "jail": {
       "scope": "project",
