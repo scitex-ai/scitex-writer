@@ -177,7 +177,14 @@ def count_includegraphics(compiled_tex):
         text = Path(compiled_tex).read_text(encoding="utf-8", errors="replace")
     except OSError:
         return None
-    return len(re.findall(r"\\includegraphics\b", _strip_comments(text)))
+    # The Writer colophon uses a private, optional icon. Its definition is
+    # flattened into every document, even when the colophon is disabled.
+    text = re.sub(
+        r"\\includegraphics\s*(?:\[[^\]]*\]\s*)?\{\\clew@sigiconpath\}",
+        "",
+        _strip_comments(text),
+    )
+    return len(re.findall(r"\\includegraphics\b", text))
 
 
 def count_pdf_images(pdf_path):

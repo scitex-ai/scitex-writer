@@ -106,6 +106,18 @@ def _run(tmp_path, *extra, rows=None, use_fake=True, pdf_text=None):
 # ============================================================================
 
 
+def test_optional_colophon_does_not_count_as_a_document_figure(tmp_path):
+    # Arrange
+    optional_icon = r"\includegraphics[height=1em]{\clew@sigiconpath}"
+    real_figure = r"\includegraphics[height=1em]{study-result}"
+    icon_only = _write(tmp_path, "without.tex", optional_icon)
+    with_figure = _write(tmp_path, "with.tex", optional_icon + real_figure)
+    # Act
+    counts = (count_includegraphics(icon_only), count_includegraphics(with_figure))
+    # Assert
+    assert counts == (0, 1)
+
+
 def test_count_includegraphics_counts_uncommented(tmp_path):
     # Arrange
     tex = _write(tmp_path, "compiled.tex", _TEX_5)
