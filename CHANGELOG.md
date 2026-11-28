@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   but the PDF embeds ZERO images" once poppler was installed.
 - The table-total mismatch hint names the usual cause (a LaTeX error that
   stops latexmk before its rerun) instead of asking for another compile.
+- Subprocess coverage is configured via `patch = ["subprocess"]` in
+  `pyproject.toml` (coverage >= 7.10); test collection no longer installs a
+  `*_subprocess_coverage.pth` hook into site-packages or overwrites the
+  caller-owned `COVERAGE_PROCESS_START` / `COVERAGE_FILE` variables.
 
 ### Added
 
