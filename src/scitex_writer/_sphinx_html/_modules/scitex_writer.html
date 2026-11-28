@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>scitex_writer &mdash; SciTeX Writer v2.45.2</title>
+  <title>scitex_writer &mdash; SciTeX Writer v2.45.3</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -13,7 +13,7 @@
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=c03dad4b"></script>
+      <script src="../_static/documentation_options.js?v=64452952"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -303,8 +303,18 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">ensure_workspace</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="n">git_strategy</span><span class="o">=</span><span class="s2">"child"</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Ensure writer workspace exists at {project_dir}/.scitex/writer/.</span>
 
-<span class="sd">    If the directory already exists, returns the path without modification.</span>
-<span class="sd">    If not, clones the full scitex-writer template.</span>
+<span class="sd">    If the directory does not exist, clones the full scitex-writer template.</span>
+
+<span class="sd">    If it exists and already holds manuscript content (``00_shared/`` or</span>
+<span class="sd">    ``01_manuscript/``) but no engine (no ``scripts/shell/``) — the layout a</span>
+<span class="sd">    project template ships when it provides only the text — the engine is</span>
+<span class="sd">    installed around that content: every template entry the workspace lacks is</span>
+<span class="sd">    added, nothing that exists is replaced, and the template's example figures</span>
+<span class="sd">    and tables are left out. Repeat calls are therefore safe on a workspace the</span>
+<span class="sd">    author has edited.</span>
+
+<span class="sd">    Any other existing, non-empty directory is returned unchanged (apart from</span>
+<span class="sd">    the vendored-script refresh).</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -327,6 +337,16 @@
 
     <span class="n">writer_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">".scitex"</span> <span class="o">/</span> <span class="s2">"writer"</span>
     <span class="k">if</span> <span class="n">writer_path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">writer_path</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">._project._engine</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">has_engine</span><span class="p">,</span>
+            <span class="n">holds_content</span><span class="p">,</span>
+            <span class="n">install_engine_from_template</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">holds_content</span><span class="p">(</span><span class="n">writer_path</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">has_engine</span><span class="p">(</span><span class="n">writer_path</span><span class="p">):</span>
+            <span class="n">install_engine_from_template</span><span class="p">(</span>
+                <span class="n">writer_path</span><span class="p">,</span> <span class="n">branch</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"branch"</span><span class="p">),</span> <span class="n">tag</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"tag"</span><span class="p">)</span>
+            <span class="p">)</span>
         <span class="n">_maybe_scaffold_paper_symlink</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">project_dir</span><span class="p">))</span>
         <span class="n">_refresh_workspace_scripts</span><span class="p">(</span><span class="n">writer_path</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">writer_path</span>
@@ -348,9 +368,9 @@
 <span class="sd">    (``01_manuscript/``/``00_shared/``). A missing source (stripped install)</span>
 <span class="sd">    is a no-op, not an error.</span>
 <span class="sd">    """</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">scitex_logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">getLogger</span>
-
     <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">scitex_logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">getLogger</span>
 
     <span class="kn">from</span><span class="w"> </span><span class="nn">.workspace_layout</span><span class="w"> </span><span class="kn">import</span> <span class="n">refresh_vendored_scripts</span>
 

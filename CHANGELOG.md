@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   would leave the workspace are skipped. Repeat calls keep the author's edits.
   Previously such a workspace was returned unchanged and could not compile.
 
+## [2.45.3] - 2026-11-28
+
 ### Fixed
 
 - A project nested in a repository now compiles on its first run wherever the
