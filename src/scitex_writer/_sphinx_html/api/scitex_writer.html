@@ -523,8 +523,16 @@ injection without patching module internals.</p>
 <dt class="sig sig-object py" id="scitex_writer.ensure_workspace">
 <span class="sig-prename descclassname"><span class="pre">scitex_writer.</span></span><span class="sig-name descname"><span class="pre">ensure_workspace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">git_strategy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'child'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/scitex_writer.html#ensure_workspace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#scitex_writer.ensure_workspace" title="Link to this definition"></a></dt>
 <dd><p>Ensure writer workspace exists at {project_dir}/.scitex/writer/.</p>
-<p>If the directory already exists, returns the path without modification.
-If not, clones the full scitex-writer template.</p>
+<p>If the directory does not exist, clones the full scitex-writer template.</p>
+<p>If it exists and already holds manuscript content (<code class="docutils literal notranslate"><span class="pre">00_shared/</span></code> or
+<code class="docutils literal notranslate"><span class="pre">01_manuscript/</span></code>) but no engine (no <code class="docutils literal notranslate"><span class="pre">scripts/shell/</span></code>) — the layout a
+project template ships when it provides only the text — the engine is
+installed around that content: every template entry the workspace lacks is
+added, nothing that exists is replaced, and the template’s example figures
+and tables are left out. Repeat calls are therefore safe on a workspace the
+author has edited.</p>
+<p>Any other existing, non-empty directory is returned unchanged (apart from
+the vendored-script refresh).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
