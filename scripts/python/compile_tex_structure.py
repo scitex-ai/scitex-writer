@@ -26,6 +26,7 @@ from _build_id import (  # noqa: E402
     inject_build_metadata,
     register_build,
 )
+from _shown_path import shown_path as _shown  # noqa: E402
 from _signature_footer import (  # noqa: E402
     SIGNATURE_FOOTER_SENTINEL,
     build_footer_injection,
@@ -111,12 +112,15 @@ def expand_inputs(
         return f"% ERROR: Max recursion depth ({max_depth}) exceeded\n"
 
     if not file_path.exists():
-        return f"% SKIPPED: \\input{{{file_path}}} (file not found)\n"
+        return f"% SKIPPED: \\input{{{_shown(file_path)}}} (file not found)\n"
 
     # Prevent infinite loops
     file_path = file_path.resolve()
     if file_path in processed:
-        return f"% SKIPPED: \\input{{{file_path}}} (already processed - circular reference)\n"
+        return (
+            f"% SKIPPED: \\input{{{_shown(file_path)}}} "
+            "(already processed - circular reference)\n"
+        )
 
     processed.add(file_path)
 
@@ -125,7 +129,7 @@ def expand_inputs(
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
     except Exception as e:
-        return f"% ERROR: Could not read {file_path}: {e}\n"
+        return f"% ERROR: Could not read {_shown(file_path)}: {e}\n"
 
     # Find all \input{} commands (but not commented lines)
     lines = content.split("\n")
@@ -170,7 +174,7 @@ def expand_inputs(
             # Add header comment
             result_lines.append("")
             result_lines.append("% " + "=" * 70)
-            result_lines.append(f"% File: {input_file}")
+            result_lines.append(f"% File: {_shown(input_file)}")
             result_lines.append("% " + "=" * 70)
 
             if input_path.exists():

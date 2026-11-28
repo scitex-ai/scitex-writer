@@ -103,6 +103,7 @@ def _first(d, *keys):
             return v
     return None
 
+
 # scitex-writer registers its \vclaim values IN clew (one claim store); the
 # writer-only fields ride in claim_value as a JSON envelope whose `display`
 # member is the display-ready string. Show that, never the raw JSON.
@@ -170,6 +171,43 @@ def _claim_link(claim):
     _first(...) accessor pattern. Empty string when the claim has no link."""
     v = _first(claim, "link", "source_file")
     return "" if v is None else str(v)
+
+
+#: Prefix of a link whose file lies outside the project root. Only the file
+#: name follows it: the directory is the build host's, not the paper's.
+EXTERNAL_LINK_PREFIX = "external: "
+
+_URL_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*:(//|[^/\\])")
+
+
+def _portable_link(link, root):
+    r"""The link as the rendered .tex may carry it: never a build-host path.
+
+    clew >= 0.37.2 already names in-project files relative to the project root;
+    an older feed (or one exported from another checkout) carries the absolute
+    path recorded on whichever machine and checkout registered the claim, and
+    that path would be baked into the tracked, flattened manuscript.tex and the
+    PDF tooltip. So, resolved against ``root`` (the project the feed belongs
+    to) at render time:
+
+    * URLs (``https://doi.org/...``, ``doi:...``) and relative paths: unchanged;
+    * an absolute path inside ``root``: the POSIX path relative to ``root``;
+    * an absolute path outside ``root``: ``external: <file name>`` -- the
+      directory says where the authors' files were, nothing about the paper.
+    """
+    if not link or root is None or _URL_RE.match(link):
+        return link
+    path = Path(link)
+    if not path.is_absolute():
+        return link
+    root = Path(root)
+    for base in dict.fromkeys((root, root.resolve())):
+        for candidate in dict.fromkeys((path, path.resolve())):
+            try:
+                return candidate.relative_to(base).as_posix()
+            except ValueError:
+                continue
+    return f"{EXTERNAL_LINK_PREFIX}{path.name}"
 
 
 def _verdict(claim):
@@ -269,8 +307,11 @@ def _iter_claims(data):
     return list(claims) if isinstance(claims, list) else []
 
 
-def render_clew_tex(data):
-    r"""Render the clew_rendered.tex body from a parsed claims.json (v1.3)."""
+def render_clew_tex(data, root=None):
+    r"""Render the clew_rendered.tex body from a parsed claims.json (v1.3).
+
+    ``root`` is the project root the feed belongs to; links are made portable
+    against it (:func:`_portable_link`). ``None`` emits links as given."""
     claims = _iter_claims(data)
     palette = _resolve_palette(data)
     total, verified, allverified = _aggregate(data, claims)
@@ -312,7 +353,7 @@ def render_clew_tex(data):
         lines.append(f"\\@namedef{{clew@status@{cid}}}{{{verdict}}}")
         # Source pointer (LaTeX-escaped): emitted only when the claim carries a
         # non-empty link, so a link-less claim's tooltip degrades to status-only.
-        link = _claim_link(claim)
+        link = _portable_link(_claim_link(claim), root)
         if link:
             lines.append(f"\\@namedef{{clew@link@{cid}}}{{{_latex_escape(link)}}}")
         lines.append("")
@@ -371,7 +412,9 @@ def main(argv):
         return 1
 
     try:
-        tex = render_clew_tex(data)
+        # <root>/.scitex/clew/runtime/claims.json -> <root>: the project the
+        # feed's paths belong to (the git root for a nested writer).
+        tex = render_clew_tex(data, root=claims_json.parents[3])
     except Exception as exc:  # malformed schema -- surface, don't ship stale
         print(
             f"ERRO:     Failed to render clew_rendered.tex from {claims_json}: {exc}.",

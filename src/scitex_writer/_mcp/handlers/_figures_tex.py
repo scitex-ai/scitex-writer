@@ -18,19 +18,21 @@ Two behaviours the shell pinned and this port keeps verbatim:
 * an end-block float is GUARDED by ``\ifcsname scitexfigplaced@<n>``, so a figure
   placed inline with ``\scitexfig{<n>}`` is not also duplicated at the end.
 
-One behaviour deliberately changed: image paths are ALWAYS absolute. The shell
-switched to absolute only for tectonic (which cannot resolve a relative graphics
-path) and left every other engine on a cwd-relative path that broke whenever the
-compile ran from another directory. Absolute is correct for all engines and drops
-the engine-conditional branch entirely.
+Image paths are named relative to the project root (``./01_manuscript/...``,
+:func:`scitex_writer._utils._tex_paths.tex_path`) when the caller passes
+``tex_root``, never by the absolute path of the checkout: the flattened
+manuscript that inlines ``FINAL.tex`` is a tracked file, and an absolute path
+there names whichever checkout compiled last. The compile runs from the project
+root, the base every ``./``-prefixed ``\input`` already resolves from.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from ..._utils._caption_footnote import split_caption_footnote
+from ..._utils._tex_paths import tex_path
 from ._figures_media import figure_number, mains, numbered
 
 HEADER_NAME = "00_Figures_Header.tex"
@@ -128,7 +130,7 @@ def read_caption(caption_file: Path, number: str) -> Tuple[str, Optional[str], s
 def figure_float(
     number: str,
     figure_id: str,
-    image_path: Path,
+    image_path: Union[Path, str],
     caption: str,
     footnote: Optional[str],
     title: str,
@@ -167,6 +169,7 @@ def compile_figure_tex_files(
     compiled_dir: Path,
     compiled_file: Path,
     max_height_frac: str = DEFAULT_MAX_HEIGHT_FRAC,
+    tex_root: Optional[Path] = None,
 ) -> dict:
     r"""Assemble ``FINAL.tex`` from the compiled figures.
 
@@ -177,6 +180,9 @@ def compile_figure_tex_files(
 
     An image is looked up as ``<figure_id>.jpg`` first, then ``<number>.jpg`` --
     the latter is the composite a panelled figure's panels were tiled into.
+
+    ``tex_root`` is the project root: the ``\includegraphics`` path is written
+    relative to it (``None`` keeps the path as given).
 
     Returns ``{"figure_count", "fallback_header", "figures"}``.
     """
@@ -212,7 +218,13 @@ def compile_figure_tex_files(
             image_path = jpg_dir / f"{number}.jpg"
 
         float_lines = figure_float(
-            number, figure_id, image_path, caption, footnote, title, max_height
+            number,
+            figure_id,
+            tex_path(image_path, tex_root),
+            caption,
+            footnote,
+            title,
+            max_height,
         )
         placeable_file = placeable_dir / f"{number}.tex"
         placeable_file.write_text("\n".join(float_lines) + "\n", encoding="utf-8")
