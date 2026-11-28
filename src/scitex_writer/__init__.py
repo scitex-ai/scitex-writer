@@ -119,8 +119,18 @@ def __dir__():
 def ensure_workspace(project_dir, git_strategy="child", **kwargs):
     """Ensure writer workspace exists at {project_dir}/.scitex/writer/.
 
-    If the directory already exists, returns the path without modification.
-    If not, clones the full scitex-writer template.
+    If the directory does not exist, clones the full scitex-writer template.
+
+    If it exists and already holds manuscript content (``00_shared/`` or
+    ``01_manuscript/``) but no engine (no ``scripts/shell/``) — the layout a
+    project template ships when it provides only the text — the engine is
+    installed around that content: every template entry the workspace lacks is
+    added, nothing that exists is replaced, and the template's example figures
+    and tables are left out. Repeat calls are therefore safe on a workspace the
+    author has edited.
+
+    Any other existing, non-empty directory is returned unchanged (apart from
+    the vendored-script refresh).
 
     Parameters
     ----------
@@ -143,6 +153,16 @@ def ensure_workspace(project_dir, git_strategy="child", **kwargs):
 
     writer_path = Path(project_dir) / ".scitex" / "writer"
     if writer_path.exists() and any(writer_path.iterdir()):
+        from ._project._engine import (
+            has_engine,
+            holds_content,
+            install_engine_from_template,
+        )
+
+        if holds_content(writer_path) and not has_engine(writer_path):
+            install_engine_from_template(
+                writer_path, branch=kwargs.get("branch"), tag=kwargs.get("tag")
+            )
         _maybe_scaffold_paper_symlink(Path(project_dir))
         _refresh_workspace_scripts(writer_path)
         return writer_path
@@ -163,9 +183,9 @@ def _refresh_workspace_scripts(writer_path):
     (``01_manuscript/``/``00_shared/``). A missing source (stripped install)
     is a no-op, not an error.
     """
-    from scitex_logging import getLogger
-
     from pathlib import Path
+
+    from scitex_logging import getLogger
 
     from .workspace_layout import refresh_vendored_scripts
 
