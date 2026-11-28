@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`-Z search-path`) instead of absolute paths in the file. Previously every
   rebuild in another checkout rewrote these tracked files and they leaked the
   authors' home, scratch and worktree paths.
+- `git_strategy="parent"` now removes the template clone's `.git`, as its
+  documentation says ("use parent git repository") (#549). The clone kept its
+  own repository, so the enclosing project committed `.scitex/writer` as a
+  gitlink with no `.gitmodules`: the project's repository held a dangling
+  pointer instead of the manuscript, and the workspace's origin was the
+  template repository. Only `"origin"` keeps the template history now.
 
 ## [2.46.0] - 2026-11-28
 
