@@ -74,3 +74,19 @@ def test_preview_download_cannot_follow_a_foreign_artifact_symlink(tmp_path):
     response = handle_section_pdf(request, ProjectState(root))
     # Assert
     assert response.status_code == 403
+
+
+def test_engine_error_reaches_preview_diagnostics():
+    # Arrange
+    from scitex_writer._dataclasses import CompilationResult
+    from scitex_writer._django.handlers.preview import _failed_preview
+
+    log = "! Undefined control sequence.\nl.3 \\unknowncommand\n"
+    result = CompilationResult(success=False, message="Compilation failed with exit code 12",
+                               stdout=log, stderr="", exit_code=12)
+    # Act
+    reply = json.loads(_failed_preview(result, "abstract.tex").content)
+    # Assert
+    assert (reply["success"], reply["diagnostics"]["items"][0]["cause"], reply["log"].strip()) == (
+        False, "undefined-control-sequence", log.strip()
+    )

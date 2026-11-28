@@ -20,6 +20,18 @@ def _artifact(project, preview_id):
     return _resolve_safe(project.project_dir, f".preview/section-{preview_id}.pdf")
 
 
+def _failed_preview(result, path):
+    from scitex_writer._compile._diagnostics import analyse_latex_output, diagnostics_report
+
+    log = (result.stdout + "\n" + result.stderr)[-400_000:]
+    diagnostics = analyse_latex_output(compile_failed=True, console_text=log or result.message)
+    return JsonResponse({
+        "success": False, "section_path": path,
+        "error": result.message or "Section preview failed", "log": log,
+        "diagnostics": diagnostics_report(diagnostics, exit_code=result.exit_code),
+    })
+
+
 def handle_section_preview(request, project):
     """Compile the current buffer without saving or overwriting manuscript PDF."""
     from scitex_writer import __version__, compile as writer_compile
@@ -56,11 +68,7 @@ def handle_section_preview(request, project):
     )
     try:
         if not result.success or not artifact.is_file():
-            return JsonResponse({
-                "success": False, "section_path": path,
-                "error": result.message or "Section preview failed",
-                "log": (result.stdout + "\n" + result.stderr)[-400_000:],
-            })
+            return _failed_preview(result, path)
         return JsonResponse({"success": True, "preview_id": preview_id, "section_path": path, "cached": False})
     finally:
         # The existing compiler creates a private scratch directory per call.
