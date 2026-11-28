@@ -157,14 +157,16 @@ export class CompileController {
     this.setLog("");
     try {
       const { effectivePdfDarkMode } = await import("./pdf-theme");
-      const result = await apiPost<{success: boolean; preview_id: string; section_path: string; error?: string; log?: string}>("api/preview", {
+      const result = await apiPost<{success: boolean; preview_id: string; section_path: string; error?: string; log?: string; diagnostics?: CompileDiagnostics}>("api/preview", {
         section_path: section.path, content: section.content,
         dark_mode: effectivePdfDarkMode(),
       });
       if (sequence !== this.previewSequence || this.mode !== "preview" || this.opts.getSection()?.path !== section.path) return;
       if (!result.success) {
-        this.showRequestFailure(result.error || "Section preview failed");
-        if (result.log) this.setLog(result.log);
+        this.updateLamp("error");
+        this.setLog(result.log || result.error || "Section preview failed");
+        this.showDiagnostics(result.diagnostics, false);
+        this.setLogOpen(true);
         return;
       }
       const loaded = await this.opts.pdf.loadPreview(result.preview_id);
