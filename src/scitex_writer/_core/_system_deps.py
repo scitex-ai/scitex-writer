@@ -50,6 +50,12 @@ _PACKAGES: list[tuple[str, str]] = [
     ("chktex", "LaTeX linter"),
     ("texlive-extra-utils", "texcount and other LaTeX utilities"),
     ("parallel", "GNU parallel -- figure/table conversion + dependency check"),
+    (
+        "poppler-utils",
+        "pdfimages/pdftotext/pdfinfo -- post-compile artifact gate (figure "
+        "embedding, rendered-text checks, page count); skipped with a WARN "
+        "when absent",
+    ),
 ]
 
 #: Apt package names, in install order (the SSoT list).
