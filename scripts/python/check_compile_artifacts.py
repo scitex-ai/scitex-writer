@@ -58,6 +58,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _severity import resolve_level  # noqa: E402
+from _tex_definitions import strip_macro_definitions  # noqa: E402
 
 GREEN = "\033[0;32m"
 YELLOW = "\033[1;33m"
@@ -172,12 +173,14 @@ def _strip_comments(text):
 
 
 def count_includegraphics(compiled_tex):
-    """Count un-commented \\includegraphics in the compiled .tex."""
+    """Count the \\includegraphics the compiled .tex issues: comments and the
+    bodies of macro definitions (a definition is not a use) are excluded."""
     try:
         text = Path(compiled_tex).read_text(encoding="utf-8", errors="replace")
     except OSError:
         return None
-    return len(re.findall(r"\\includegraphics\b", _strip_comments(text)))
+    body = strip_macro_definitions(_strip_comments(text))
+    return len(re.findall(r"\\includegraphics\b", body))
 
 
 def count_pdf_images(pdf_path):
@@ -269,8 +272,14 @@ def check_table_total(tex_log, report):
         if shown == actual:
             log_pass(f"front matter reports the compiled table total ({actual})")
         else:
-            report(f"front matter shows {shown} tables but the compile counted {actual}")
-            log_detail("run a full Writer compile so the table count can settle.")
+            report(
+                f"front matter shows {shown} tables but the compile counted {actual}"
+            )
+            log_detail(
+                "the total settles on a rerun; if the engine exited non-zero, "
+                "fix the first LaTeX error in the log (e.g. a figure file not "
+                "found) -- latexmk stops before the rerun when one occurs."
+            )
 
 
 def extract_pdf_text(pdf_path):

@@ -28,6 +28,14 @@ def test_apt_packages_has_parallel():
     assert "parallel" in APT_PACKAGES
 
 
+def test_apt_packages_has_poppler_for_the_artifact_gate():
+    # Arrange
+    # Act
+    # Assert: the post-compile gate's pdfimages/pdftotext/pdfinfo checks
+    # WARN-skip without it, so a host built from this list must carry it.
+    assert "poppler-utils" in APT_PACKAGES
+
+
 def test_apt_packages_has_both_bibtex_and_biber():
     # Arrange
     # Act
