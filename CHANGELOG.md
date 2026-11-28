@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.46.1] - 2026-11-28
+
+### Fixed
+
+- The generated `.tex` files most projects commit (the flattened
+  `manuscript.tex` / `supplementary.tex`, `00_shared/clew_rendered.tex`, the
+  `*_diff.tex`) no longer name the absolute path of the checkout that compiled
+  them (#547). `\clew@link` is made project-relative at render time (a file
+  outside the project is shown as `external: <file name>`); figure
+  `\includegraphics` and table `\input` paths are `./`-relative to the project
+  root; flatten comments and the latexdiff header name files by project path
+  (and commit, for the diff). Tectonic gets the project root on its search path
+  (`-Z search-path`) instead of absolute paths in the file. Previously every
+  rebuild in another checkout rewrote these tracked files and they leaked the
+  authors' home, scratch and worktree paths.
+
+## [2.46.0] - 2026-11-28
+
 ### Added
 
 - `ensure_workspace` (and `scitex-writer create-project`) complete a workspace
