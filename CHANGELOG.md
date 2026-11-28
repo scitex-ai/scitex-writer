@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.45.3] - 2026-11-28
+
 ### Fixed
 
 - A project nested in a repository now compiles on its first run wherever the
