@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `ensure_workspace` (and `scitex-writer create-project`) complete a workspace
+  that holds manuscript content but no engine — the layout a project template
+  ships when it provides only the text in `.scitex/writer/`. Every template
+  entry the workspace lacks is added; nothing that exists is replaced, the
+  template's example figures and tables are left out, and template links that
+  would leave the workspace are skipped. Repeat calls keep the author's edits.
+  Previously such a workspace was returned unchanged and could not compile.
+
 ## [2.45.3] - 2026-11-28
 
 ### Fixed
