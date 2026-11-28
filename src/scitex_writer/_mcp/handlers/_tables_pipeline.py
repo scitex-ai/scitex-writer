@@ -42,6 +42,7 @@ from typing import Optional
 
 from ..._dataclasses import TablesResult
 from ..._utils._csv_table import MAX_ROWS, render_csv_table
+from ..._utils._tex_paths import tex_path
 from ..utils import resolve_project_path
 
 DOC_DIRS = {
@@ -232,7 +233,9 @@ def csv2tex(
     return rendered
 
 
-def gather_table_tex_files(compiled_dir: Path, compiled_file: Path) -> dict:
+def gather_table_tex_files(
+    compiled_dir: Path, compiled_file: Path, tex_root: Optional[Path] = None
+) -> dict:
     """Stage 5: assemble ``FINAL.tex`` from the compiled tables.
 
     With NO real table, writes the comment-only ``00_Tables_Header.tex`` fallback
@@ -240,6 +243,11 @@ def gather_table_tex_files(compiled_dir: Path, compiled_file: Path) -> dict:
     tables, copies each into ``_placeable/<number>.tex`` (so the author may place
     it inline with ``\\scitextab{<number>}``) and emits a GUARDED end-block
     ``\\input`` so an inline-placed table is not duplicated.
+
+    ``tex_root`` is the project root: each ``\\input`` names its file relative
+    to it (:func:`scitex_writer._utils._tex_paths.tex_path`; ``None`` keeps the
+    path as given), so the flattened manuscript never carries the checkout's
+    absolute path.
 
     Returns ``{"table_count": int, "fallback_header": bool}``.
     """
@@ -255,7 +263,7 @@ def gather_table_tex_files(compiled_dir: Path, compiled_file: Path) -> dict:
     if not has_real_tables:
         header_file = compiled_dir / HEADER_NAME
         header_file.write_text(FALLBACK_HEADER, encoding="utf-8")
-        lines.append(f"\\input{{{header_file}}}")
+        lines.append(f"\\input{{{tex_path(header_file, tex_root)}}}")
         lines.append("")
         compiled_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return {"table_count": 0, "fallback_header": True}
@@ -268,7 +276,7 @@ def gather_table_tex_files(compiled_dir: Path, compiled_file: Path) -> dict:
         lines.append(f"% Table from: {table_tex.name}")
         lines.append(
             f"\\ifcsname scitextabplaced@{number}\\endcsname"
-            f"\\else\\input{{{table_tex}}}\\fi"
+            f"\\else\\input{{{tex_path(table_tex, tex_root)}}}\\fi"
         )
         lines.append("")
     compiled_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -377,7 +385,9 @@ def process(
         tables = csv2tex(
             paths["caption_media_dir"], paths["compiled_dir"], max_rows=max_rows
         )
-        gathered = gather_table_tex_files(paths["compiled_dir"], paths["compiled_file"])
+        gathered = gather_table_tex_files(
+            paths["compiled_dir"], paths["compiled_file"], tex_root=boundary
+        )
 
         result = TablesResult(
             success=True,

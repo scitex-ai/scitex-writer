@@ -79,6 +79,32 @@ create_temp_tex_from_commit() {
     fi
 }
 
+# latexdiff names its two inputs in the header (`%DIF DEL <file> <mtime>` /
+# `%DIF ADD <file> <mtime>`). The old side is a mktemp file, so the header
+# carried a build-host path (e.g. /home/<user>/.cache/tmp/tmp.XXXX.tex) into
+# the tracked *_diff.tex. Name each side by commit and project-relative path
+# instead; the mtime stays. Only the first DEL and ADD header lines are touched.
+portable_diff_header() {
+    local diff_tex="$1"
+    local old_label="$2"
+    local new_label="$3"
+    local tmp
+    tmp="$(mktemp)" || return 1
+    OLD_LABEL="$old_label" NEW_LABEL="$new_label" awk '
+        NR <= 20 && /^%DIF (DEL|ADD) / && !seen[$2]++ {
+            label = ($2 == "DEL") ? ENVIRON["OLD_LABEL"] : ENVIRON["NEW_LABEL"]
+            rest = substr($0, length("%DIF DEL ") + 1)
+            sub(/^[^ \t]+/, "", rest)
+            print "%DIF " $2 " " label rest
+            next
+        }
+        { print }
+    ' "$diff_tex" >"$tmp" && cat "$tmp" >"$diff_tex"
+    local rc=$?
+    rm -f "$tmp"
+    return $rc
+}
+
 # Get short commit hash for display
 get_short_hash() {
     local commit="${1:-HEAD}"
@@ -156,6 +182,9 @@ take_diff_tex() {
     [ -f "$previous_tex" ] && [ "$previous_tex" != "$SCITEX_WRITER_COMPILED_TEX" ] && rm -f "$previous_tex"
 
     if [ -f "$SCITEX_WRITER_DIFF_TEX" ] && [ -s "$SCITEX_WRITER_DIFF_TEX" ]; then
+        portable_diff_header "$SCITEX_WRITER_DIFF_TEX" \
+            "${old_hash}:${SCITEX_WRITER_COMPILED_TEX#./}" \
+            "${new_hash}:${SCITEX_WRITER_COMPILED_TEX#./}"
         echo_success "    $SCITEX_WRITER_DIFF_TEX created (${old_hash} → ${new_hash})"
 
         # Add signature with git commit metadata

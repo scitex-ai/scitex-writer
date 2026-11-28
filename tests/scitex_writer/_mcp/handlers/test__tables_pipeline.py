@@ -278,10 +278,17 @@ class TestPdflatexSmoke:
             _PREAMBLE + "\\begin{document}\n" + table + "\n\\end{document}\n",
             encoding="utf-8",
         )
-        # Act
+        # Act: from the project root, as the engines run -- FINAL.tex names its
+        # inputs relative to it, never by the checkout's absolute path.
         subprocess.run(
-            ["pdflatex", "-interaction=nonstopmode", "-halt-on-error", "doc.tex"],
-            cwd=str(work),
+            [
+                "pdflatex",
+                "-interaction=nonstopmode",
+                "-halt-on-error",
+                f"-output-directory={work}",
+                str(work / "doc.tex"),
+            ],
+            cwd=str(project),
             capture_output=True,
             text=True,
         )
@@ -303,10 +310,17 @@ class TestPdflatexSmoke:
             + "\\end{document}\n",
             encoding="utf-8",
         )
-        # Act
+        # Act: from the project root, as the engines run -- FINAL.tex names its
+        # inputs relative to it, never by the checkout's absolute path.
         subprocess.run(
-            ["pdflatex", "-interaction=nonstopmode", "-halt-on-error", "doc.tex"],
-            cwd=str(work),
+            [
+                "pdflatex",
+                "-interaction=nonstopmode",
+                "-halt-on-error",
+                f"-output-directory={work}",
+                str(work / "doc.tex"),
+            ],
+            cwd=str(project),
             capture_output=True,
             text=True,
         )

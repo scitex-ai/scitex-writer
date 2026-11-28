@@ -48,7 +48,8 @@ def clone_writer_project(
         project_dir: Path to project directory (will be created)
         git_strategy: Git initialization strategy (optional)
             - 'child': Create isolated git in project directory (default)
-            - 'parent': Use parent git repository
+            - 'parent': Use parent git repository (the template's .git is
+              removed so the enclosing repository tracks the files)
             - 'origin': Preserve template's original git history
             - None or 'none': Disable git initialization
         branch: Specific branch of the template repository to clone (optional)
@@ -95,8 +96,13 @@ def clone_writer_project(
             logger.error(f"Git clone failed: {result.stderr}")
             return False
 
-        # Handle git strategy
-        if git_strategy == "none" or git_strategy is None:
+        # Handle git strategy. Only "origin" keeps the template's own history.
+        # "parent" means the enclosing repository tracks the workspace, so the
+        # clone's .git must go: left in place, the parent committed the whole
+        # workspace as a gitlink (mode 160000) with no .gitmodules -- its
+        # repository held a dangling pointer instead of the manuscript, and
+        # the nested origin pointed at the template repo, not the project.
+        if git_strategy in ("none", "parent") or git_strategy is None:
             git_dir = project_path / ".git"
             if git_dir.exists():
                 shutil.rmtree(git_dir)
@@ -113,7 +119,7 @@ def clone_writer_project(
                 cwd=str(project_path),
                 capture_output=True,
             )
-        # "parent" and "origin" strategies keep the git history as-is
+        # "origin" keeps the template's git history as-is
 
         logger.info(f"Successfully created writer project at {project_path}")
         return True

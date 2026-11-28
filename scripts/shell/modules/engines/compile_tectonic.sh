@@ -36,6 +36,14 @@ compile_with_tectonic() {
     local abs_log_dir="$(cd "$(dirname "$LOG_DIR")" && pwd)/$(basename "$LOG_DIR")"
     opts="$opts --outdir=$abs_log_dir"
 
+    # Tectonic resolves \input / \includegraphics against the directory of the
+    # .tex it compiles, not the working directory. The generated .tex names
+    # files relative to the project root (./01_manuscript/...), the base every
+    # other engine resolves from, so put the project root (cwd) on tectonic's
+    # search path -- on the command line, never as an absolute path written
+    # into the tracked .tex.
+    opts="$opts -Z search-path=$(pwd)"
+
     # Incremental mode (use cache)
     if [ "$SCITEX_WRITER_TECTONIC_INCREMENTAL" = "true" ]; then
         # Set cache directory
