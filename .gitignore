@@ -1,5 +1,5 @@
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Custom/Specific.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Custom/Specific.gitignore ###
 # Please add files here
 
 # Examples directory - allow demo files
@@ -25,7 +25,7 @@
 # Compilation logs
 docs/compilation_log.txt
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Custom/Claude.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Custom/Claude.gitignore ###
 CLAUDE.md
 docs/to_claude
 docs/from_agents
@@ -35,11 +35,11 @@ docs/structure_mermaid
 mgmt
 .mcp.json
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Custom/Secrets.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Custom/Secrets.gitignore ###
 .git-crypt/keys
 **/*secret*
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Custom/Development.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Custom/Development.gitignore ###
 # old directories as trash bin
 *old*
 **/*old*
@@ -71,21 +71,21 @@ mgmt
 # TODO
 **/TODO.md
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Custom/MyEmacs.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Custom/MyEmacs.gitignore ###
 **/*~undo-tree~
 **/undohist/*
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Custom/Apptainer.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Custom/Apptainer.gitignore ###
 **/*.log
 **/*.sandbox/*
 **/*.sif
 **/build-temp-*
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Custom/Django.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Custom/Django.gitignore ###
 ./staticfiles*
 ./static/bootstrap*
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Custom/LargeFiles.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Custom/LargeFiles.gitignore ###
 data/*
 
 **/*.csv
@@ -156,7 +156,7 @@ data/*
 **/*.JNB
 **/*.jnb
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Python.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Python.gitignore ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -318,10 +318,10 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Django.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Django.gitignore ###
 
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/TeX.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/TeX.gitignore ###
 ## Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
@@ -629,7 +629,7 @@ TSWLatexianTemp*
 # Uncomment the next line to have this generated file ignored.
 #*Notes.bib
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Global/Emacs.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Global/Emacs.gitignore ###
 # -*- mode: gitignore; -*-
 *~
 \#*\#
@@ -679,10 +679,10 @@ flycheck_*.el
 # network security
 /network-security.data
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Custom/SQL.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Custom/SQL.gitignore ###
 **/*.db
 
-### Source: /home/ywatanabe/.git-templates/.gitignore-templates/Custom/GitKeep.gitignore ###
+### Source: ~/.git-templates/.gitignore-templates/Custom/GitKeep.gitignore ###
 !.gitkeep
 !**/.gitkeep
 .claude

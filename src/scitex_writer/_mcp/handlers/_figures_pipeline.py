@@ -242,6 +242,7 @@ def process(
             compiled_dir,
             paths["compiled_file"],
             max_height_frac(cfg),
+            tex_root=boundary,
         )
 
         result = FiguresResult(
