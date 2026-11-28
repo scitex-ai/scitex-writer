@@ -72,16 +72,25 @@ def _jpg_dir(project):
     )
 
 
-def _compile(work, tex_body):
-    """Write and compile a minimal document; return the expected PDF path."""
+def _compile(work, tex_body, project):
+    """Write and compile a minimal document; return the expected PDF path.
+
+    Runs from the PROJECT ROOT, as the engines do: the generated floats name
+    their images relative to it, never by the checkout's absolute path."""
     work.mkdir(parents=True, exist_ok=True)
     (work / "doc.tex").write_text(
         _PREAMBLE + "\\begin{document}\n" + tex_body + "\n\\end{document}\n",
         encoding="utf-8",
     )
     subprocess.run(
-        ["pdflatex", "-interaction=nonstopmode", "-halt-on-error", "doc.tex"],
-        cwd=str(work),
+        [
+            "pdflatex",
+            "-interaction=nonstopmode",
+            "-halt-on-error",
+            f"-output-directory={work}",
+            str(work / "doc.tex"),
+        ],
+        cwd=str(project),
         capture_output=True,
         text=True,
     )
@@ -280,7 +289,7 @@ class TestPdflatexSmoke:
         _figures_pipeline.process(str(project), "manuscript")
         placeable = (_compiled_dir(project) / "_placeable/01.tex").read_text()
         # Act
-        pdf = _compile(tmp_path / "build", placeable)
+        pdf = _compile(tmp_path / "build", placeable, project)
         # Assert
         assert pdf.is_file()
 
@@ -291,7 +300,7 @@ class TestPdflatexSmoke:
         _figures_pipeline.process(str(project), "manuscript")
         final = _compiled_dir(project) / "FINAL.tex"
         # Act
-        pdf = _compile(tmp_path / "build_final", f"\\input{{{final}}}")
+        pdf = _compile(tmp_path / "build_final", f"\\input{{{final}}}", project)
         # Assert
         assert pdf.is_file()
 
@@ -303,7 +312,7 @@ class TestPdflatexSmoke:
         _figures_pipeline.process(str(project), "manuscript")
         final = _compiled_dir(project) / "FINAL.tex"
         # Act
-        pdf = _compile(tmp_path / "build_panels", f"\\input{{{final}}}")
+        pdf = _compile(tmp_path / "build_panels", f"\\input{{{final}}}", project)
         # Assert
         assert pdf.is_file()
 
@@ -317,7 +326,7 @@ class TestPdflatexSmoke:
         _figures_pipeline.process(str(project), "manuscript")
         final = _compiled_dir(project) / "FINAL.tex"
         # Act
-        pdf = _compile(tmp_path / "build_footnote", f"\\input{{{final}}}")
+        pdf = _compile(tmp_path / "build_footnote", f"\\input{{{final}}}", project)
         # Assert
         assert pdf.is_file()
 
@@ -328,7 +337,7 @@ class TestPdflatexSmoke:
         _figures_pipeline.process(str(project), "manuscript")
         final = _compiled_dir(project) / "FINAL.tex"
         # Act
-        pdf = _compile(tmp_path / "build_empty", f"\\input{{{final}}}")
+        pdf = _compile(tmp_path / "build_empty", f"\\input{{{final}}}", project)
         # Assert
         assert pdf.is_file()
 
