@@ -144,6 +144,25 @@ class TestCloneWriterProjectSuccess:
         assert result is True
 
 
+class TestCloneWriterProjectTemplateHistory:
+    """Which strategies keep the template's own .git (the shim's clone makes one)."""
+
+    @pytest.mark.parametrize(
+        ("strategy", "keeps_template_git"),
+        [("parent", False), (None, False), ("none", False), ("origin", True)],
+    )
+    def test_only_origin_keeps_the_template_git(
+        self, tmp_path, path_with_success_git, strategy, keeps_template_git
+    ):
+        # Arrange: inside a parent repository, as hub's <project>/.scitex/writer
+        project_dir = tmp_path / "project" / ".scitex" / "writer"
+        project_dir.parent.mkdir(parents=True)
+        # Act
+        clone_writer_project(str(project_dir), git_strategy=strategy)
+        # Assert
+        assert (project_dir / ".git").exists() is keeps_template_git
+
+
 class TestCloneWriterProjectFailure:
     """Failure cases."""
 
