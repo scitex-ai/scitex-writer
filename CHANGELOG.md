@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `git_strategy="parent"` now removes the template clone's `.git`, as its
+  documentation says ("use parent git repository"). The clone kept its own
+  repository, so the enclosing project committed `.scitex/writer` as a gitlink
+  with no `.gitmodules`: the project's repository held a dangling pointer
+  instead of the manuscript, and the workspace's origin was the template
+  repository. Only `"origin"` keeps the template history now.
+
 ### Added
 
 - `ensure_workspace` (and `scitex-writer create-project`) complete a workspace
